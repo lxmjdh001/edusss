@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务打卡</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Comic Sans MS', 'Marker Felt', 'Arial Rounded MT Bold', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ffd6e0, #b8e1ff);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: all 0.5s ease;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+            animation: fadeInDown 1s ease;
+            flex-wrap: wrap;
+        }
+
+        .title {
+            font-size: 26px;
+            color: #ff6b9e;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            cursor: text;
+            position: relative;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            margin-right: 20px;
+        }
+
+        .title-icon {
+            margin-right: 10px;
+            color: #ff6b9e;
+            animation: spin 2s infinite linear;
+        }
+
+        .title-edit {
+            position: absolute;
+            left: 40px;
+            top: 0;
+            font-size: 24px;
+            color: #ff6b9e;
+            border: 2px solid #ff6b9e;
+            background: rgba(255, 255, 255, 0.9);
+            font-family: inherit;
+            padding: 0 10px;
+            width: calc(100% - 40px);
+            height: 100%;
+            display: none;
+            border-radius: 50px;
+        }
+
+        .controls-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            padding: 8px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .start-timer-btn,
+        .save-btn,
+        .home-btn {
+            background: linear-gradient(45deg, #ff9eb5, #ff6b9e);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            animation: pulse 1.5s infinite;
+            min-width: 140px;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .home-btn {
+            background: linear-gradient(45deg, #4a90e2, #73a6ff);
+        }
+
+        .home-btn:hover {
+            background: linear-gradient(45deg, #73a6ff, #4a90e2);
+        }
+
+        .start-timer-btn i,
+        .save-btn i,
+        .home-btn i {
+            margin-right: 8px;
+        }
+
+        .start-timer-btn:hover,
+        .save-btn:hover {
+            background: linear-gradient(45deg, #ff6b9e, #ff4d88);
+            transform: scale(1.05);
+        }
+
+        .start-timer-btn:active,
+        .save-btn:active,
+        .home-btn:active {
+            transform: scale(0.95);
+        }
+
+        .timer-display,
+        .counter-display {
+            font-size: 16px;
+            color: #666;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+
+        .students-container {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 20px;
+            padding: 20px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: fadeInLeft 1s ease;
+            border: 3px dashed #ff9eb5;
+        }
+
+        /* 泡泡样式 */
+        .student-ball {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at 50% 120%, #ffd6e0, #ff9eb5 80%, #ff6b9e 100%);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 107, 158, 0.5);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            animation: float 3s ease-in-out infinite;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .student-ball::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+
+        /* 圆角矩形样式 */
+        .student-rect {
+            width: 100px;
+            height: 60px;
+            background: linear-gradient(45deg, #ffd6e0, #ff9eb5);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            position: relative;
+            animation: bounce 3s ease-in-out infinite;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .student-ball.completed,
+        .student-rect.completed {
+            background: radial-gradient(circle at 50% 120%, #b8e1ff, #73a6ff 80%, #4a90e2 100%);
+            color: white;
+        }
+
+        .student-ball:hover,
+        .student-rect:hover {
+            transform: translateY(-5px) scale(1.1);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1), 0 0 30px rgba(255, 107, 158, 0.8);
+        }
+
+        .student-ball:active,
+        .student-rect:active {
+            transform: scale(0.95);
+        }
+
+        .student-ball.completed::after,
+        .student-rect.completed::after {
+            content: "✓";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background-color: #4a90e2;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            animation: bounceIn 0.5s ease;
+        }
+
+        .student-name {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+		.student-name {
+			font-size: 20px;
+			font-weight: bold;
+			text-align: center;
+			line-height: 1.2;
+			color: #000000;   /* ← 新增：默认白色，想换色写你自己的色值 */
+		}
+
+        .student-note {
+            font-size: 9.6px;
+            opacity: 0.8;
+            text-align: center;
+            margin-top: 4px;
+            line-height: 1.1;
+        }
+
+        .leaderboard {
+            width: 360px; /* 原300px加宽20% */
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            animation: fadeInRight 1s ease;
+            border: 3px dashed #73a6ff;
+        }
+
+        .leaderboard h2 {
+            color: #ff6b9e;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .leaderboard h2 i {
+            margin-right: 10px;
+        }
+
+        .leaderboard-list {
+            list-style-type: none;
+            padding: 0;
+            flex: 1;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            color: #666;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+            border-radius: 10px;
+        }
+
+        .leaderboard-item:first-child {
+            color: #ff6b9e;
+            font-weight: bold;
+            background: rgba(255, 214, 224, 0.7);
+        }
+
+        .leaderboard-item:nth-child(2) {
+            color: #ff9eb5;
+            background: rgba(255, 214, 224, 0.5);
+        }
+
+        .leaderboard-item:nth-child(3) {
+            color: #ffc0cb;
+            background: rgba(255, 214, 224, 0.3);
+        }
+
+        .leaderboard-item:hover {
+            background-color: rgba(255, 214, 224, 0.5);
+            transform: scale(1.02);
+        }
+
+        .time-taken {
+            font-weight: bold;
+            color: inherit;
+        }
+
+        .pending-list {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px dashed #ff9eb5;
+        }
+
+        .pending-list h3 {
+            color: #ff6b9e;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .pending-list h3 i {
+            margin-right: 10px;
+        }
+
+        .pending-list-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pending-item {
+            background: linear-gradient(45deg, #ffd6e0, #ff9eb5);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            color: white;
+            animation: fadeInUp 0.5s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .show-pending-btn {
+            background: linear-gradient(45deg, #ff6b9e, #ff4d88);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+            align-self: center;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .export-btn {
+            background: linear-gradient(45deg, #4a90e2, #73a6ff);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+            align-self: center;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .export-btn:hover {
+            background: linear-gradient(45deg, #73a6ff, #4a90e2);
+            transform: scale(1.05);
+        }
+
+        .export-btn:active {
+            transform: scale(0.95);
+        }
+
+        .style-selector {
+            padding: 10px 15px;
+            border-radius: 20px;
+            border: none;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .leaderboard-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        /* 数据管理控件 */
+        .data-btn {
+            background: linear-gradient(45deg, #4a90e2, #73a6ff);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .data-btn i {
+            margin-right: 5px;
+        }
+
+        .data-btn:hover {
+            background: linear-gradient(45deg, #73a6ff, #4a90e2);
+            transform: scale(1.05);
+        }
+
+        .data-btn:active {
+            transform: scale(0.95);
+        }
+
+        .font-size-slider {
+            width: 100px;
+        }
+
+        .text-color-picker {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .size-slider {
+            width: 100px;
+        }
+
+        /* 新增样式 */
+        .task-record-item {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .task-record-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .record-header {
+            font-weight: bold;
+            color: #5a67d8;
+            margin-bottom: 8px;
+        }
+
+        .record-details {
+            font-size: 0.9em;
+            color: #718096;
+            margin: 4px 0;
+        }
+
+        .delete-record {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .task-record-item:hover .delete-record {
+            display: block;
+        }
+
+        .sync-points-btn {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .sync-points-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .task-name-input {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .task-points-input {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 80px;
+            margin-right: 10px;
+        }
+
+        /* 记录选择器样式 */
+        .record-selector {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .record-selector h4 {
+            color: #5a67d8;
+            margin-bottom: 10px;
+        }
+
+        .record-option {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .record-option:hover {
+            background: #edf2f7;
+        }
+
+        .record-option input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .record-option label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .record-stats {
+            font-size: 0.8em;
+            color: #718096;
+            margin-left: auto;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes bounceIn {
+            from,
+            20%,
+            40%,
+            60%,
+            80%,
+            to {
+                animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+            }
+
+            0% {
+                opacity: 0;
+                transform: scale3d(0.3, 0.3, 0.3);
+            }
+
+            20% {
+                transform: scale3d(1.1, 1.1, 1.1);
+            }
+
+            40% {
+                transform: scale3d(0.9, 0.9, 0.9);
+            }
+
+            60% {
+                opacity: 1;
+                transform: scale3d(1.03, 1.03, 1.03);
+            }
+
+            80% {
+                transform: scale3d(0.97, 0.97, 0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale3d(1, 1, 1);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            border-radius: 50%;
+            animation: confetti-fall 1s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 100px;
+            color: gold;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            animation: zoomIn 0.5s ease-out;
+            opacity: 0;
+        }
+
+        @keyframes zoomIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        .save-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #4a90e2, #73a6ff);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: fadeInUp 0.5s ease;
+            z-index: 1000;
+            display: none;
+        }
+		
+		.btn-load,.btn-detail,.btn-del{
+			  padding:4px 8px;font-size:12px;border:none;border-radius:4px;color:#fff;cursor:pointer;
+			}
+			.btn-load{background:#48bb78;}
+			.btn-detail{background:#4299e1;}
+			.btn-del{background:#f56565;}
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="title" id="pageTitle">
+            <i class="fas fa-clipboard-check title-icon"></i>
+            <span id="titleText">任务打卡</span>
+            <input type="text" class="title-edit" id="titleEdit">
+        </div>
+        
+        <div class="controls-container">
+            <!-- 主要功能按钮 -->
+            <div class="control-group">
+					<button class="home-btn" id="newTaskBtn" title="开始全新任务">
+					  <i class="fas fa-plus"></i> 开始新任务
+					</button>
+                <button class="start-timer-btn" id="startTaskBtn">
+                    <i class="fas fa-play"></i>
+                    开始任务
+                </button>
+                <div class="timer-display" id="timerDisplay">00:00:00</div>
+                <div class="counter-display" id="counterDisplay">0/0</div>
+            </div>
+            
+            <!-- 样式调整控件 -->
+            <div class="control-group">
+                <label for="fontSizeSlider">字号:</label>
+                <input type="range" id="fontSizeSlider" class="font-size-slider" min="10" max="36" value="16">
+                <label for="textColorPicker">颜色:</label>
+                <input type="color" id="textColorPicker" class="text-color-picker" value="#ffffff">
+                <label for="sizeSlider">大小:</label>
+                <input type="range" id="sizeSlider" class="size-slider" min="80" max="150" value="100">
+            </div>
+            
+            <!-- 数据管理控件 -->
+            <div class="control-group">
+                <button class="data-btn" id="saveDataBtn" title="保存当前数据">
+                    <i class="fas fa-save"></i>
+                    生成记录
+                </button>
+                <button class="data-btn" id="clearDataBtn" title="清除所有数据">
+                    <i class="fas fa-trash"></i>
+                    清除
+                </button>
+                <button class="sync-points-btn" id="syncPointsBtn" title="同步积分到主系统">
+                    <i class="fas fa-sync"></i>
+                    同步积分
+                </button>
+                <button class="home-btn" id="homeBtn" title="返回主页">
+				<script>
+				  document.getElementById('homeBtn').addEventListener('click', () => {
+					if (confirm('确定要返回主页吗？')) {
+					  window.location.href = '积分成长系统.html';
+					}
+				  });
+				</script>
+                    <i class="fas fa-home"></i>
+                    返回主页
+                </button>
+            </div>
+            
+            <!-- 样式选择 -->
+            <div class="control-group">
+                <select class="style-selector" id="styleSelector">
+                    <option value="ball">泡泡样式</option>
+                    <option value="rect">圆角矩形</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="students-container" id="studentsContainer">
+            <!-- 学生圆球将在这里动态生成 -->
+        </div>
+
+        <div class="leaderboard">
+            <h2>
+                <i class="fas fa-trophy"></i>
+                已完成同学
+            </h2>
+            <ul class="leaderboard-list" id="leaderboardList">
+                <!-- 排行榜条目将在这里动态生成 -->
+            </ul>
+            <div class="pending-list" id="pendingList" style="display: none;">
+                <h3><i class="fas fa-list"></i> 未完成同学</h3>
+                <div class="pending-list-items" id="pendingItems"></div>
+            </div>
+            <div class="leaderboard-buttons">
+                <button class="show-pending-btn" id="showPendingBtn">
+                    <i class="fas fa-eye"></i>
+                    显示未完成同学
+                </button>
+                <button class="export-btn" id="exportBtn">
+                    <i class="fas fa-file-excel"></i>
+                    导出结果
+                </button>
+            </div>
+            
+            <!-- 任务记录区域 -->
+<!-- 任务记录区域 -->
+<div style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ff9eb5;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3><i class="fas fa-history"></i> 任务记录</h3>
+        <button class="btn-del" id="clearRecordsBtn" title="清空所有任务记录" style="padding: 6px 12px;">
+            <i class="fas fa-trash-alt"></i> 清空记录
+        </button>
+    </div>
+    <div id="taskRecordsList" style="max-height: 200px; overflow-y: auto;">
+        <!-- 任务记录将在这里显示 -->
+    </div>
+</div>
+        </div>
+    </div>
+
+<!-- 同步积分设置模态框 -->
+<div id="syncPointsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
+        <h3 style="color: #ff6b9e; margin-bottom: 20px; text-align: center;">⚙️ 同步积分设置</h3>
+        
+        <!-- 记录选择器 -->
+        <div class="record-selector" id="recordSelector" style="flex: 1; overflow-y: auto; margin-bottom: 20px;">
+            <h4>选择要同步的记录</h4>
+            <div id="recordOptions">
+                <!-- 记录选项将在这里动态生成 -->
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">积分值:</label>
+            <input type="number" id="taskPointsValue" class="task-points-input" placeholder="积分" value="5">
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label style="display: inline-flex; align-items: center;">
+                <input type="checkbox" id="syncToMainSystem" checked style="margin-right: 5px;">
+                同步到主系统
+            </label>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-shrink: 0;">
+            <button class="btn btn-primary" id="confirmSyncBtn" style="padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 5px; cursor: pointer;">确认同步</button>
+            <button class="btn btn-secondary" id="cancelSyncBtn" style="padding: 10px 20px; background: #718096; color: white; border: none; border-radius: 5px; cursor: pointer;">取消</button>
+        </div>
+    </div>
+</div>
+
+    <!-- 庆祝效果容器 -->
+    <div class="celebration" id="celebration"></div>
+    
+    <!-- 保存消息 -->
+    <div class="save-message" id="saveMessage">
+        <i class="fas fa-check-circle"></i> 数据已保存！
+    </div>
+
+    <script>
+        // 全局变量
+        let startTime = null;
+        let timerInterval = null;
+        let isTimerRunning = false;
+        let totalStudents = 0;
+        let completedStudents = 0;
+        let currentStyle = 'ball';
+        let studentsData = [];
+        let taskRecords = [];
+        let currentTaskName = '';
+        let processedStudents = new Set(); // 记录已同步积分的学生
+        
+        // DOM元素
+        const titleText = document.getElementById('titleText');
+        const titleEdit = document.getElementById('titleEdit');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const counterDisplay = document.getElementById('counterDisplay');
+        const pendingList = document.getElementById('pendingList');
+        const pendingItems = document.getElementById('pendingItems');
+        const showPendingBtn = document.getElementById('showPendingBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const celebration = document.getElementById('celebration');
+        const styleSelector = document.getElementById('styleSelector');
+        const fontSizeSlider = document.getElementById('fontSizeSlider');
+        const textColorPicker = document.getElementById('textColorPicker');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const saveDataBtn = document.getElementById('saveDataBtn');
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        const saveMessage = document.getElementById('saveMessage');
+        const syncPointsBtn = document.getElementById('syncPointsBtn');
+        const homeBtn = document.getElementById('homeBtn');
+        
+        // 添加泡泡音效
+        const popSound = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
+        popSound.volume = 0.6;
+
+        // 从URL参数获取学生数据
+        function getStudentsFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentsParam = urlParams.get('students');
+            const classNameParam = urlParams.get('className');
+            
+            if (studentsParam) {
+                try {
+                    const students = JSON.parse(decodeURIComponent(studentsParam));
+                    studentsData = students.map((student, index) => ({
+                        name: student.name,
+                        note: '',
+                        completed: false,
+                        time: null,
+                        avatar: student.avatar || '🥚'
+                    }));
+                    totalStudents = studentsData.length;
+                    
+                    if (classNameParam) {
+                        document.getElementById('titleText').textContent = `${decodeURIComponent(classNameParam)} - 任务打卡`;
+                        document.title = `${decodeURIComponent(classNameParam)} - 任务打卡`;
+                    }
+                    
+                    return true;
+                } catch (e) {
+                    console.error('解析学生数据失败:', e);
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        // 样式选择器
+        styleSelector.addEventListener('change', function () {
+            currentStyle = this.value;
+            updateStudentStyles();
+            saveDataToLocalStorage();
+        });
+
+        // 更新学生样式
+        function updateStudentStyles() {
+            const students = document.querySelectorAll('.student-ball, .student-rect');
+            students.forEach(student => {
+                student.classList.remove('student-ball', 'student-rect');
+                
+                switch (currentStyle) {
+                    case 'ball':
+                        student.classList.add('student-ball');
+                        break;
+                    case 'rect':
+                        student.classList.add('student-rect');
+                        break;
+                }
+            });
+        }
+
+        // 初始化学生数据
+        function initializeStudents() {
+            if (!getStudentsFromURL()) {
+                // 如果没有URL参数，使用示例数据
+                const sampleData = `张三|班长\n李四|副班长\n王五|学习委员\n赵六|体育委员\n钱七|文艺委员\n孙八|生活委员\n周九|纪律委员\n吴十|组长`;
+                processStudentList(sampleData);
+            } else {
+                renderStudents();
+                updateCounter();
+                updatePendingList();
+            }
+        }
+
+        // 处理学生名单
+        function processStudentList(content) {
+            const studentsContainer = document.getElementById('studentsContainer');
+            const leaderboardList = document.getElementById('leaderboardList');
+            
+            // 清空现有内容
+            studentsContainer.innerHTML = '';
+            leaderboardList.innerHTML = '';
+            pendingItems.innerHTML = '';
+            pendingList.style.display = 'none';
+            
+            // 重置计数器
+            totalStudents = 0;
+            completedStudents = 0;
+            updateCounter();
+            
+            // 解析名单内容
+            const lines = content.split('\n');
+            studentsData = [];
+            
+            lines.forEach(line => {
+                line = line.trim();
+                if (line) {
+                    // 检查是否包含备注（使用|分隔）
+                    const parts = line.split('|');
+                    const name = parts[0].trim();
+                    const note = parts[1] ? parts[1].trim() : '';
+                    
+                    studentsData.push({ name, note, completed: false, time: null });
+                    totalStudents++;
+                }
+            });
+            
+            // 渲染学生元素
+            renderStudents();
+        }
+
+        // 渲染学生元素
+        function renderStudents() {
+            const studentsContainer = document.getElementById('studentsContainer');
+            const leaderboardList = document.getElementById('leaderboardList');
+            
+            // 清空现有内容
+            studentsContainer.innerHTML = '';
+            leaderboardList.innerHTML = '';
+            
+            // 重置计数器
+            totalStudents = studentsData.length;
+            completedStudents = 0;
+            
+            studentsData.forEach((student, index) => {
+                if (student.completed) completedStudents++;
+                
+                const studentElement = document.createElement('div');
+                
+                // 根据当前样式设置类名
+                switch (currentStyle) {
+                    case 'ball':
+                        studentElement.classList.add('student-ball');
+                        break;
+                    case 'rect':
+                        studentElement.classList.add('student-rect');
+                        break;
+                }
+                
+                // 应用当前字号和颜色
+                studentElement.style.fontSize = fontSizeSlider.value + 'px';
+                studentElement.style.color = textColorPicker.value;
+                
+                // 设置学生姓名和备注
+                const mainFontSize = parseInt(fontSizeSlider.value);
+                const noteFontSize = mainFontSize * 0.6;
+                
+                studentElement.innerHTML = `
+                    <div class="student-name" style="font-size: ${mainFontSize}px">${student.name}</div>
+                    ${student.note ? `<div class="student-note" style="font-size: ${noteFontSize}px">${student.note}</div>` : ''}
+                `;
+                
+                studentElement.dataset.name = student.name;
+                studentElement.dataset.index = index;
+                
+                // 如果已完成，添加完成样式
+                if (student.completed) {
+                    studentElement.classList.add('completed');
+                    
+                    // 添加到排行榜
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('leaderboard-item');
+                    listItem.dataset.name = student.name;
+                    listItem.innerHTML = `
+                        <span>${student.name}</span>
+                        <span class="time-taken">${student.time ? formatTime(new Date() - new Date(student.time)) : '未知'}</span>
+                    `;
+                    leaderboardList.appendChild(listItem);
+                }
+                
+                studentElement.addEventListener('click', function () {
+                    // 检查是否已开始计时
+                    if (!isTimerRunning) {
+                        showCelebration('请先开始任务哦！', '⏰');
+                        return;
+                    }
+                    
+                    const index = parseInt(this.dataset.index);
+                    const student = studentsData[index];
+                    
+                    if (!student.completed) {
+                        // 标记为完成
+                        student.completed = true;
+                        student.time = new Date();
+                        completedStudents++;
+                        
+                        // 添加完成样式
+                        this.classList.add('completed');
+                        
+                        // 更新计数器
+                        updateCounter();
+                        
+                        // 播放音效
+                        popSound.play();
+                        
+                        // 添加到排行榜
+                        addToLeaderboard(student);
+                        
+                        // 检查是否全部完成
+                        if (completedStudents === totalStudents) {
+                            celebrateCompletion();
+                        }
+                        
+                        // 更新未签到列表
+                        updatePendingList();
+                        
+                        // 保存数据
+                        saveDataToLocalStorage();
+                    } else {
+                        // 撤回完成状态
+                        student.completed = false;
+                        student.time = null;
+                        completedStudents--;
+                        
+                        // 移除完成样式
+                        this.classList.remove('completed');
+                        
+                        // 更新计数器
+                        updateCounter();
+                        
+                        // 从排行榜移除
+                        removeFromLeaderboard(student.name);
+                        
+                        // 更新未签到列表
+                        updatePendingList();
+                        
+                        // 保存数据
+                        saveDataToLocalStorage();
+                    }
+                });
+                
+                studentsContainer.appendChild(studentElement);
+            });
+            
+            // 更新计数器
+            updateCounter();
+            
+            // 更新未签到列表
+            updatePendingList();
+        }
+
+        // 更新计数器
+        function updateCounter() {
+            counterDisplay.textContent = `${completedStudents}/${totalStudents}`;
+        }
+
+        // 添加到排行榜
+        function addToLeaderboard(student) {
+            const leaderboardList = document.getElementById('leaderboardList');
+            const listItem = document.createElement('li');
+            listItem.classList.add('leaderboard-item');
+            listItem.dataset.name = student.name;
+            
+            // 计算用时（从计时开始到点击的时间）
+            let timeTaken = '未知';
+            if (startTime) {
+                const timeDiff = student.time - startTime;
+                timeTaken = formatTime(timeDiff);
+            }
+            
+            listItem.innerHTML = `
+                <span>${student.name}</span>
+                <span class="time-taken">${timeTaken}</span>
+            `;
+            
+            leaderboardList.appendChild(listItem);
+        }
+
+        // 从排行榜移除
+        function removeFromLeaderboard(name) {
+            const leaderboardList = document.getElementById('leaderboardList');
+            const items = leaderboardList.querySelectorAll('.leaderboard-item');
+            
+            items.forEach(item => {
+                if (item.dataset.name === name) {
+                    item.remove();
+                }
+            });
+        }
+
+        // 更新未签到列表
+        function updatePendingList() {
+            const pendingStudents = studentsData.filter(student => !student.completed).map(student => student.name);
+            
+            pendingItems.innerHTML = '';
+            
+            if (pendingStudents.length > 0) {
+                pendingStudents.forEach(name => {
+                    const pendingItem = document.createElement('div');
+                    pendingItem.classList.add('pending-item');
+                    pendingItem.textContent = name;
+                    pendingItems.appendChild(pendingItem);
+                });
+            }
+        }
+
+        // 显示/隐藏未签到列表
+        showPendingBtn.addEventListener('click', function () {
+            if (pendingList.style.display === 'none') {
+                pendingList.style.display = 'block';
+                this.innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏未完成同学';
+            } else {
+                pendingList.style.display = 'none';
+                this.innerHTML = '<i class="fas fa-eye"></i> 显示未完成同学';
+            }
+        });
+
+        // 导出结果
+        exportBtn.addEventListener('click', function () {
+            const leaderboardItems = document.querySelectorAll('.leaderboard-item');
+            let csvContent = "姓名,用时\n";
+            
+            leaderboardItems.forEach(item => {
+                const name = item.querySelector('span:first-child').textContent;
+                const time = item.querySelector('.time-taken').textContent;
+                csvContent += `${name},${time}\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "任务完成结果.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // 开始任务
+document.getElementById('startTaskBtn').addEventListener('click', function () {
+  if (!isTimerRunning) {
+    startTime = startTime || new Date(); // 继续用旧时间
+    timerInterval = setInterval(updateTimer, 1000);
+    isTimerRunning = true;
+    this.innerHTML = '<i class="fas fa-pause"></i> 暂停任务';
+  } else {
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    this.innerHTML = '<i class="fas fa-play"></i> 继续任务';
+  }
+  saveDataToLocalStorage();
+});
+
+        // 更新计时器
+        function updateTimer() {
+            const now = new Date();
+            const timeDiff = now - startTime;
+            timerDisplay.textContent = formatTime(timeDiff);
+        }
+
+        // 格式化时间
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.floor(milliseconds / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // 庆祝完成
+        function celebrateCompletion() {
+            // 显示庆祝文字
+            celebration.textContent = '🎉 全部完成！ 🎉';
+            celebration.style.opacity = '1';
+            
+            // 创建彩色纸屑
+            for (let i = 0; i < 100; i++) {
+                createConfetti();
+            }
+            
+            // 3秒后隐藏庆祝文字
+            setTimeout(() => {
+                celebration.style.opacity = '0';
+            }, 3000);
+        }
+
+        // 创建彩色纸屑
+        function createConfetti() {
+            const confetti = document.createElement('div');
+            confetti.classList.add('confetti');
+            
+            // 随机颜色
+            const colors = ['#ff6b9e', '#4a90e2', '#aed581', '#ff8a65', '#4fc3f7', '#ffd700'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.backgroundColor = color;
+            
+            // 随机位置
+            const startX = Math.random() * window.innerWidth;
+            confetti.style.left = `${startX}px`;
+            confetti.style.top = '0';
+            
+            // 随机动画延迟和持续时间
+            const delay = Math.random() * 2;
+            const duration = 1 + Math.random() * 2;
+            confetti.style.animationDelay = `${delay}s`;
+            confetti.style.animationDuration = `${duration}s`;
+            
+            document.body.appendChild(confetti);
+            
+            // 动画结束后移除元素
+            setTimeout(() => {
+                confetti.remove();
+            }, (delay + duration) * 1000);
+        }
+
+        // 显示庆祝消息
+        function showCelebration(message, emoji) {
+            celebration.textContent = `${emoji} ${message} ${emoji}`;
+            celebration.style.opacity = 1;
+            celebration.style.animation = 'none';
+            void celebration.offsetHeight; // 触发重绘
+            celebration.style.animation = 'zoomIn 0.5s ease-out';
+            
+            setTimeout(() => {
+                celebration.style.opacity = 0;
+            }, 2000);
+        }
+
+        // 标题编辑功能
+        titleText.addEventListener('click', function (e) {
+            titleEdit.value = titleText.textContent;
+            titleEdit.style.display = 'block';
+            titleEdit.focus();
+            e.stopPropagation();
+        });
+
+		titleEdit.addEventListener('blur', function () {
+			titleText.textContent = this.value || '任务打卡';
+			// 设置标题字号与.title样式一致
+			titleText.style.fontSize = '24px'; // 这里改成你想要的字号
+			// 标题变了 → 新任务 → 清空已同步集合，允许全部重新加积分
+			processedStudents.clear();
+			currentTaskName = titleText.textContent;
+			document.title = titleText.textContent;
+			this.style.display = 'none';
+			saveDataToLocalStorage();
+		});
+
+        titleEdit.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') this.blur();
+        });
+
+        // 字号调整功能
+        fontSizeSlider.addEventListener('input', function() {
+            const mainFontSize = this.value;
+            const noteFontSize = mainFontSize * 0.6;
+            
+            const studentNames = document.querySelectorAll('.student-name');
+            studentNames.forEach(name => {
+                name.style.fontSize = mainFontSize + 'px';
+            });
+            
+            const studentNotes = document.querySelectorAll('.student-note');
+            studentNotes.forEach(note => {
+                note.style.fontSize = noteFontSize + 'px';
+            });
+            
+            saveDataToLocalStorage();
+        });
+
+        // 颜色调整功能
+        textColorPicker.addEventListener('input', function() {
+            const color = this.value;
+            const studentNames = document.querySelectorAll('.student-name, .student-note');
+            studentNames.forEach(name => {
+                name.style.color = color;
+            });
+            
+            saveDataToLocalStorage();
+        });
+
+        // 泡泡大小调整功能
+        sizeSlider.addEventListener('input', function() {
+            const size = this.value;
+            
+            const studentBalls = document.querySelectorAll('.student-ball');
+            studentBalls.forEach(ball => {
+                ball.style.width = size + 'px';
+                ball.style.height = size + 'px';
+            });
+            
+            const studentRects = document.querySelectorAll('.student-rect');
+            studentRects.forEach(rect => {
+                rect.style.width = size + 'px';
+                // 保持矩形比例
+                rect.style.height = (size * 0.6) + 'px';
+            });
+            
+            saveDataToLocalStorage();
+        });
+
+        // 保存数据到本地存储
+        function saveDataToLocalStorage() {
+            const data = {
+                students: studentsData,
+                timerState: {
+                    isTimerRunning,
+                    startTime: startTime ? startTime.toISOString() : null,
+                    elapsedTime: timerDisplay.textContent
+                },
+                totalStudents,
+                completedStudents,
+                currentStyle,
+                title: titleText.textContent,
+                fontSize: fontSizeSlider.value,
+                textColor: textColorPicker.value,
+                size: sizeSlider.value,
+                taskRecords: taskRecords,
+                currentTaskName: currentTaskName,
+                processedStudents: Array.from(processedStudents),
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('taskCheckinData', JSON.stringify(data));
+            
+            // 显示保存成功的消息
+            showSaveMessage();
+        }
+
+        // 显示保存消息
+        function showSaveMessage() {
+            saveMessage.style.display = 'block';
+            setTimeout(() => {
+                saveMessage.style.display = 'none';
+            }, 2000);
+        }
+
+        // 从本地存储加载数据
+        function loadDataFromLocalStorage() {
+            const savedData = localStorage.getItem('taskCheckinData');
+            
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    
+                    // 恢复学生数据
+                    if (data.students && data.students.length > 0) {
+                        studentsData = data.students;
+                        totalStudents = data.totalStudents || studentsData.length;
+                        completedStudents = data.completedStudents || 0;
+                        
+                        // 恢复已处理学生列表
+                        if (data.processedStudents) {
+                            processedStudents = new Set(data.processedStudents);
+                        }
+                        
+                        // 恢复计时器状态
+                        if (data.timerState && data.timerState.isTimerRunning && data.timerState.startTime) {
+                            startTime = new Date(data.timerState.startTime);
+                            timerInterval = setInterval(updateTimer, 1000);
+                            isTimerRunning = true;
+                            document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-pause"></i> 暂停任务';
+                        }
+                        timerDisplay.textContent = data.timerState?.elapsedTime || '00:00:00';
+                        
+                        // 恢复样式设置
+                        if (data.currentStyle) {
+                            currentStyle = data.currentStyle;
+                            styleSelector.value = currentStyle;
+                        }
+                        
+                        if (data.title && data.title !== '任务打卡') {
+                            titleText.textContent = data.title;
+                            document.title = data.title;
+                        }
+                        
+                        if (data.fontSize) {
+                            fontSizeSlider.value = data.fontSize;
+                        }
+                        
+                        if (data.textColor) {
+                            textColorPicker.value = data.textColor;
+                        }
+                        
+                        if (data.size) {
+                            sizeSlider.value = data.size;
+                        }
+                        
+                        // 恢复任务记录
+                        if (data.taskRecords) {
+                            taskRecords = data.taskRecords;
+                        }
+                        
+                        if (data.currentTaskName) {
+                            currentTaskName = data.currentTaskName;
+                        }
+                        
+                        renderStudents();
+                        renderTaskRecords();
+                        showCelebration('已恢复上次的数据！', '📂');
+                    }
+                } catch (e) {
+                    console.error('加载保存的数据时出错:', e);
+                }
+            }
+        }
+
+// ========== 任务记录相关 ==========
+
+function renderTaskRecords() {
+  const container = document.getElementById('taskRecordsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!taskRecords || taskRecords.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:#718096;padding:20px;">暂无任务记录</div>';
+    return;
+  }
+
+  taskRecords.slice().reverse().forEach((rec, idx) => {
+    const div = document.createElement('div');
+    div.className = 'task-record-item';
+    div.dataset.index = idx;
+    div.innerHTML = `
+      <div class="record-header">${rec.taskName || '未命名任务'}</div>
+      <div class="record-details">📅 ${rec.date}</div>
+      <div class="record-details">⏱️ ${rec.duration}</div>
+      <div class="record-details">✅ ${rec.completedStudents.length}人完成</div>
+      <div class="record-details">⏳ ${rec.pendingStudents.length}人未完成</div>
+      <div style="margin-top:6px;display:flex;gap:6px;">
+        <button class="btn-load" onclick="loadThisRecord(${idx})">加载</button>
+        <button class="btn-detail" onclick="showDetail(${idx})">详情</button>
+        <button class="btn-del" onclick="deleteThisRecord(${idx})">删除</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function loadThisRecord(idx) {
+  if (!confirm('加载后会替换当前进度，确定继续？')) return;
+  const rec = taskRecords[idx];
+  studentsData = rec.students.map(s => ({...s}));
+  totalStudents = studentsData.length;
+  completedStudents = studentsData.filter(s => s.completed).length;
+  currentTaskName = rec.taskName || '未命名任务';
+  if (isTimerRunning) { clearInterval(timerInterval); isTimerRunning = false; }
+  startTime = null; timerDisplay.textContent = '00:00:00';
+  document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
+  renderStudents(); renderTaskRecords(); saveDataToLocalStorage();
+}
+
+function showDetail(idx) {
+  const rec = taskRecords[idx];
+  document.getElementById('detailTitle').textContent = rec.taskName || '未命名任务';
+  document.getElementById('doneCount').textContent = rec.completedStudents.length;
+  document.getElementById('undoneCount').textContent = rec.pendingStudents.length;
+  document.getElementById('doneList').innerHTML = rec.completedStudents.map(n => `<li>${n}</li>`).join('');
+  document.getElementById('undoneList').innerHTML = rec.pendingStudents.map(n => `<li>${n}</li>`).join('');
+  document.getElementById('detailModal').style.display = 'flex';
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').style.display = 'none';
+}
+
+function deleteThisRecord(idx) {
+  if (!confirm('确定删除这条记录？')) return;
+  taskRecords.splice(idx, 1);
+  saveDataToLocalStorage();
+  renderTaskRecords();
+}
+
+        // 返回主页按钮事件
+        homeBtn.addEventListener('click', function() {
+            if (confirm('确定要返回主页吗？当前任务进度将会保存。')) {
+                window.location.href = '积分成长系统.html';
+            }
+        });
+
+        // 同步积分按钮事件
+        syncPointsBtn.addEventListener('click', function() {
+            if (taskRecords.length === 0) {
+                showCelebration('没有任务记录！', '⚠️');
+                return;
+            }
+            
+            // 渲染记录选择器
+            renderRecordSelector();
+            
+            // 显示同步积分设置模态框
+            document.getElementById('syncPointsModal').style.display = 'flex';
+        });
+
+        // 渲染记录选择器
+        function renderRecordSelector() {
+            const recordOptions = document.getElementById('recordOptions');
+            recordOptions.innerHTML = '';
+            
+            if (taskRecords.length === 0) {
+                recordOptions.innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">暂无任务记录</div>';
+                return;
+            }
+            
+            // 按时间倒序显示记录
+            const sortedRecords = [...taskRecords].reverse();
+            
+            sortedRecords.forEach((record, index) => {
+                const originalIndex = taskRecords.length - 1 - index;
+                const completedCount = record.completedStudents.length;
+                const pendingCount = record.pendingStudents.length;
+                
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'record-option';
+                
+                optionDiv.innerHTML = `
+                    <input type="radio" id="record-${originalIndex}" name="selectedRecord" value="${originalIndex}" ${index === 0 ? 'checked' : ''}>
+                    <label for="record-${originalIndex}">
+                        <div style="font-weight: 600;">${record.taskName || '未命名任务'}</div>
+                        <div style="font-size: 0.9em; color: #718096;">${record.date}</div>
+                    </label>
+                    <div class="record-stats">
+                        ✅ ${completedCount}人 | ⏳ ${pendingCount}人
+                    </div>
+                `;
+                
+                recordOptions.appendChild(optionDiv);
+            });
+        }
+
+        // 确认同步积分
+        document.getElementById('confirmSyncBtn').addEventListener('click', function() {
+            const selectedRecordIndex = document.querySelector('input[name="selectedRecord"]:checked');
+            if (!selectedRecordIndex) {
+                alert('请选择要同步的记录！');
+                return;
+            }
+            
+            const recordIndex = parseInt(selectedRecordIndex.value);
+            const record = taskRecords[recordIndex];
+            const pointsValue = parseInt(document.getElementById('taskPointsValue').value);
+            const syncToMain = document.getElementById('syncToMainSystem').checked;
+            
+            if (isNaN(pointsValue) || pointsValue === 0) {
+                alert('请输入有效的积分值！');
+                return;
+            }
+            
+            if (!record || !record.completedStudents || record.completedStudents.length === 0) {
+                alert('该记录没有已完成任务的同学！');
+                return;
+            }
+            
+            // 检查是否有同学已经处理过
+            const alreadyProcessed = record.completedStudents.filter(name => processedStudents.has(name));
+            const availableStudents = record.completedStudents.filter(name => !processedStudents.has(name));
+            
+            if (availableStudents.length === 0) {
+                alert('该记录中所有已完成的同学都已经同步过积分，不能重复添加！');
+                return;
+            }
+            
+            let confirmMessage = `确定要为${availableStudents.length}名完成任务的同学每人增加${pointsValue}积分吗？`;
+            if (alreadyProcessed.length > 0) {
+                confirmMessage += `\n\n注意：${alreadyProcessed.length}名同学已经同步过积分，将跳过这些人。`;
+            }
+            
+            if (confirm(confirmMessage)) {
+                // 创建临时规则数据
+                const tempRuleData = {
+                    taskName: record.taskName || '任务打卡',
+                    points: pointsValue,
+                    completedStudents: availableStudents,
+                    timestamp: new Date().toISOString(),
+                    recordIndex: recordIndex
+                };
+                
+                // 保存到本地存储
+                localStorage.setItem('tempTaskRule', JSON.stringify(tempRuleData));
+                
+                // 将处理过的学生加入已处理集合
+                availableStudents.forEach(name => processedStudents.add(name));
+                
+                // 关闭模态框
+                document.getElementById('syncPointsModal').style.display = 'none';
+                
+                // 显示成功消息
+                showCelebration(`积分规则已生成！为${availableStudents}名同学增加${pointsValue}积分`, '✅');
+                
+                // 保存数据
+                saveDataToLocalStorage();
+            }
+        });
+
+        // 取消同步
+        document.getElementById('cancelSyncBtn').addEventListener('click', function() {
+            document.getElementById('syncPointsModal').style.display = 'none';
+        });
+
+        // 生成记录按钮事件
+        saveDataBtn.addEventListener('click', function() {
+            if (studentsData.length === 0) {
+                showCelebration('当前没有任务数据！', '⚠️');
+                return;
+            }
+            
+            // 获取任务名称
+            const taskName = titleText.textContent.replace(' - 任务打卡', '') || '未命名任务';
+            const duration = timerDisplay.textContent;
+            const completedStudentsList = studentsData.filter(student => student.completed);
+            const pendingStudentsList = studentsData.filter(student => !student.completed);
+            
+            // 创建任务记录
+            const record = {
+                taskName: taskName,
+                date: new Date().toLocaleString('zh-CN'),
+                duration: duration,
+                students: studentsData.map(student => ({
+                    name: student.name,
+                    note: student.note,
+                    completed: student.completed,
+                    time: student.time
+                })),
+                completedStudents: completedStudentsList.map(s => s.name),
+                pendingStudents: pendingStudentsList.map(s => s.name),
+                totalStudents: totalStudents,
+                completedCount: completedStudents
+            };
+            
+            // 添加到任务记录
+            taskRecords.push(record);
+            
+            // 限制记录数量（最多保留20条）
+            if (taskRecords.length > 20) {
+                taskRecords.shift();
+            }
+            
+            // 保存数据
+            saveDataToLocalStorage();
+            
+            // 重新渲染任务记录
+			
+            renderTaskRecords();
+            showCelebration('任务记录已生成！', '📝');
+        });
+
+        // 清除数据按钮事件
+        clearDataBtn.addEventListener('click', function() {
+            if (confirm('确定要清除当前任务的所有数据吗？此操作不可撤销！')) {
+                // 停止计时器
+                if (isTimerRunning) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
+                }
+                
+                // 重置数据
+                studentsData = [];
+                totalStudents = 0;
+                completedStudents = 0;
+                startTime = null;
+                timerDisplay.textContent = '00:00:00';
+                counterDisplay.textContent = '0/0';
+                
+                // 清空显示
+                document.getElementById('studentsContainer').innerHTML = '';
+                document.getElementById('leaderboardList').innerHTML = '';
+                document.getElementById('pendingItems').innerHTML = '';
+                
+                saveDataToLocalStorage();
+                showCelebration('数据已清除！', '🗑️');
+            }
+        });
+
+        // 页面加载时初始化
+        window.addEventListener('load', function() {
+            initializeStudents();
+            loadDataFromLocalStorage();
+            
+            // 添加自动保存定时器（每30秒自动保存一次）
+            setInterval(saveDataToLocalStorage, 30000);
+        });
+		
+		function showDetail(idx){
+  const rec  = taskRecords[idx];
+  if(!rec) return;
+  document.getElementById('detailTitle').textContent = rec.taskName || '未命名任务';
+  document.getElementById('doneCount').textContent   = rec.completedStudents.length;
+  document.getElementById('undoneCount').textContent = rec.pendingStudents.length;
+
+  document.getElementById('doneList').innerHTML   = rec.completedStudents.map(n=>`<li>${n}</li>`).join('');
+  document.getElementById('undoneList').innerHTML = rec.pendingStudents.map(n=>`<li>${n}</li>`).join('');
+
+  document.getElementById('detailModal').style.display = 'flex';
+}
+function closeDetail(){
+  document.getElementById('detailModal').style.display = 'none';
+}
+function deleteThisRecord(idx){
+  if(confirm('确定删除这条记录？')){
+    taskRecords.splice(idx,1);
+    saveDataToLocalStorage();
+    renderTaskRecords();
+  }
+}
+
+function loadThisRecord(idx){
+  if(confirm('加载后会替换当前进度，确定继续？')){
+    const rec = taskRecords[idx];
+    // 恢复数据
+    studentsData = rec.students.map(s=> ({...s}));
+    totalStudents = studentsData.length;
+    completedStudents = studentsData.filter(s=>s.completed).length;
+    currentTaskName = rec.taskName || '未命名任务';
+    // 重置计时
+    if(isTimerRunning){clearInterval(timerInterval);isTimerRunning=false;}
+    startTime = null;
+    timerDisplay.textContent = '00:00:00';
+    document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
+    // 重新渲染
+    renderStudents(); renderTaskRecords();
+    saveDataToLocalStorage();
+  }
+}
+
+document.getElementById('newTaskBtn').addEventListener('click', function(){
+  if(confirm('开始新任务将清空当前进度，确定？')){
+    localStorage.removeItem('taskCheckinData');
+    studentsData.forEach(s=>{s.completed=false;s.time=null;});
+    completedStudents=0;
+    if(isTimerRunning){clearInterval(timerInterval);isTimerRunning=false;}
+    startTime=null; timerDisplay.textContent='00:00:00';
+    document.getElementById('startTaskBtn').innerHTML='<i class="fas fa-play"></i> 开始任务';
+    renderStudents(); renderTaskRecords();
+    saveDataToLocalStorage();
+  }
+});
+
+// 清空所有任务记录按钮事件
+document.getElementById('clearRecordsBtn').addEventListener('click', function() {
+    if (taskRecords.length === 0) {
+        showCelebration('没有任务记录可清空！', 'ℹ️');
+        return;
+    }
+    
+    if (confirm(`确定要清空所有${taskRecords.length}条任务记录吗？此操作不可撤销！`)) {
+        // 清空任务记录数组
+        taskRecords = [];
+        
+        // 清空已处理学生集合
+        processedStudents.clear();
+        
+        // 保存数据
+        saveDataToLocalStorage();
+        
+        // 重新渲染任务记录
+        renderTaskRecords();
+        
+        showCelebration('所有任务记录已清空！', '🗑️');
+    }
+});
+    </script>
+	
+	<!-- 查看详情弹窗 -->
+<div id="detailModal" style="display:none;position:fixed;z-index:999;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.4);">
+  <div style="background:#fff;margin:10% auto;padding:20px;border-radius:10px;width:320px;max-height:60vh;overflow-y:auto;">
+    <h3 id="detailTitle" style="margin-top:0;"></h3>
+    <p><strong>✅ 已完成（<span id="doneCount"></span>人）：</strong></p>
+    <ul id="doneList" style="margin:0 0 15px 0;padding-left:20px;"></ul>
+    <p><strong>⏳ 未完成（<span id="undoneCount"></span>人）：</strong></p>
+    <ul id="undoneList" style="margin:0;padding-left:20px;"></ul>
+    <div style="text-align:right;margin-top:15px;">
+      <button onclick="closeDetail()" style="padding:6px 12px;border:none;border-radius:4px;background:#718096;color:#fff;cursor:pointer;">关闭</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

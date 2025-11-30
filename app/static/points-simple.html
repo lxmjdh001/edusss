@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班级积分系统（数据库版）</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card-bg: #ffffff;
+      --primary: #2563eb;
+      --text: #1f2937;
+      --subtext: #6b7280;
+      --border: #e5e7eb;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: "PingFang SC", "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .simple-header {
+      position: sticky;
+      top: 0;
+      background: var(--card-bg);
+      padding: 16px 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .simple-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .simple-header p {
+      font-size: 14px;
+      color: var(--subtext);
+      margin-top: 4px;
+    }
+    .simple-controls {
+      background: var(--card-bg);
+      padding: 16px 40px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .simple-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+    }
+    .students-section, .rankings-section {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .students-section h2, .rankings-section h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+    .student-card {
+      background: #f8fafc;
+      padding: 16px;
+      margin: 12px 0;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+    .student-card:hover {
+      background: #f1f5f9;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .student-info {
+      flex: 1;
+    }
+    .student-name {
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .student-points {
+      color: var(--primary);
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 15px;
+    }
+    .ranking-item {
+      padding: 12px;
+      margin: 8px 0;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rank {
+      font-weight: 700;
+      color: var(--primary);
+      margin-right: 10px;
+      min-width: 30px;
+    }
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.2);
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-secondary:hover {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    }
+    .btn-sm {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+    .btn-danger {
+      background: #ef4444;
+    }
+    .modal-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      margin: 8px 0;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      padding: 32px;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    .modal-content h3 {
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    @media (max-width: 768px) {
+      .simple-content {
+        grid-template-columns: 1fr;
+      }
+      .simple-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .simple-controls {
+        padding: 12px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="simple-header">
+    <div>
+      <h1>📊 班级积分系统</h1>
+      <p>数据库版本 - 所有数据存储在 SQLite</p>
+    </div>
+  </div>
+
+  <div class="simple-controls">
+    <select id="classSelector" class="modal-input" style="min-width: 200px;">
+      <option>加载中...</option>
+    </select>
+    <button class="btn btn-primary" onclick="app.syncStudents()">📥 同步学生</button>
+    <button class="btn btn-secondary" onclick="app.showAddRuleModal()">➕ 添加规则</button>
+    <button class="btn btn-info" onclick="app.refresh()">🔄 刷新</button>
+    <a href="/static/grades.html" class="btn btn-secondary">← 返回成绩管理</a>
+  </div>
+
+  <div class="simple-content">
+    <div class="students-section">
+      <h2>👨‍🎓 学生列表</h2>
+      <div id="studentsList"></div>
+    </div>
+
+    <div class="rankings-section">
+      <h2>🏆 积分排行榜</h2>
+      <div id="rankingsList"></div>
+    </div>
+  </div>
+
+  <!-- 积分操作模态框 -->
+  <div id="pointsModal" class="modal">
+    <div class="modal-content">
+      <h3>📝 积分操作</h3>
+      <p id="studentName"></p>
+      <div id="ruleButtons" style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;"></div>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="app.closeModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加规则模态框 -->
+  <div id="addRuleModal" class="modal">
+    <div class="modal-content">
+      <h3>➕ 添加积分规则</h3>
+      <input type="text" id="ruleName" class="modal-input" placeholder="规则名称（如：作业优秀）">
+      <input type="number" id="rulePoints" class="modal-input" placeholder="积分值（正数加分，负数扣分）">
+      <div class="modal-buttons">
+        <button class="btn btn-primary" onclick="app.addRule()">确定</button>
+        <button class="btn btn-secondary" onclick="app.closeAddRuleModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/points-api.js"></script>
+  <script>
+    class SimplePointsApp {
+      constructor() {
+        this.api = window.pointsAPI;
+        this.currentClassId = null;
+        this.students = [];
+        this.rules = [];
+        this.currentStudent = null;
+        this.init();
+      }
+
+      async init() {
+        console.log('🚀 初始化简化版积分系统');
+        try {
+          await this.loadClasses();
+          if (this.currentClassId) {
+            await this.loadData();
+          }
+        } catch (error) {
+          console.error('初始化失败:', error);
+          alert('系统初始化失败: ' + error.message);
+        }
+      }
+
+      async loadClasses() {
+        const classes = await this.api.getClasses();
+        const selector = document.getElementById('classSelector');
+
+        if (classes.length === 0) {
+          selector.innerHTML = '<option>没有班级数据</option>';
+          alert('没有找到班级，请先在成绩管理系统中添加学生');
+          return;
+        }
+
+        this.currentClassId = classes[0].id;
+        selector.innerHTML = classes.map(c =>
+          `<option value="${c.id}">${c.class_name} (${c.student_count}人)</option>`
+        ).join('');
+
+        selector.onchange = (e) => {
+          this.currentClassId = parseInt(e.target.value);
+          this.loadData();
+        };
+      }
+
+      async loadData() {
+        try {
+          const [students, rules, rankings] = await Promise.all([
+            this.api.getStudents(this.currentClassId),
+            this.api.getRules(this.currentClassId, 'student'),
+            this.api.getStudentRankings(this.currentClassId, 10)
+          ]);
+
+          this.students = students;
+          this.rules = rules;
+
+          this.renderStudents();
+          this.renderRankings(rankings);
+        } catch (error) {
+          console.error('加载数据失败:', error);
+          alert('加载数据失败: ' + error.message);
+        }
+      }
+
+      renderStudents() {
+        const container = document.getElementById('studentsList');
+
+        if (this.students.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+              <p>暂无学生数据</p>
+              <button class="btn btn-primary" onclick="app.syncStudents()">
+                从成绩系统同步学生
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = this.students.map(s => `
+          <div class="student-card">
+            <div class="student-info">
+              <div class="student-name">${s.name}</div>
+              <div style="color: #666; font-size: 12px;">${s.student_no || '无学号'}</div>
+            </div>
+            <div class="student-points">${s.points}分</div>
+            <button class="btn btn-primary btn-sm" onclick="app.showPointsModal(${s.id})">
+              加减分
+            </button>
+          </div>
+        `).join('');
+      }
+
+      renderRankings(rankings) {
+        const container = document.getElementById('rankingsList');
+
+        if (rankings.length === 0) {
+          container.innerHTML = '<p style="text-align: center; color: #666;">暂无排名数据</p>';
+          return;
+        }
+
+        container.innerHTML = rankings.map(r => `
+          <div class="ranking-item">
+            <div>
+              <span class="rank">#${r.rank}</span>
+              <span>${r.name}</span>
+            </div>
+            <span style="font-weight: bold; color: #667eea;">${r.points}分</span>
+          </div>
+        `).join('');
+      }
+
+      async syncStudents() {
+        if (!confirm('确定要从成绩系统同步学生吗？')) return;
+
+        try {
+          const result = await this.api.syncStudentsFromGrades(this.currentClassId);
+          alert(result.message);
+          await this.loadData();
+        } catch (error) {
+          alert('同步失败: ' + error.message);
+        }
+      }
+
+      showPointsModal(studentId) {
+        this.currentStudent = this.students.find(s => s.id === studentId);
+        if (!this.currentStudent) return;
+
+        document.getElementById('studentName').textContent = `学生：${this.currentStudent.name}`;
+
+        const container = document.getElementById('ruleButtons');
+        container.innerHTML = this.rules.map(rule => `
+          <button class="btn ${rule.points > 0 ? '' : 'btn-danger'}"
+                  onclick="app.applyRule(${rule.id}, ${rule.points}, '${rule.name}')"
+                  style="width: 100%;">
+            ${rule.name} (${rule.points > 0 ? '+' : ''}${rule.points}分)
+          </button>
+        `).join('');
+
+        document.getElementById('pointsModal').style.display = 'flex';
+      }
+
+      async applyRule(ruleId, points, reason) {
+        try {
+          await this.api.updateStudentPoints(this.currentStudent.id, points, reason);
+          this.closeModal();
+          await this.loadData();
+          alert(`成功${points > 0 ? '加' : '扣'}${Math.abs(points)}分`);
+        } catch (error) {
+          alert('操作失败: ' + error.message);
+        }
+      }
+
+      closeModal() {
+        document.getElementById('pointsModal').style.display = 'none';
+      }
+
+      showAddRuleModal() {
+        document.getElementById('addRuleModal').style.display = 'flex';
+      }
+
+      closeAddRuleModal() {
+        document.getElementById('addRuleModal').style.display = 'none';
+      }
+
+      async addRule() {
+        const name = document.getElementById('ruleName').value.trim();
+        const points = parseInt(document.getElementById('rulePoints').value);
+
+        if (!name || isNaN(points)) {
+          alert('请填写完整信息');
+          return;
+        }
+
+        try {
+          await this.api.createRule(this.currentClassId, name, points, 'student');
+          this.closeAddRuleModal();
+          await this.loadData();
+          alert('规则添加成功');
+
+          // 清空输入
+          document.getElementById('ruleName').value = '';
+          document.getElementById('rulePoints').value = '';
+        } catch (error) {
+          alert('添加失败: ' + error.message);
+        }
+      }
+
+      async refresh() {
+        await this.loadData();
+        alert('数据已刷新');
+      }
+    }
+
+    // 初始化应用
+    let app;
+    document.addEventListener('DOMContentLoaded', () => {
+      app = new SimplePointsApp();
+    });
+
+    // 点击模态框外部关闭
+    window.onclick = (event) => {
+      if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+      }
+    };
+  </script>
+</body>
+</html>

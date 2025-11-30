@@ -91,3 +91,115 @@ class SubjectRange(Base, TimestampMixin):
     id = Column(Integer, primary_key=True)
     subject = Column(String(64), unique=True, nullable=False, index=True)
     config = Column(JSON, nullable=False, default=list)
+
+
+class PointsClass(Base, TimestampMixin):
+    """积分系统班级表"""
+    __tablename__ = "points_classes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    class_name = Column(String(80), unique=True, nullable=False, index=True)
+    grade_name = Column(String(80), nullable=True)
+    teacher_name = Column(String(80), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    students = relationship("PointsStudent", back_populates="points_class")
+    groups = relationship("PointsGroup", back_populates="points_class")
+
+
+class PointsStudent(Base, TimestampMixin):
+    """积分系统学生表"""
+    __tablename__ = "points_students"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=True)  # 关联成绩系统学生
+    class_id = Column(Integer, ForeignKey("points_classes.id"), nullable=False)
+    name = Column(String(80), nullable=False)
+    student_no = Column(String(50), nullable=True)
+    points = Column(Integer, default=0, nullable=False)
+    pet_type = Column(String(50), nullable=True)
+    pet_level = Column(Integer, default=0, nullable=False)
+    group_id = Column(Integer, ForeignKey("points_groups.id"), nullable=True)
+
+    points_class = relationship("PointsClass", back_populates="students")
+    group = relationship("PointsGroup", back_populates="members")
+    point_records = relationship("PointRecord", back_populates="student")
+    purchases = relationship("Purchase", back_populates="student")
+
+
+class PointsGroup(Base, TimestampMixin):
+    """积分系统小组表"""
+    __tablename__ = "points_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    class_id = Column(Integer, ForeignKey("points_classes.id"), nullable=False)
+    name = Column(String(80), nullable=False)
+    points = Column(Integer, default=0, nullable=False)
+    pet_type = Column(String(50), nullable=True)
+    pet_level = Column(Integer, default=0, nullable=False)
+
+    points_class = relationship("PointsClass", back_populates="groups")
+    members = relationship("PointsStudent", back_populates="group")
+    point_records = relationship("GroupPointRecord", back_populates="group")
+
+
+class PointRecord(Base, TimestampMixin):
+    """学生积分记录表"""
+    __tablename__ = "point_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("points_students.id"), nullable=False)
+    points = Column(Integer, nullable=False)
+    reason = Column(String(255), nullable=False)
+    operator = Column(String(80), nullable=True)
+
+    student = relationship("PointsStudent", back_populates="point_records")
+
+
+class GroupPointRecord(Base, TimestampMixin):
+    """小组积分记录表"""
+    __tablename__ = "group_point_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("points_groups.id"), nullable=False)
+    points = Column(Integer, nullable=False)
+    reason = Column(String(255), nullable=False)
+    operator = Column(String(80), nullable=True)
+
+    group = relationship("PointsGroup", back_populates="point_records")
+
+
+class ShopItem(Base, TimestampMixin):
+    """积分商店商品表"""
+    __tablename__ = "shop_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    class_id = Column(Integer, ForeignKey("points_classes.id"), nullable=False)
+    name = Column(String(120), nullable=False)
+    cost = Column(Integer, nullable=False)
+    stock = Column(Integer, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+
+class Purchase(Base, TimestampMixin):
+    """购买记录表"""
+    __tablename__ = "purchases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("points_students.id"), nullable=False)
+    item_name = Column(String(120), nullable=False)
+    cost = Column(Integer, nullable=False)
+
+    student = relationship("PointsStudent", back_populates="purchases")
+
+
+class PointRule(Base, TimestampMixin):
+    """积分规则表"""
+    __tablename__ = "point_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    class_id = Column(Integer, ForeignKey("points_classes.id"), nullable=False)
+    name = Column(String(120), nullable=False)
+    points = Column(Integer, nullable=False)
+    rule_type = Column(String(20), nullable=False)  # 'student' or 'group'
+    is_active = Column(Boolean, default=True, nullable=False)
