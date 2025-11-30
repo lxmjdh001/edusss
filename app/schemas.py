@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -113,6 +113,8 @@ class StudentBase(ORMModel):
     class_name: Optional[str] = None
     grade_name: Optional[str] = None
     exam_name: Optional[str] = None
+    exam_date: Optional[datetime] = None
+    gender: Optional[str] = None
     notes: Optional[str] = None
     scores: List[ScoreItem]
     class_rank: Optional[int] = None
@@ -129,6 +131,8 @@ class StudentUpdate(ORMModel):
     class_name: Optional[str] = None
     grade_name: Optional[str] = None
     exam_name: Optional[str] = None
+    exam_date: Optional[datetime] = None
+    gender: Optional[str] = None
     notes: Optional[str] = None
     scores: Optional[List[ScoreItem]] = None
     class_rank: Optional[int] = None
@@ -163,3 +167,92 @@ class RangeSegment(BaseModel):
 class SubjectRangeConfig(BaseModel):
     subject: str
     config: List[RangeSegment]
+
+
+class ClassStats(BaseModel):
+    class_name: str
+    grade_name: Optional[str]
+    total_students: int
+    exam_count: int
+    male_count: int = 0
+    female_count: int = 0
+    male_ratio: float = 0.0
+    female_ratio: float = 0.0
+    average_score: float
+    pass_rate: float
+    good_rate: float
+    excellent_rate: float
+
+
+class ExamTrendPoint(BaseModel):
+    exam_name: str
+    exam_date: Optional[datetime] = None
+    total_score: float
+    average_score: float
+    subject_scores: Dict[str, float] = {}
+
+
+class StudentTrend(BaseModel):
+    student_no: str
+    name: str
+    class_name: Optional[str]
+    exams: List[ExamTrendPoint]
+
+
+class ClassTrendPoint(BaseModel):
+    exam_name: str
+    exam_date: Optional[datetime] = None
+    average_score: float
+    pass_rate: float
+    good_rate: float
+    excellent_rate: float
+    student_count: int
+
+
+class ClassTrend(BaseModel):
+    class_name: str
+    grade_name: Optional[str]
+    trend_data: List[ClassTrendPoint]
+
+
+class ProgressStudent(BaseModel):
+    student_no: str
+    name: str
+    class_name: Optional[str]
+    first_exam: str
+    first_score: float
+    latest_exam: str
+    latest_score: float
+    progress: float
+    progress_rate: float
+
+
+class ProgressAnalysis(BaseModel):
+    top_progress: List[ProgressStudent]
+    top_regress: List[ProgressStudent]
+
+
+class CriticalStudent(BaseModel):
+    student_no: str
+    name: str
+    class_name: Optional[str]
+    exam_name: Optional[str]
+    average_score: float
+    distance_to_line: float
+    category: str
+
+
+class CriticalStudents(BaseModel):
+    near_pass: List[CriticalStudent]
+    near_good: List[CriticalStudent]
+    near_excellent: List[CriticalStudent]
+
+
+class ClassComparison(BaseModel):
+    class_name: str
+    grade_name: Optional[str]
+    student_count: int
+    average_score: float
+    pass_rate: float
+    good_rate: float
+    excellent_rate: float

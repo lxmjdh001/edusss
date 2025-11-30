@@ -77,6 +77,8 @@ class Student(Base, TimestampMixin):
     class_name = Column(String(80), nullable=True)
     grade_name = Column(String(80), nullable=True)
     exam_name = Column(String(120), nullable=True)
+    exam_date = Column(DateTime, nullable=True)
+    gender = Column(String(10), nullable=True)
     notes = Column(String(255), nullable=True)
     scores = Column(JSON, nullable=False, default=list)
     class_rank = Column(Integer, nullable=True)

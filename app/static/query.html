@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>学生成绩查询</title>
+    <style>
+      :root {
+        --bg: #f5f5f5;
+        --card-bg: #ffffff;
+        --primary: #333333;
+        --text: #000000;
+        --subtext: #666666;
+        --border: #e0e0e0;
+        --hover: #f9f9f9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .container {
+        width: 100%;
+        max-width: 500px;
+      }
+      .query-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        animation: slideUp 0.5s ease;
+      }
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+      }
+      .logo h1 {
+        margin: 0;
+        font-size: 24px;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .logo p {
+        margin: 8px 0 0;
+        color: var(--subtext);
+        font-size: 14px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text);
+        font-size: 14px;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+      }
+      .form-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+      .btn {
+        width: 100%;
+        padding: 14px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      .btn:hover {
+        background: #000000;
+      }
+      .btn:active {
+        transform: scale(0.98);
+      }
+      .btn:disabled {
+        background: #999999;
+        cursor: not-allowed;
+      }
+      .result-card {
+        display: none;
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        animation: slideUp 0.5s ease;
+      }
+      .result-card.show {
+        display: block;
+      }
+      .result-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--border);
+      }
+      .result-header h2 {
+        margin: 0 0 10px;
+        font-size: 28px;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .result-header .student-info {
+        color: var(--subtext);
+        font-size: 14px;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .info-item {
+        background: var(--bg);
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+      .info-item label {
+        display: block;
+        font-size: 12px;
+        color: var(--subtext);
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+      .info-item .value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .scores-section {
+        margin-top: 24px;
+      }
+      .scores-section h3 {
+        margin: 0 0 16px;
+        font-size: 18px;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .score-list {
+        display: grid;
+        gap: 10px;
+      }
+      .score-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 18px;
+        background: var(--bg);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        transition: background 0.2s ease;
+      }
+      .score-item:hover {
+        background: var(--hover);
+      }
+      .score-item .subject {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .score-item .score {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .back-btn {
+        margin-top: 24px;
+        width: 100%;
+        padding: 12px;
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      .back-btn:hover {
+        background: var(--hover);
+      }
+      .error-message {
+        display: none;
+        padding: 12px 16px;
+        background: #f5f5f5;
+        color: #333333;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+      }
+      .error-message.show {
+        display: block;
+      }
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+      .loading.show {
+        display: block;
+      }
+      .loading-spinner {
+        border: 3px solid var(--border);
+        border-top: 3px solid var(--primary);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @media (max-width: 600px) {
+        .query-card, .result-card {
+          padding: 30px 20px;
+        }
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 查询表单 -->
+      <div class="query-card" id="queryCard">
+        <div class="logo">
+          <div class="logo-icon">📊</div>
+          <h1>学生成绩查询</h1>
+          <p>请输入学生姓名或学号查询成绩</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <form id="queryForm">
+          <div class="form-group">
+            <label for="keyword">学生姓名或学号</label>
+            <input
+              type="text"
+              id="keyword"
+              name="keyword"
+              placeholder="请输入学生姓名或学号"
+              required
+              autocomplete="off"
+            />
+          </div>
+
+          <button type="submit" class="btn" id="submitBtn">查询成绩</button>
+        </form>
+
+        <div class="loading" id="loading">
+          <div class="loading-spinner"></div>
+          <p>正在查询中...</p>
+        </div>
+      </div>
+
+      <!-- 查询结果 -->
+      <div class="result-card" id="resultCard">
+        <div class="result-header">
+          <h2 id="studentName">张三</h2>
+          <div class="student-info">
+            <span id="studentNo">学号：2024001</span>
+            <span id="className"></span>
+            <span id="examName"></span>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <label>总分</label>
+            <div class="value" id="totalScore">650</div>
+          </div>
+          <div class="info-item">
+            <label>平均分</label>
+            <div class="value" id="avgScore">72.2</div>
+          </div>
+        </div>
+
+        <div class="scores-section">
+          <h3>各科成绩</h3>
+          <div class="score-list" id="scoreList">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+
+        <button class="back-btn" id="backBtn">返回查询</button>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "/api/students";
+      const queryForm = document.getElementById("queryForm");
+      const queryCard = document.getElementById("queryCard");
+      const resultCard = document.getElementById("resultCard");
+      const errorMessage = document.getElementById("errorMessage");
+      const loading = document.getElementById("loading");
+      const submitBtn = document.getElementById("submitBtn");
+      const backBtn = document.getElementById("backBtn");
+      const keywordInput = document.getElementById("keyword");
+
+      // 从URL获取查询码
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+
+      if (!code) {
+        showError("无效的查询链接，请联系老师获取正确的查询链接");
+        submitBtn.disabled = true;
+      }
+
+      queryForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const keyword = keywordInput.value.trim();
+        if (!keyword) {
+          showError("请输入学生姓名或学号");
+          return;
+        }
+
+        await queryStudentScore(keyword);
+      });
+
+      backBtn.addEventListener("click", () => {
+        resultCard.classList.remove("show");
+        queryCard.style.display = "block";
+        keywordInput.value = "";
+        errorMessage.classList.remove("show");
+      });
+
+      async function queryStudentScore(keyword) {
+        hideError();
+        loading.classList.add("show");
+        submitBtn.disabled = true;
+
+        try {
+          const params = new URLSearchParams();
+          params.append("code", code);
+          params.append("keyword", keyword);
+
+          const res = await fetch(`${API_BASE}/query-by-code?${params.toString()}`);
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "查询失败");
+          }
+
+          const students = await res.json();
+
+          if (students.length === 0) {
+            throw new Error("未找到匹配的学生，请检查姓名或学号是否正确");
+          }
+
+          // 如果找到多个学生，显示第一个（通常按时间倒序，显示最新的成绩）
+          const student = students[0];
+          displayResult(student);
+
+        } catch (error) {
+          showError(error.message);
+          loading.classList.remove("show");
+          submitBtn.disabled = false;
+        }
+      }
+
+      function displayResult(student) {
+        loading.classList.remove("show");
+        submitBtn.disabled = false;
+
+        // 填充学生信息
+        document.getElementById("studentName").textContent = student.name;
+        document.getElementById("studentNo").textContent = `学号：${student.student_no}`;
+        const classNameEl = document.getElementById("className");
+        if (student.class_name) {
+          classNameEl.textContent = ` | 班级：${student.class_name}`;
+        } else {
+          classNameEl.textContent = "";
+        }
+        const examNameEl = document.getElementById("examName");
+        if (student.exam_name) {
+          examNameEl.textContent = ` | 考试：${student.exam_name}`;
+        } else {
+          examNameEl.textContent = "";
+        }
+        document.getElementById("totalScore").textContent = student.total_score.toFixed(1);
+        document.getElementById("avgScore").textContent = student.average_score.toFixed(1);
+
+        // 填充各科成绩
+        const scoreList = document.getElementById("scoreList");
+        scoreList.innerHTML = "";
+
+        if (student.scores && student.scores.length > 0) {
+          student.scores.forEach(score => {
+            const scoreItem = document.createElement("div");
+            scoreItem.className = "score-item";
+            scoreItem.innerHTML = `
+              <span class="subject">${score.subject}</span>
+              <span class="score">${score.score}</span>
+            `;
+            scoreList.appendChild(scoreItem);
+          });
+        } else {
+          scoreList.innerHTML = '<p style="text-align: center; color: var(--subtext);">暂无科目成绩</p>';
+        }
+
+        // 显示结果卡片
+        queryCard.style.display = "none";
+        resultCard.classList.add("show");
+      }
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add("show");
+      }
+
+      function hideError() {
+        errorMessage.classList.remove("show");
+      }
+    </script>
+  </body>
+</html>
