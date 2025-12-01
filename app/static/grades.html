@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>成绩管理控制台</title>
-    <script src="chart.min.js"></script>
+    <script src="/static/chart.min.js"></script>
     <style>
       :root {
         color-scheme: light dark;
@@ -713,16 +713,30 @@
         </section>
 
         <section class="grade-card" style="margin-top: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2>考试成绩走势</h2>
-            <div class="subject-tabs" style="margin: 0;">
-              <button class="subject-tab active" data-trend-count="3">近3场</button>
-              <button class="subject-tab" data-trend-count="5">近5场</button>
-              <button class="subject-tab" data-trend-count="10">近10场</button>
+          <div style="margin-bottom: 16px;">
+            <h2 style="margin-bottom: 12px;">考试成绩走势</h2>
+            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px; color: #718096;">按场次:</span>
+                <div class="subject-tabs" style="margin: 0;">
+                  <button class="subject-tab active" data-trend-count="3">近3场</button>
+                  <button class="subject-tab" data-trend-count="5">近5场</button>
+                  <button class="subject-tab" data-trend-count="10">近10场</button>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px; color: #718096;">按时间:</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="date" id="trendStartDate" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: white;">
+                  <span style="color: #718096;">至</span>
+                  <input type="date" id="trendEndDate" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: white;">
+                  <button id="applyTrendDateRange" class="subject-tab" style="padding: 6px 16px;">应用</button>
+                </div>
+              </div>
             </div>
           </div>
-          <div style="padding: 20px;">
-            <canvas id="dashboardTrendChart" width="800" height="300"></canvas>
+          <div style="padding: 20px; height: 350px; position: relative;">
+            <canvas id="dashboardTrendChart"></canvas>
           </div>
           <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);">
             <h3 style="margin: 0 0 16px 0; font-size: 16px;">排名前5学生</h3>
@@ -753,6 +767,84 @@
             <div style="padding: 20px; margin-top: 20px;">
               <canvas id="comparisonChart" width="800" height="400"></canvas>
             </div>
+          </div>
+        </section>
+
+        <!-- 学生个人成绩走势 -->
+        <section class="grade-card" style="margin-top: 24px;">
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h2 style="margin: 0;">学生成绩对比走势</h2>
+              <div style="display: flex; gap: 12px;">
+                <button class="btn secondary compact-btn" id="selectStudentsBtn">📋 选择学生</button>
+                <button class="btn secondary compact-btn" id="selectSubjectsBtn">⚙️ 选择科目</button>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+              <span style="font-size: 14px; color: #718096;">已选择学生 (<span id="selectedStudentCount">0</span>/5)</span>
+              <span style="font-size: 14px; color: #718096;">|</span>
+              <span style="font-size: 14px; color: #718096;">显示科目 (<span id="selectedSubjectCount">1</span>)</span>
+            </div>
+            <div id="selectedStudentsList" style="min-height: 44px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f9fafb; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              <span style="color: #9ca3af; font-size: 14px;">点击"选择学生"按钮添加学生</span>
+            </div>
+          </div>
+          <div id="studentTrendChartContainer" style="display: none;">
+            <div style="padding: 20px; height: 350px; position: relative;">
+              <canvas id="studentTrendChart"></canvas>
+            </div>
+            <div style="margin-top: 24px; padding: 20px; background: #f7fafc; border-radius: 12px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 16px;">成绩统计</h3>
+              <div id="studentTrendStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;"></div>
+            </div>
+          </div>
+          <div id="studentTrendPlaceholder" style="padding: 60px 20px; text-align: center; color: #a0aec0;">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 16px;">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <p style="font-size: 16px; margin: 0;">请选择学生查看成绩对比走势（最多5人）</p>
+          </div>
+        </section>
+
+        <!-- 进步与退步学生分析 -->
+        <section style="margin-top: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 20px;">📊 进步与退步学生分析</h2>
+            <button class="btn secondary compact-btn" id="progressSettingsBtn" style="padding: 6px 12px; font-size: 14px;">⚙️ 设置</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px;">
+          <!-- 进步最大前十名 -->
+          <div class="grade-card">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+              <span style="font-size: 20px;">📈</span>
+              <h2 style="margin: 0;" id="progressTitle">进步最大前10名</h2>
+            </div>
+            <p style="color: #718096; font-size: 14px; margin-bottom: 20px;" id="progressSubtitle">基于最近3场考试综合对比</p>
+            <div style="height: 400px; position: relative;">
+              <canvas id="progressChart"></canvas>
+            </div>
+            <div id="progressStudentsList" style="margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 8px; max-height: 200px; overflow-y: auto;">
+              <p style="margin: 0; color: #6b7280; text-align: center;">暂无数据</p>
+            </div>
+          </div>
+
+          <!-- 退步最大前十名 -->
+          <div class="grade-card">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+              <span style="font-size: 20px;">📉</span>
+              <h2 style="margin: 0;" id="regressionTitle">退步最大前10名</h2>
+            </div>
+            <p style="color: #718096; font-size: 14px; margin-bottom: 20px;" id="regressionSubtitle">基于最近3场考试综合对比</p>
+            <div style="height: 400px; position: relative;">
+              <canvas id="regressionChart"></canvas>
+            </div>
+            <div id="regressionStudentsList" style="margin-top: 16px; padding: 12px; background: #fef2f2; border-radius: 8px; max-height: 200px; overflow-y: auto;">
+              <p style="margin: 0; color: #6b7280; text-align: center;">暂无数据</p>
+            </div>
+          </div>
           </div>
         </section>
       </main>
@@ -1051,6 +1143,69 @@
       </div>
     </div>
 
+    <div class="modal-backdrop" id="progressSettingsModal" role="dialog" aria-modal="true">
+      <div class="modal">
+        <h2>📊 进步退步分析设置</h2>
+        <p class="hint-text">选择对比方式和显示人数，系统将自动计算学生的进步或退步情况</p>
+
+        <div style="margin-top: 24px;">
+          <label style="display: block; margin-bottom: 12px; font-weight: 600;">对比方式</label>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+              <input type="radio" name="compareMode" value="2" style="width: 18px; height: 18px; cursor: pointer;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">最近2场对比</div>
+                <div style="font-size: 13px; color: #718096; margin-top: 4px;">对比最新1场 vs 前1场（灵敏，适合短期激励）</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #3b82f6; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: rgba(59, 130, 246, 0.05);">
+              <input type="radio" name="compareMode" value="3" checked style="width: 18px; height: 18px; cursor: pointer;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">最近3场综合对比 ⭐ 推荐</div>
+                <div style="font-size: 13px; color: #718096; margin-top: 4px;">对比最新1场 vs 前2场平均（稳定，过滤偶然波动）</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+              <input type="radio" name="compareMode" value="5" style="width: 18px; height: 18px; cursor: pointer;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">最近5场趋势对比</div>
+                <div style="font-size: 13px; color: #718096; margin-top: 4px;">对比最近2场平均 vs 前3场平均（长期趋势）</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+              <input type="radio" name="compareMode" value="custom" style="width: 18px; height: 18px; cursor: pointer;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">自定义场次</div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                  <span style="font-size: 13px; color: #718096;">对比最近</span>
+                  <input type="number" id="customExamCount" min="2" max="50" value="10"
+                    style="width: 70px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; text-align: center;"
+                    onclick="event.stopPropagation(); document.querySelector('input[value=custom]').checked = true; document.querySelector('input[value=custom]').dispatchEvent(new Event('change'));">
+                  <span style="font-size: 13px; color: #718096;">场考试（灵活设置）</span>
+                </div>
+                <div style="font-size: 12px; color: #f59e0b; margin-top: 6px;">💡 计算方式：最新1场 vs 前N-1场平均</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px;">
+          <label style="display: block; margin-bottom: 12px; font-weight: 600;">显示人数</label>
+          <select id="progressTopCount" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+            <option value="5">前5名</option>
+            <option value="10" selected>前10名</option>
+            <option value="15">前15名</option>
+            <option value="20">前20名</option>
+          </select>
+        </div>
+
+        <div class="modal-footer" style="margin-top: 24px;">
+          <button type="button" class="btn secondary" id="cancelProgressSettings">取消</button>
+          <button type="button" class="btn" id="saveProgressSettings">保存</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-backdrop" id="shareModal" role="dialog" aria-modal="true">
       <div class="modal">
         <h2>生成分享链接</h2>
@@ -1076,6 +1231,39 @@
         <div class="modal-footer">
           <button type="button" class="btn secondary" id="cancelShare">取消</button>
           <button type="button" class="btn" id="confirmShare">生成链接</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 学生选择弹窗 -->
+    <div class="modal-backdrop" id="studentSelectModal" role="dialog" aria-modal="true">
+      <div class="modal" style="max-width: 600px;">
+        <h2>选择学生（最多5人）</h2>
+        <p class="hint-text">选择要对比的学生，不同学生将用不同颜色的曲线显示</p>
+        <div style="margin: 20px 0;">
+          <input type="search" id="studentSearchInput" placeholder="搜索学生姓名或学号..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px;" />
+          <div id="studentCheckboxList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+            <!-- 动态填充学生复选框 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn secondary" id="cancelStudentSelect">取消</button>
+          <button type="button" class="btn" id="confirmStudentSelect">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 科目选择弹窗 -->
+    <div class="modal-backdrop" id="subjectSelectModal" role="dialog" aria-modal="true">
+      <div class="modal" style="max-width: 500px;">
+        <h2>选择显示科目</h2>
+        <p class="hint-text">选择要在走势图中显示的科目</p>
+        <div id="subjectCheckboxList" style="margin: 20px 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+          <!-- 动态填充科目复选框 -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn secondary" id="cancelSubjectSelect">取消</button>
+          <button type="button" class="btn" id="confirmSubjectSelect">确定</button>
         </div>
       </div>
     </div>
@@ -1135,6 +1323,23 @@
       const examComparisonResult = document.getElementById("examComparisonResult");
       const comparisonStats = document.getElementById("comparisonStats");
       const comparisonChart = document.getElementById("comparisonChart");
+      const selectStudentsBtn = document.getElementById("selectStudentsBtn");
+      const selectSubjectsBtn = document.getElementById("selectSubjectsBtn");
+      const studentSelectModal = document.getElementById("studentSelectModal");
+      const subjectSelectModal = document.getElementById("subjectSelectModal");
+      const studentCheckboxList = document.getElementById("studentCheckboxList");
+      const subjectCheckboxList = document.getElementById("subjectCheckboxList");
+      const studentSearchInput = document.getElementById("studentSearchInput");
+      const cancelStudentSelect = document.getElementById("cancelStudentSelect");
+      const confirmStudentSelect = document.getElementById("confirmStudentSelect");
+      const cancelSubjectSelect = document.getElementById("cancelSubjectSelect");
+      const confirmSubjectSelect = document.getElementById("confirmSubjectSelect");
+      const selectedStudentsList = document.getElementById("selectedStudentsList");
+      const selectedStudentCount = document.getElementById("selectedStudentCount");
+      const selectedSubjectCount = document.getElementById("selectedSubjectCount");
+      const studentTrendChartContainer = document.getElementById("studentTrendChartContainer");
+      const studentTrendPlaceholder = document.getElementById("studentTrendPlaceholder");
+      const studentTrendStats = document.getElementById("studentTrendStats");
       const shareModal = document.getElementById("shareModal");
       const cancelShare = document.getElementById("cancelShare");
       const confirmShare = document.getElementById("confirmShare");
@@ -1148,9 +1353,23 @@
       let currentDetailStudent = null;
       let isEditingDetail = false;
       let classStats = [];
-      let trendExamCount = 3;
+      let trendExamCount = 3; // 按场次：默认显示近3场
+      let trendDateRange = null; // 按时间：{startDate, endDate} 或 null
       let shareClassName = null;
       let selectedDays = 30;
+      let selectedStudentNos = []; // 学生走势对比：选中的学生学号列表（最多5个）
+      let selectedTrendSubjects = ["总分"]; // 学生走势对比：选中的科目列表
+      let studentTrendChart = null; // 学生走势对比图表实例
+      let allAvailableTrendSubjects = ["总分", "语文", "数学", "英语", "物理", "化学", "生物", "历史", "政治", "地理"]; // 所有可用科目
+
+      // 5个学生对应的颜色
+      const studentColors = [
+        { border: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },   // 紫色
+        { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },   // 蓝色
+        { border: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },   // 绿色
+        { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },   // 橙色
+        { border: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' }    // 粉色
+      ];
 
       const scoreSubjects = ["语文", "数学", "英语", "物理", "化学", "生物", "历史", "政治", "地理"];
       const allColumns = [
@@ -1678,6 +1897,7 @@
           renderTable();
           updateSummary();
           await loadClassStats();
+          renderProgressRegressionCharts();
         } catch (error) {
           studentBody.innerHTML = `<tr><td colspan="14" class="empty-tip">加载失败：${error.message}</td></tr>`;
         }
@@ -1877,226 +2097,237 @@
         summary = computeSummaryFromStudents(filtered, selectedSubject);
         renderGradeDashboard();
         renderStatisticsCharts();
+        renderProgressRegressionCharts();
         renderDashboardTrendChart();
         renderTopStudents();
+        updateSelectedSubjectCount(); // 初始化科目数量显示
       }
+
+      // 考试成绩走势图（使用Chart.js）
+      let trendChart = null;
 
       function renderDashboardTrendChart() {
         const canvas = document.getElementById('dashboardTrendChart');
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
-        const padding = 60;
-        const chartWidth = width - padding * 2;
-        const chartHeight = height - padding * 2;
-
-        ctx.clearRect(0, 0, width, height);
+        // 销毁旧图表
+        if (trendChart) {
+          trendChart.destroy();
+        }
 
         if (students.length === 0) {
-          ctx.fillStyle = '#6b7280';
-          ctx.font = '14px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('暂无学生数据', width / 2, height / 2);
           return;
         }
 
-        // 定义要显示的科目
-        const subjects = ["语文", "数学", "英语", "物理", "化学", "生物", "历史", "政治", "地理"];
+        // 按考试名称分组
+        const examGroups = {};
+        students.forEach(student => {
+          const examName = student.exam_name || '未知考试';
+          if (!examGroups[examName]) {
+            examGroups[examName] = {
+              name: examName,
+              date: student.exam_date ? new Date(student.exam_date) : null,
+              students: []
+            };
+          }
+          examGroups[examName].students.push(student);
+        });
 
-        // 计算每个科目的统计数据
-        const subjectStats = subjects.map(subject => {
-          const stats = computeSummaryFromStudents(students, subject);
+        // 转换为数组并按日期排序
+        let exams = Object.values(examGroups).sort((a, b) => {
+          if (!a.date || !b.date) return 0;
+          return a.date - b.date;
+        });
+
+        // 根据筛选模式过滤考试
+        if (trendDateRange !== null) {
+          // 按时间模式：筛选指定日期范围内的考试
+          const startDate = new Date(trendDateRange.startDate);
+          const endDate = new Date(trendDateRange.endDate);
+          endDate.setHours(23, 59, 59, 999); // 包含结束日期的全天
+          exams = exams.filter(exam => exam.date && exam.date >= startDate && exam.date <= endDate);
+        } else if (trendExamCount !== null) {
+          // 按场次模式：取最近N场考试
+          exams = exams.slice(-trendExamCount);
+        }
+
+        // 如果没有考试数据，显示空图表
+        if (exams.length === 0) {
+          return;
+        }
+
+        // 计算每场考试的统计数据
+        const examStats = exams.map(exam => {
+          const stats = computeSummaryFromStudents(exam.students, "总分");
           return {
-            name: subject,
+            name: exam.name,
+            date: exam.date,
             avgScore: stats.average_total,
             excellentRate: stats.excellent_rate,
-            goodRate: stats.good_rate
+            goodRate: stats.good_rate,
+            passRate: stats.pass_rate
           };
         });
 
-        // 计算分数范围（左Y轴）
-        const scores = subjectStats.map(s => s.avgScore);
-        const maxScore = Math.max(...scores);
-        const minScore = Math.min(...scores);
-        const yMin = Math.max(0, minScore - 10);
-        const yMax = maxScore + 10;
-        const yRange = yMax - yMin;
-
-        // 右Y轴固定为0-100%
-        const rateMax = 100;
-
-        // 绘制网格线和Y轴标签
-        ctx.strokeStyle = '#e5e7eb';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 5; i++) {
-          const y = padding + (chartHeight / 5) * i;
-          ctx.beginPath();
-          ctx.moveTo(padding, y);
-          ctx.lineTo(width - padding, y);
-          ctx.stroke();
-
-          // 左Y轴标签（分数）
-          const score = yMax - (yRange / 5) * i;
-          ctx.fillStyle = '#3b82f6';
-          ctx.font = '12px sans-serif';
-          ctx.textAlign = 'right';
-          ctx.fillText(score.toFixed(0), padding - 10, y + 4);
-
-          // 右Y轴标签（百分比）
-          const rate = rateMax - (rateMax / 5) * i;
-          ctx.fillStyle = '#10b981';
-          ctx.textAlign = 'left';
-          ctx.fillText(rate.toFixed(0) + '%', width - padding + 10, y + 4);
-        }
-
-        const pointSpacing = subjectStats.length > 1 ? chartWidth / (subjectStats.length - 1) : chartWidth / 2;
-
-        // 绘制平均分折线（蓝色）
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        subjectStats.forEach((stat, i) => {
-          const x = padding + (subjectStats.length > 1 ? pointSpacing * i : chartWidth / 2);
-          const y = padding + chartHeight - ((stat.avgScore - yMin) / yRange) * chartHeight;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+        // 准备图表数据
+        const labels = examStats.map(e => {
+          // 如果有日期，显示日期；否则显示考试名称
+          if (e.date) {
+            const month = (e.date.getMonth() + 1).toString().padStart(2, '0');
+            const day = e.date.getDate().toString().padStart(2, '0');
+            return `${month}-${day}`;
+          }
+          return e.name.length > 10 ? e.name.substring(0, 10) + '...' : e.name;
         });
-        ctx.stroke();
+        const avgScores = examStats.map(e => e.avgScore);
+        const excellentRates = examStats.map(e => e.excellentRate);
+        const goodRates = examStats.map(e => e.goodRate);
 
-        // 绘制优秀率折线（绿色）
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        subjectStats.forEach((stat, i) => {
-          const x = padding + (subjectStats.length > 1 ? pointSpacing * i : chartWidth / 2);
-          const y = padding + chartHeight - (stat.excellentRate / rateMax) * chartHeight;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+        const ctx = canvas.getContext('2d');
+        trendChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: '平均分',
+                data: avgScores,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                tension: 0.3,
+                yAxisID: 'y'
+              },
+              {
+                label: '优秀率',
+                data: excellentRates,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#10b981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                tension: 0.3,
+                yAxisID: 'y1'
+              },
+              {
+                label: '良好率',
+                data: goodRates,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#f59e0b',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                tension: 0.3,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                  font: { size: 13 },
+                  padding: 15,
+                  usePointStyle: true,
+                  pointStyle: 'circle'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                titleFont: { size: 14 },
+                bodyFont: { size: 13 },
+                callbacks: {
+                  label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                      if (context.datasetIndex === 0) {
+                        label += context.parsed.y.toFixed(1) + '分';
+                      } else {
+                        label += context.parsed.y.toFixed(1) + '%';
+                      }
+                    }
+                    return label;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  font: { size: 12 },
+                  color: '#374151'
+                }
+              },
+              y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                  display: true,
+                  text: '平均分',
+                  color: '#3b82f6',
+                  font: { size: 12, weight: 'bold' }
+                },
+                ticks: {
+                  font: { size: 12 },
+                  color: '#3b82f6'
+                },
+                grid: {
+                  color: '#e5e7eb'
+                }
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                  display: true,
+                  text: '百分比(%)',
+                  color: '#10b981',
+                  font: { size: 12, weight: 'bold' }
+                },
+                min: 0,
+                max: 100,
+                ticks: {
+                  font: { size: 12 },
+                  color: '#10b981',
+                  callback: function(value) {
+                    return value + '%';
+                  }
+                },
+                grid: {
+                  drawOnChartArea: false
+                }
+              }
+            }
+          }
         });
-        ctx.stroke();
-
-        // 绘制良好率折线（橙色）
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        subjectStats.forEach((stat, i) => {
-          const x = padding + (subjectStats.length > 1 ? pointSpacing * i : chartWidth / 2);
-          const y = padding + chartHeight - (stat.goodRate / rateMax) * chartHeight;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-
-        // 绘制平均分数据点
-        ctx.fillStyle = '#3b82f6';
-        subjectStats.forEach((stat, i) => {
-          const x = padding + (subjectStats.length > 1 ? pointSpacing * i : chartWidth / 2);
-          const y = padding + chartHeight - ((stat.avgScore - yMin) / yRange) * chartHeight;
-          ctx.beginPath();
-          ctx.arc(x, y, 5, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 显示分数
-          ctx.fillStyle = '#1e40af';
-          ctx.font = 'bold 11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(stat.avgScore.toFixed(1), x, y - 12);
-        });
-
-        // 绘制优秀率数据点
-        ctx.fillStyle = '#10b981';
-        subjectStats.forEach((stat, i) => {
-          const x = padding + (subjectStats.length > 1 ? pointSpacing * i : chartWidth / 2);
-          const y = padding + chartHeight - (stat.excellentRate / rateMax) * chartHeight;
-          ctx.beginPath();
-          ctx.arc(x, y, 4, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 显示优秀率
-          ctx.fillStyle = '#059669';
-          ctx.font = 'bold 10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(stat.excellentRate.toFixed(1) + '%', x + 25, y);
-        });
-
-        // 绘制良好率数据点
-        ctx.fillStyle = '#f59e0b';
-        subjectStats.forEach((stat, i) => {
-          const x = padding + (subjectStats.length > 1 ? pointSpacing * i : chartWidth / 2);
-          const y = padding + chartHeight - (stat.goodRate / rateMax) * chartHeight;
-          ctx.beginPath();
-          ctx.arc(x, y, 4, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 显示良好率
-          ctx.fillStyle = '#d97706';
-          ctx.font = 'bold 10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(stat.goodRate.toFixed(1) + '%', x - 25, y);
-        });
-
-        // 绘制X轴标签（科目名称）
-        ctx.fillStyle = '#374151';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        subjectStats.forEach((stat, i) => {
-          const x = padding + (subjectStats.length > 1 ? pointSpacing * i : chartWidth / 2);
-          ctx.fillText(stat.name, x, height - padding + 20);
-        });
-
-        // 绘制图例
-        const legendY = 25;
-        const legendX = padding;
-
-        // 平均分图例
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(legendX, legendY);
-        ctx.lineTo(legendX + 30, legendY);
-        ctx.stroke();
-        ctx.fillStyle = '#3b82f6';
-        ctx.beginPath();
-        ctx.arc(legendX + 15, legendY, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#374151';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText('平均分', legendX + 35, legendY + 4);
-
-        // 优秀率图例
-        const legend2X = legendX + 100;
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(legend2X, legendY);
-        ctx.lineTo(legend2X + 30, legendY);
-        ctx.stroke();
-        ctx.fillStyle = '#10b981';
-        ctx.beginPath();
-        ctx.arc(legend2X + 15, legendY, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#374151';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('优秀率', legend2X + 35, legendY + 4);
-
-        // 良好率图例
-        const legend3X = legend2X + 100;
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(legend3X, legendY);
-        ctx.lineTo(legend3X + 30, legendY);
-        ctx.stroke();
-        ctx.fillStyle = '#f59e0b';
-        ctx.beginPath();
-        ctx.arc(legend3X + 15, legendY, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#374151';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('良好率', legend3X + 35, legendY + 4);
       }
 
       function renderTopStudents() {
@@ -2180,6 +2411,258 @@
             </div>
           </div>
         `).join('');
+      }
+
+      // 填充学生复选框列表
+      function populateStudentCheckboxList(searchTerm = '') {
+        if (!studentCheckboxList) return;
+
+        // 获取所有唯一的学生（按学号去重）
+        const uniqueStudents = new Map();
+        students.forEach(student => {
+          if (!uniqueStudents.has(student.student_no)) {
+            uniqueStudents.set(student.student_no, {
+              name: student.name,
+              student_no: student.student_no,
+              class_name: student.class_name
+            });
+          }
+        });
+
+        // 按姓名排序并筛选
+        let sortedStudents = Array.from(uniqueStudents.values()).sort((a, b) =>
+          a.name.localeCompare(b.name, 'zh-CN')
+        );
+
+        if (searchTerm) {
+          sortedStudents = sortedStudents.filter(s =>
+            s.name.includes(searchTerm) || s.student_no.includes(searchTerm)
+          );
+        }
+
+        studentCheckboxList.innerHTML = sortedStudents.map(s => {
+          const isChecked = selectedStudentNos.includes(s.student_no);
+          const colorIndex = selectedStudentNos.indexOf(s.student_no);
+          const colorIndicator = colorIndex >= 0 ?
+            `<span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${studentColors[colorIndex].border}; margin-left: 8px;"></span>` : '';
+
+          return `
+            <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; ${isChecked ? 'background: #f0f9ff; border-color: #3b82f6;' : ''}">
+              <input type="checkbox" value="${s.student_no}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+              <span style="flex: 1;">${s.name} (${s.student_no})</span>
+              <span style="font-size: 12px; color: #6b7280;">${s.class_name || '无班级'}</span>
+              ${colorIndicator}
+            </label>
+          `;
+        }).join('') || '<p style="text-align: center; color: #9ca3af; padding: 20px;">没有找到匹配的学生</p>';
+      }
+
+      // 填充科目复选框列表
+      function populateSubjectCheckboxList() {
+        if (!subjectCheckboxList) return;
+
+        subjectCheckboxList.innerHTML = allAvailableTrendSubjects.map(subject => {
+          const isChecked = selectedTrendSubjects.includes(subject);
+          return `
+            <label style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; ${isChecked ? 'background: #f0fdf4; border-color: #10b981;' : ''}">
+              <input type="checkbox" value="${subject}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+              <span>${subject}</span>
+            </label>
+          `;
+        }).join('');
+      }
+
+      // 更新已选择学生列表显示
+      function updateSelectedStudentsList() {
+        if (!selectedStudentsList || !selectedStudentCount) return;
+
+        selectedStudentCount.textContent = selectedStudentNos.length;
+
+        if (selectedStudentNos.length === 0) {
+          selectedStudentsList.innerHTML = '<span style="color: #9ca3af; font-size: 14px;">点击"选择学生"按钮添加学生</span>';
+        } else {
+          const uniqueStudents = new Map();
+          students.forEach(student => {
+            if (!uniqueStudents.has(student.student_no)) {
+              uniqueStudents.set(student.student_no, student.name);
+            }
+          });
+
+          selectedStudentsList.innerHTML = selectedStudentNos.map((studentNo, index) => {
+            const name = uniqueStudents.get(studentNo) || '未知';
+            const color = studentColors[index].border;
+            return `
+              <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: ${studentColors[index].bg}; border: 1px solid ${color}; border-radius: 6px; font-size: 14px; color: ${color}; font-weight: 500;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color};"></span>
+                ${name}
+                <button onclick="removeSelectedStudent('${studentNo}')" style="background: none; border: none; color: ${color}; cursor: pointer; padding: 0; margin-left: 4px; font-size: 16px; line-height: 1;">&times;</button>
+              </span>
+            `;
+          }).join('');
+        }
+      }
+
+      // 移除选中的学生
+      window.removeSelectedStudent = function(studentNo) {
+        selectedStudentNos = selectedStudentNos.filter(no => no !== studentNo);
+        updateSelectedStudentsList();
+        renderStudentTrendChart();
+      };
+
+      // 更新选中科目数量显示
+      function updateSelectedSubjectCount() {
+        if (selectedSubjectCount) {
+          selectedSubjectCount.textContent = selectedTrendSubjects.length;
+        }
+      }
+
+      // 渲染学生成绩对比走势图
+      function renderStudentTrendChart() {
+        if (selectedStudentNos.length === 0 || selectedTrendSubjects.length === 0) {
+          studentTrendChartContainer.style.display = 'none';
+          studentTrendPlaceholder.style.display = 'block';
+          return;
+        }
+
+        studentTrendChartContainer.style.display = 'block';
+        studentTrendPlaceholder.style.display = 'none';
+
+        // 销毁旧图表
+        if (studentTrendChart) {
+          studentTrendChart.destroy();
+        }
+
+        // 获取所有考试，按日期排序
+        const examGroups = {};
+        students.forEach(student => {
+          const examName = student.exam_name || '未知考试';
+          if (!examGroups[examName]) {
+            examGroups[examName] = {
+              name: examName,
+              date: student.exam_date ? new Date(student.exam_date) : null
+            };
+          }
+        });
+
+        const exams = Object.values(examGroups).sort((a, b) => {
+          if (a.date && b.date) return a.date - b.date;
+          return 0;
+        });
+
+        // X轴标签
+        const labels = exams.map(e => {
+          if (e.date) {
+            const month = (e.date.getMonth() + 1).toString().padStart(2, '0');
+            const day = e.date.getDate().toString().padStart(2, '0');
+            return `${month}-${day}`;
+          }
+          return e.name.length > 8 ? e.name.substring(0, 8) + '...' : e.name;
+        });
+
+        // 为每个学生的每个科目创建一条曲线
+        const datasets = [];
+        selectedStudentNos.forEach((studentNo, studentIndex) => {
+          const studentName = students.find(s => s.student_no === studentNo)?.name || '未知';
+          const color = studentColors[studentIndex];
+
+          selectedTrendSubjects.forEach((subject) => {
+            // 获取该学生在各场考试中该科目的成绩
+            const scores = exams.map(exam => {
+              const record = students.find(s =>
+                s.student_no === studentNo && s.exam_name === exam.name
+              );
+              if (!record) return null;
+
+              if (subject === "总分") {
+                return record.total_score || null;
+              } else {
+                const scoreItem = record.scores?.find(s => s.subject === subject);
+                return scoreItem ? Number(scoreItem.score) : null;
+              }
+            });
+
+            datasets.push({
+              label: `${studentName} - ${subject}`,
+              data: scores,
+              borderColor: color.border,
+              backgroundColor: color.bg,
+              borderWidth: 2.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: color.border,
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              tension: 0.3,
+              spanGaps: true // 允许跳过null值连接线
+            });
+          });
+        });
+
+        const canvas = document.getElementById('studentTrendChart');
+        const ctx = canvas.getContext('2d');
+
+        studentTrendChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                  font: { size: 12 },
+                  padding: 12,
+                  usePointStyle: true,
+                  pointStyle: 'circle'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                titleFont: { size: 14 },
+                bodyFont: { size: 13 }
+              }
+            },
+            scales: {
+              x: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  font: { size: 11 },
+                  color: '#374151',
+                  maxRotation: 45,
+                  minRotation: 0
+                }
+              },
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: '#e5e7eb'
+                },
+                ticks: {
+                  font: { size: 11 },
+                  color: '#374151'
+                },
+                title: {
+                  display: true,
+                  text: '分数',
+                  font: { size: 12, weight: 'bold' }
+                }
+              }
+            }
+          }
+        });
+
+        // 隐藏统计信息（因为是多学生对比，统计不太合适）
+        if (studentTrendStats) {
+          studentTrendStats.parentElement.style.display = 'none';
+        }
       }
 
       function compareExams() {
@@ -2498,25 +2981,55 @@
         }
       });
 
-      // 走势图选项卡切换
+      // 走势图选项卡切换 - 按场次
       document.addEventListener("click", (event) => {
-        const target = event.target.closest("button[data-trend-count]");
-        if (!target) return;
+        const countTarget = event.target.closest("button[data-trend-count]");
+        if (countTarget) {
+          const count = parseInt(countTarget.dataset.trendCount);
+          if (count && count !== trendExamCount) {
+            trendExamCount = count;
+            trendDateRange = null; // 禁用按时间模式
 
-        const count = parseInt(target.dataset.trendCount);
-        if (count && count !== trendExamCount) {
-          trendExamCount = count;
+            // 更新按场次选项卡样式
+            document.querySelectorAll("button[data-trend-count]").forEach(btn => {
+              btn.classList.remove("active");
+            });
+            countTarget.classList.add("active");
 
-          // 更新选项卡样式
-          document.querySelectorAll("button[data-trend-count]").forEach(btn => {
-            btn.classList.remove("active");
-          });
-          target.classList.add("active");
-
-          // 重新绘制图表和排名
-          renderDashboardTrendChart();
-          renderTopStudents();
+            // 重新绘制图表和排名
+            renderDashboardTrendChart();
+            renderTopStudents();
+          }
+          return;
         }
+      });
+
+      // 应用自定义日期范围
+      document.getElementById("applyTrendDateRange")?.addEventListener("click", () => {
+        const startDate = document.getElementById("trendStartDate").value;
+        const endDate = document.getElementById("trendEndDate").value;
+
+        if (!startDate || !endDate) {
+          alert("请选择开始日期和结束日期");
+          return;
+        }
+
+        if (new Date(startDate) > new Date(endDate)) {
+          alert("开始日期不能晚于结束日期");
+          return;
+        }
+
+        trendDateRange = { startDate, endDate };
+        trendExamCount = null; // 禁用按场次模式
+
+        // 清除按场次选项卡样式
+        document.querySelectorAll("button[data-trend-count]").forEach(btn => {
+          btn.classList.remove("active");
+        });
+
+        // 重新绘制图表和排名
+        renderDashboardTrendChart();
+        renderTopStudents();
       });
       downloadTemplateBtn?.addEventListener("click", downloadTemplate);
       addStudentBtn?.addEventListener("click", () => openModal());
@@ -2660,6 +3173,80 @@
       }
 
       compareExamsBtn?.addEventListener("click", compareExams);
+
+      // 学生成绩对比走势图事件监听
+
+      // 打开学生选择弹窗
+      selectStudentsBtn?.addEventListener("click", () => {
+        populateStudentCheckboxList();
+        studentSelectModal?.classList.add("active");
+      });
+
+      // 打开科目选择弹窗
+      selectSubjectsBtn?.addEventListener("click", () => {
+        populateSubjectCheckboxList();
+        subjectSelectModal?.classList.add("active");
+      });
+
+      // 学生搜索
+      studentSearchInput?.addEventListener("input", (e) => {
+        populateStudentCheckboxList(e.target.value);
+      });
+
+      // 取消学生选择
+      cancelStudentSelect?.addEventListener("click", () => {
+        studentSelectModal?.classList.remove("active");
+      });
+
+      // 确认学生选择
+      confirmStudentSelect?.addEventListener("click", () => {
+        const checkboxes = studentCheckboxList.querySelectorAll('input[type="checkbox"]:checked');
+        const selected = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selected.length > 5) {
+          alert('最多只能选择5个学生');
+          return;
+        }
+
+        selectedStudentNos = selected;
+        updateSelectedStudentsList();
+        studentSelectModal?.classList.remove("active");
+        renderStudentTrendChart();
+      });
+
+      // 取消科目选择
+      cancelSubjectSelect?.addEventListener("click", () => {
+        subjectSelectModal?.classList.remove("active");
+      });
+
+      // 确认科目选择
+      confirmSubjectSelect?.addEventListener("click", () => {
+        const checkboxes = subjectCheckboxList.querySelectorAll('input[type="checkbox"]:checked');
+        const selected = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selected.length === 0) {
+          alert('请至少选择一个科目');
+          return;
+        }
+
+        selectedTrendSubjects = selected;
+        updateSelectedSubjectCount();
+        subjectSelectModal?.classList.remove("active");
+        renderStudentTrendChart();
+      });
+
+      // 点击弹窗背景关闭
+      studentSelectModal?.addEventListener("click", (event) => {
+        if (event.target === studentSelectModal) {
+          studentSelectModal.classList.remove("active");
+        }
+      });
+
+      subjectSelectModal?.addEventListener("click", (event) => {
+        if (event.target === subjectSelectModal) {
+          subjectSelectModal.classList.remove("active");
+        }
+      });
 
       // 分享弹窗事件监听
       cancelShare?.addEventListener("click", closeShareModal);
@@ -3186,8 +3773,454 @@
         renderSubjectRadar();
       });
 
+      // 进步与退步学生分析
+      let progressChart = null;
+      let regressionChart = null;
+
+      // 默认设置：对比场次3，显示人数10，自定义场次10
+      let progressSettings = {
+        compareMode: 3,
+        topCount: 10,
+        customCount: 10
+      };
+
+      // 从localStorage加载设置
+      function loadProgressSettings() {
+        const saved = localStorage.getItem('progressSettings');
+        if (saved) {
+          try {
+            progressSettings = JSON.parse(saved);
+          } catch (e) {
+            console.error('Failed to load progress settings', e);
+          }
+        }
+      }
+
+      // 保存设置到localStorage
+      function saveProgressSettings() {
+        localStorage.setItem('progressSettings', JSON.stringify(progressSettings));
+      }
+
+      // 更新标题显示
+      function updateProgressTitles() {
+        const count = progressSettings.topCount;
+        const mode = progressSettings.compareMode;
+
+        document.getElementById('progressTitle').textContent = `进步最大前${count}名`;
+        document.getElementById('regressionTitle').textContent = `退步最大前${count}名`;
+
+        let subtitle = '';
+        if (mode === 2) {
+          subtitle = '基于最近2场考试对比';
+        } else if (mode === 3) {
+          subtitle = '基于最近3场考试综合对比';
+        } else if (mode === 5) {
+          subtitle = '基于最近5场考试趋势对比';
+        } else if (mode === 'custom') {
+          const customCount = progressSettings.customCount || 10;
+          subtitle = `基于最近${customCount}场考试综合对比`;
+        }
+
+        document.getElementById('progressSubtitle').textContent = subtitle;
+        document.getElementById('regressionSubtitle').textContent = subtitle;
+      }
+
+      function renderProgressRegressionCharts() {
+        // 获取所有学生的成绩数据
+        if (!students || students.length === 0) {
+          document.getElementById('progressStudentsList').innerHTML = '<p style="margin: 0; color: #6b7280; text-align: center;">暂无数据</p>';
+          document.getElementById('regressionStudentsList').innerHTML = '<p style="margin: 0; color: #6b7280; text-align: center;">暂无数据</p>';
+          return;
+        }
+
+        // 更新标题
+        updateProgressTitles();
+
+        const mode = progressSettings.compareMode;
+        const topCount = progressSettings.topCount;
+
+        // 获取每个学生的所有考试记录，按日期排序
+        const studentProgressData = [];
+
+        students.forEach(student => {
+          if (!student.exam_id) return;
+
+          // 找到该学生的所有考试记录
+          const studentExams = students.filter(s => s.name === student.name && s.total_score != null);
+
+          // 确定需要的最少考试场次
+          let requiredExams;
+          if (mode === 'custom') {
+            requiredExams = progressSettings.customCount || 10;
+          } else {
+            requiredExams = mode;
+          }
+
+          if (studentExams.length >= requiredExams) {
+            // 按日期排序
+            studentExams.sort((a, b) => {
+              const dateA = new Date(a.exam_date || 0);
+              const dateB = new Date(b.exam_date || 0);
+              return dateA - dateB;
+            });
+
+            let latestScore, previousScore, change;
+
+            if (mode === 2) {
+              // 最近2场对比：最新1场 vs 前1场
+              const latest = studentExams[studentExams.length - 1];
+              const previous = studentExams[studentExams.length - 2];
+              latestScore = latest.total_score;
+              previousScore = previous.total_score;
+              change = latestScore - previousScore;
+            } else if (mode === 3) {
+              // 最近3场综合对比：最新1场 vs 前2场平均
+              const latest = studentExams[studentExams.length - 1];
+              const prev1 = studentExams[studentExams.length - 2];
+              const prev2 = studentExams[studentExams.length - 3];
+              latestScore = latest.total_score;
+              previousScore = (prev1.total_score + prev2.total_score) / 2;
+              change = latestScore - previousScore;
+            } else if (mode === 5) {
+              // 最近5场趋势对比：最近2场平均 vs 前3场平均
+              const recent2Avg = (studentExams[studentExams.length - 1].total_score + studentExams[studentExams.length - 2].total_score) / 2;
+              const prev3Avg = (studentExams[studentExams.length - 3].total_score + studentExams[studentExams.length - 4].total_score + studentExams[studentExams.length - 5].total_score) / 3;
+              latestScore = recent2Avg;
+              previousScore = prev3Avg;
+              change = latestScore - previousScore;
+            } else if (mode === 'custom') {
+              // 自定义场次对比：最新1场 vs 前N-1场平均
+              const customCount = progressSettings.customCount || 10;
+              const latest = studentExams[studentExams.length - 1];
+              latestScore = latest.total_score;
+
+              // 计算前N-1场的平均分
+              let sum = 0;
+              for (let i = studentExams.length - 2; i >= studentExams.length - customCount; i--) {
+                sum += studentExams[i].total_score;
+              }
+              previousScore = sum / (customCount - 1);
+              change = latestScore - previousScore;
+            }
+
+            studentProgressData.push({
+              name: student.name,
+              previous: previousScore.toFixed(1),
+              latest: latestScore.toFixed(1),
+              change: change.toFixed(1),
+              changePercent: ((change / previousScore) * 100).toFixed(1)
+            });
+          }
+        });
+
+        // 去重（同一个学生只保留一条记录）
+        const uniqueStudents = [];
+        const seenNames = new Set();
+        studentProgressData.forEach(item => {
+          if (!seenNames.has(item.name)) {
+            seenNames.add(item.name);
+            uniqueStudents.push(item);
+          }
+        });
+
+        // 进步最大的前N名（正数，从大到小）
+        const topProgress = uniqueStudents
+          .filter(s => parseFloat(s.change) > 0)
+          .sort((a, b) => parseFloat(b.change) - parseFloat(a.change))
+          .slice(0, topCount);
+
+        // 退步最大的前N名（负数，从小到大）
+        const topRegression = uniqueStudents
+          .filter(s => parseFloat(s.change) < 0)
+          .sort((a, b) => parseFloat(a.change) - parseFloat(b.change))
+          .slice(0, topCount);
+
+        // 渲染进步榜
+        renderProgressChart(topProgress);
+        renderProgressList(topProgress);
+
+        // 渲染退步榜
+        renderRegressionChart(topRegression);
+        renderRegressionList(topRegression);
+      }
+
+      function renderProgressChart(data) {
+        const canvas = document.getElementById('progressChart');
+        if (!canvas) return;
+
+        if (progressChart) {
+          progressChart.destroy();
+        }
+
+        if (data.length === 0) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = '14px sans-serif';
+          ctx.fillStyle = '#9ca3af';
+          ctx.textAlign = 'center';
+          ctx.fillText('暂无进步数据', canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        const ctx = canvas.getContext('2d');
+        progressChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.map(s => s.name),
+            datasets: [{
+              label: '进步分数',
+              data: data.map(s => s.change),
+              backgroundColor: '#10b981',
+              borderRadius: 8,
+              barThickness: 30
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                callbacks: {
+                  label: function(context) {
+                    const student = data[context.dataIndex];
+                    return [
+                      `进步: +${student.change}分`,
+                      `前次: ${student.previous}分`,
+                      `本次: ${student.latest}分`,
+                      `提升: ${student.changePercent}%`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { font: { size: 11 } },
+                grid: { color: '#e5e7eb' }
+              },
+              y: {
+                ticks: { font: { size: 12 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      function renderRegressionChart(data) {
+        const canvas = document.getElementById('regressionChart');
+        if (!canvas) return;
+
+        if (regressionChart) {
+          regressionChart.destroy();
+        }
+
+        if (data.length === 0) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = '14px sans-serif';
+          ctx.fillStyle = '#9ca3af';
+          ctx.textAlign = 'center';
+          ctx.fillText('暂无退步数据', canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        const ctx = canvas.getContext('2d');
+        regressionChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.map(s => s.name),
+            datasets: [{
+              label: '退步分数',
+              data: data.map(s => Math.abs(s.change)),
+              backgroundColor: '#ef4444',
+              borderRadius: 8,
+              barThickness: 30
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                callbacks: {
+                  label: function(context) {
+                    const student = data[context.dataIndex];
+                    return [
+                      `退步: ${student.change}分`,
+                      `前次: ${student.previous}分`,
+                      `本次: ${student.latest}分`,
+                      `下降: ${student.changePercent}%`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { font: { size: 11 } },
+                grid: { color: '#e5e7eb' }
+              },
+              y: {
+                ticks: { font: { size: 12 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      function renderProgressList(data) {
+        const container = document.getElementById('progressStudentsList');
+        if (!container) return;
+
+        if (data.length === 0) {
+          container.innerHTML = '<p style="margin: 0; color: #6b7280; text-align: center;">暂无数据</p>';
+          return;
+        }
+
+        container.innerHTML = data.map((student, index) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-weight: 600; color: #10b981; font-size: 16px;">${index + 1}</span>
+              <span style="font-weight: 500;">${student.name}</span>
+            </div>
+            <div style="text-align: right;">
+              <span style="color: #10b981; font-weight: 600; font-size: 15px;">+${student.change}分</span>
+              <span style="color: #6b7280; font-size: 12px; margin-left: 8px;">(${student.previous}→${student.latest})</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function renderRegressionList(data) {
+        const container = document.getElementById('regressionStudentsList');
+        if (!container) return;
+
+        if (data.length === 0) {
+          container.innerHTML = '<p style="margin: 0; color: #6b7280; text-align: center;">暂无数据</p>';
+          return;
+        }
+
+        container.innerHTML = data.map((student, index) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-weight: 600; color: #ef4444; font-size: 16px;">${index + 1}</span>
+              <span style="font-weight: 500;">${student.name}</span>
+            </div>
+            <div style="text-align: right;">
+              <span style="color: #ef4444; font-weight: 600; font-size: 15px;">${student.change}分</span>
+              <span style="color: #6b7280; font-size: 12px; margin-left: 8px;">(${student.previous}→${student.latest})</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 进步退步设置模态框
+      const progressSettingsModal = document.getElementById('progressSettingsModal');
+      const progressSettingsBtn = document.getElementById('progressSettingsBtn');
+      const cancelProgressSettings = document.getElementById('cancelProgressSettings');
+      const saveProgressSettingsBtn = document.getElementById('saveProgressSettings');
+      const progressTopCountSelect = document.getElementById('progressTopCount');
+      const customExamCountInput = document.getElementById('customExamCount');
+
+      // 打开设置弹窗
+      progressSettingsBtn?.addEventListener('click', () => {
+        // 恢复当前设置到UI
+        document.querySelectorAll('input[name="compareMode"]').forEach(radio => {
+          const isCustom = radio.value === 'custom' && progressSettings.compareMode === 'custom';
+          const isNumeric = parseInt(radio.value) === progressSettings.compareMode;
+          radio.checked = isCustom || isNumeric;
+
+          // 更新样式
+          const label = radio.closest('label');
+          if (radio.checked) {
+            label.style.borderColor = '#3b82f6';
+            label.style.background = 'rgba(59, 130, 246, 0.05)';
+          } else {
+            label.style.borderColor = 'var(--border)';
+            label.style.background = 'transparent';
+          }
+        });
+        progressTopCountSelect.value = progressSettings.topCount;
+        customExamCountInput.value = progressSettings.customCount || 10;
+        progressSettingsModal?.classList.add('active');
+      });
+
+      // 单选按钮样式更新
+      document.querySelectorAll('input[name="compareMode"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          document.querySelectorAll('input[name="compareMode"]').forEach(r => {
+            const label = r.closest('label');
+            if (r.checked) {
+              label.style.borderColor = '#3b82f6';
+              label.style.background = 'rgba(59, 130, 246, 0.05)';
+            } else {
+              label.style.borderColor = 'var(--border)';
+              label.style.background = 'transparent';
+            }
+          });
+        });
+      });
+
+      // 关闭弹窗
+      cancelProgressSettings?.addEventListener('click', () => {
+        progressSettingsModal?.classList.remove('active');
+      });
+
+      // 点击背景关闭
+      progressSettingsModal?.addEventListener('click', (e) => {
+        if (e.target === progressSettingsModal) {
+          progressSettingsModal.classList.remove('active');
+        }
+      });
+
+      // 保存设置
+      saveProgressSettingsBtn?.addEventListener('click', () => {
+        const selectedMode = document.querySelector('input[name="compareMode"]:checked');
+        if (selectedMode) {
+          if (selectedMode.value === 'custom') {
+            // 自定义场次
+            const customCount = parseInt(customExamCountInput.value);
+
+            // 验证输入
+            if (isNaN(customCount) || customCount < 2 || customCount > 50) {
+              alert('请输入有效的场次数（2-50之间）');
+              return;
+            }
+
+            progressSettings.compareMode = 'custom';
+            progressSettings.customCount = customCount;
+          } else {
+            // 预设场次
+            progressSettings.compareMode = parseInt(selectedMode.value);
+          }
+        }
+        progressSettings.topCount = parseInt(progressTopCountSelect.value);
+
+        // 保存到localStorage
+        saveProgressSettings();
+
+        // 关闭弹窗
+        progressSettingsModal?.classList.remove('active');
+
+        // 重新渲染图表
+        renderProgressRegressionCharts();
+      });
+
       async function bootstrap() {
         loadColumnSettings();
+        loadProgressSettings();
         renderRangeSubjectOptions();
         await loadGradeConfig();
         await loadStudents();
@@ -3195,6 +4228,7 @@
         initCollapsibleSections();
         renderGradeDashboard();
         renderStatisticsCharts();
+        renderProgressRegressionCharts();
       }
       bootstrap();
     </script>
