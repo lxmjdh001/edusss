@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>成绩管理控制台</title>
+    <script src="chart.min.js"></script>
     <style>
       :root {
         color-scheme: light dark;
@@ -663,7 +664,53 @@
 
         <section class="subject-tabs" id="subjectTabs"></section>
 
-        <section class="stats-grid" id="statCards"></section>
+        <!-- 数据仪表盘 -->
+        <section class="grade-card" style="margin-top: 20px;">
+          <h2 style="margin-bottom: 20px;">数据统计概览</h2>
+          <div id="gradeDashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;"></div>
+        </section>
+
+        <!-- 新增统计图表 -->
+        <section style="margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;">
+          <!-- 分数分布 -->
+          <div class="grade-card">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+              <span style="font-size: 20px;">📊</span>
+              <h2 style="margin: 0;">分数分布</h2>
+            </div>
+            <p style="color: #718096; font-size: 14px; margin-bottom: 20px;">总分分段统计</p>
+            <div style="height: 300px; position: relative;">
+              <canvas id="scoreDistributionChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 科目雷达图 -->
+          <div class="grade-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 20px;">👤</span>
+                <h2 style="margin: 0;">科目雷达图</h2>
+              </div>
+              <button class="btn secondary" id="radarSettingsBtn" style="padding: 6px 12px; font-size: 14px;">⚙️ 设置科目</button>
+            </div>
+            <p style="color: #718096; font-size: 14px; margin-bottom: 20px;">各科平均分对比分析</p>
+            <div style="height: 300px; position: relative;">
+              <canvas id="subjectRadarChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 等级分布 -->
+          <div class="grade-card">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+              <span style="font-size: 20px;">📈</span>
+              <h2 style="margin: 0;">等级分布</h2>
+            </div>
+            <p style="color: #718096; font-size: 14px; margin-bottom: 20px;">优秀/良好/及格/不及格占比</p>
+            <div style="height: 300px; position: relative;">
+              <canvas id="gradeLevelChart"></canvas>
+            </div>
+          </div>
+        </section>
 
         <section class="grade-card" style="margin-top: 24px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -990,6 +1037,20 @@
       </div>
     </div>
 
+    <div class="modal-backdrop" id="radarSettingsModal" role="dialog" aria-modal="true">
+      <div class="modal">
+        <h2>科目雷达图设置</h2>
+        <p class="hint-text">选择要在雷达图中显示的科目（至少选择3个科目）</p>
+        <div style="margin-top: 24px;">
+          <div id="radarSubjectCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;"></div>
+        </div>
+        <div class="modal-footer" style="margin-top: 24px;">
+          <button type="button" class="btn secondary" id="cancelRadarSettings">取消</button>
+          <button type="button" class="btn" id="saveRadarSettings">保存</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-backdrop" id="shareModal" role="dialog" aria-modal="true">
       <div class="modal">
         <h2>生成分享链接</h2>
@@ -1024,7 +1085,6 @@
     <script>
       const API_BASE = "/api/students";
       const studentBody = document.getElementById("studentBody");
-      const statCards = document.getElementById("statCards");
       const subjectTabsEl = document.getElementById("subjectTabs");
       const modalBackdrop = document.getElementById("modalBackdrop");
       const studentForm = document.getElementById("studentForm");
@@ -1291,48 +1351,6 @@
         }
       }
 
-      function renderStats() {
-        if (!summary) {
-          statCards.innerHTML = "";
-          return;
-        }
-
-        // 计算班级数
-        const classSet = new Set();
-        students.forEach(student => {
-          if (student.class_name) classSet.add(student.class_name);
-        });
-        const classCount = classSet.size;
-
-        // 计算考试场次
-        const examSet = new Set();
-        students.forEach(student => {
-          if (student.exam_name) examSet.add(student.exam_name);
-        });
-        const examCount = examSet.size;
-
-        const cards = [
-          { label: "学生总数", value: summary.total_students },
-          { label: "班级数", value: classCount },
-          { label: "考试场次", value: examCount },
-          { label: "平均总分", value: summary.average_total },
-          { label: "最高总分", value: summary.highest_total ?? "-", extra: summary.highest_student ? `(${summary.highest_student})` : "" },
-          { label: "及格率", value: `${summary.pass_rate}%` },
-          { label: "良好率", value: `${summary.good_rate}%` },
-          { label: "优秀率", value: `${summary.excellent_rate}%` },
-        ];
-        statCards.innerHTML = cards
-          .map(
-            (card) => `
-            <div class="stat-card">
-              <h3>${card.label}</h3>
-              <div class="value">${card.value}</div>
-              ${card.extra ? `<div class="chip">${card.extra}</div>` : ""}
-            </div>
-          `,
-          )
-          .join("");
-      }
 
       function renderSubjectTabs() {
         if (!subjectTabsEl) return;
@@ -1857,7 +1875,8 @@
         // 应用筛选条件，确保统计数据与表格数据一致
         const filtered = students.filter(applyFilters);
         summary = computeSummaryFromStudents(filtered, selectedSubject);
-        renderStats();
+        renderGradeDashboard();
+        renderStatisticsCharts();
         renderDashboardTrendChart();
         renderTopStudents();
       }
@@ -2703,6 +2722,470 @@
         });
       }
 
+      // 渲染成绩仪表盘（使用Chart.js）
+      let dashboardCharts = [];
+
+      function renderGradeDashboard() {
+        const container = document.getElementById('gradeDashboard');
+        if (!container) return;
+
+        // 销毁旧图表
+        dashboardCharts.forEach(chart => chart.destroy());
+        dashboardCharts = [];
+
+        // 使用现有的computeSummaryFromStudents函数计算统计数据
+        const summaryData = computeSummaryFromStudents(students, "总分");
+
+        // 计算班级数和考试场次
+        const classCount = new Set(students.map(s => s.class_name).filter(Boolean)).size;
+        const examCount = new Set(students.map(s => s.exam_name).filter(Boolean)).size;
+
+        // 提取统计数据
+        const totalStudents = summaryData.total_students;
+        const avgScore = summaryData.average_total;
+        const maxScore = summaryData.highest_total || 0;
+        const topStudentName = summaryData.highest_student || '';
+        const passRate = Math.round(summaryData.pass_rate);
+        const goodRate = Math.round(summaryData.good_rate);
+        const excellentRate = Math.round(summaryData.excellent_rate);
+
+        // 计算总分满分（假设每科150分，共5科=750分）
+        const maxPossibleTotal = 750;
+
+        // 定义统计卡片数据
+        const dashboardStats = [
+          { label: '学生总数', value: totalStudents, percentage: Math.min(100, (totalStudents / 50) * 100), color: '#9f7aea', trend: null },
+          { label: '班级数', value: classCount, percentage: Math.min(100, (classCount / 10) * 100), color: '#4299e1', trend: null },
+          { label: '考试场次', value: examCount, percentage: Math.min(100, (examCount / 20) * 100), color: '#38b2ac', trend: null },
+          { label: '平均总分', value: avgScore, percentage: Math.min(100, (avgScore / maxPossibleTotal) * 100), color: '#ed8936', trend: null },
+          { label: '最高总分', value: maxScore, percentage: Math.min(100, (maxScore / maxPossibleTotal) * 100), color: '#48bb78', trend: topStudentName },
+          { label: '及格率', value: passRate + '%', percentage: passRate, color: '#ecc94b', trend: null },
+          { label: '良好率', value: goodRate + '%', percentage: goodRate, color: '#ed64a6', trend: null },
+          { label: '优秀率', value: excellentRate + '%', percentage: excellentRate, color: '#f56565', trend: null }
+        ];
+
+        // 清空容器
+        container.innerHTML = '';
+
+        // 创建卡片
+        dashboardStats.forEach((stat, index) => {
+          const card = document.createElement('div');
+          card.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+          `;
+          card.onmouseenter = () => {
+            card.style.transform = 'translateY(-5px)';
+            card.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.15)';
+          };
+          card.onmouseleave = () => {
+            card.style.transform = '';
+            card.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+          };
+
+          // 左侧内容
+          const content = document.createElement('div');
+          content.style.cssText = 'flex: 1;';
+          content.innerHTML = `
+            <div style="font-size: 14px; color: #718096; margin-bottom: 8px; font-weight: 500;">${stat.label}</div>
+            <div style="font-size: 32px; font-weight: bold; color: #2d3748; line-height: 1;">${stat.value}</div>
+            ${stat.trend ? `<div style="font-size: 12px; margin-top: 8px; color: #48bb78;">↑ ${stat.trend}</div>` : ''}
+          `;
+
+          // 右侧圆环图
+          const chartContainer = document.createElement('div');
+          chartContainer.style.cssText = 'width: 80px; height: 80px; position: relative;';
+
+          const canvas = document.createElement('canvas');
+          canvas.id = `dashboardChart${index}`;
+          chartContainer.appendChild(canvas);
+
+          card.appendChild(content);
+          card.appendChild(chartContainer);
+          container.appendChild(card);
+
+          // 创建Chart.js圆环图
+          const ctx = canvas.getContext('2d');
+          const chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              datasets: [{
+                data: [stat.percentage, 100 - stat.percentage],
+                backgroundColor: [stat.color, '#edf2f7'],
+                borderWidth: 0
+              }]
+            },
+            options: {
+              cutout: '70%',
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+              }
+            }
+          });
+          dashboardCharts.push(chart);
+
+          // 添加装饰圆圈
+          const decoration = document.createElement('div');
+          decoration.style.cssText = `
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: ${stat.color};
+            opacity: 0.05;
+            right: -50px;
+            top: -50px;
+            pointer-events: none;
+          `;
+          card.appendChild(decoration);
+        });
+      }
+
+      // 新增统计图表
+      let scoreDistChart = null;
+      let radarChart = null;
+      let levelChart = null;
+
+      function renderStatisticsCharts() {
+        renderScoreDistribution();
+        renderSubjectRadar();
+        renderGradeLevel();
+      }
+
+      // 1. 分数分布柱状图
+      function renderScoreDistribution() {
+        const canvas = document.getElementById('scoreDistributionChart');
+        if (!canvas) return;
+
+        // 销毁旧图表
+        if (scoreDistChart) {
+          scoreDistChart.destroy();
+        }
+
+        // 计算分数段分布
+        const ranges = [
+          { label: '728-730', min: 728, max: 730 },
+          { label: '731-733', min: 731, max: 733 },
+          { label: '734-736', min: 734, max: 736 },
+          { label: '737-739', min: 737, max: 739 },
+          { label: '740-742', min: 740, max: 742 },
+          { label: '743-745', min: 743, max: 745 }
+        ];
+
+        const distribution = ranges.map(range => {
+          return students.filter(s => {
+            const total = s.total_score || 0;
+            return total >= range.min && total <= range.max;
+          }).length;
+        });
+
+        const ctx = canvas.getContext('2d');
+        scoreDistChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ranges.map(r => r.label),
+            datasets: [{
+              label: '人数',
+              data: distribution,
+              backgroundColor: '#3b82f6',
+              borderRadius: 8,
+              barThickness: 40
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                titleFont: { size: 14 },
+                bodyFont: { size: 13 }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1,
+                  font: { size: 12 }
+                },
+                grid: {
+                  color: '#e5e7eb'
+                }
+              },
+              x: {
+                ticks: {
+                  font: { size: 12 }
+                },
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 2. 科目雷达图
+      let selectedRadarSubjects = []; // 用户选择的科目
+      let allAvailableSubjects = []; // 所有可用科目
+
+      // 从数据库提取所有科目
+      function extractAvailableSubjects() {
+        const subjectsSet = new Set();
+        students.forEach(student => {
+          if (student.scores && Array.isArray(student.scores)) {
+            student.scores.forEach(score => {
+              if (score.subject) {
+                subjectsSet.add(score.subject);
+              }
+            });
+          }
+        });
+        allAvailableSubjects = Array.from(subjectsSet).sort();
+
+        // 初始化选择的科目（默认选择前5个，如果少于5个则全选）
+        if (selectedRadarSubjects.length === 0) {
+          selectedRadarSubjects = allAvailableSubjects.slice(0, Math.min(5, allAvailableSubjects.length));
+        }
+
+        return allAvailableSubjects;
+      }
+
+      function renderSubjectRadar() {
+        const canvas = document.getElementById('subjectRadarChart');
+        if (!canvas) return;
+
+        // 销毁旧图表
+        if (radarChart) {
+          radarChart.destroy();
+        }
+
+        // 提取可用科目
+        extractAvailableSubjects();
+
+        // 使用用户选择的科目
+        const subjects = selectedRadarSubjects.length > 0 ? selectedRadarSubjects : allAvailableSubjects.slice(0, 5);
+        const subjectAvgs = subjects.map(subject => {
+          let total = 0;
+          let count = 0;
+          students.forEach(student => {
+            const score = student.scores?.find(s => s.subject === subject);
+            if (score) {
+              total += Number(score.score || 0);
+              count++;
+            }
+          });
+          return count > 0 ? (total / count).toFixed(1) : 0;
+        });
+
+        const ctx = canvas.getContext('2d');
+        radarChart = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: subjects,
+            datasets: [{
+              label: '平均分',
+              data: subjectAvgs,
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              borderColor: '#3b82f6',
+              borderWidth: 2,
+              pointBackgroundColor: '#3b82f6',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                  font: { size: 12 },
+                  padding: 15
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                callbacks: {
+                  label: function(context) {
+                    return context.dataset.label + ': ' + context.parsed.r + '分';
+                  }
+                }
+              }
+            },
+            scales: {
+              r: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  stepSize: 20,
+                  font: { size: 11 }
+                },
+                grid: {
+                  color: '#e5e7eb'
+                },
+                angleLines: {
+                  color: '#e5e7eb'
+                },
+                pointLabels: {
+                  font: { size: 13, weight: 'bold' },
+                  color: '#2d3748'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 3. 等级分布饼图
+      function renderGradeLevel() {
+        const canvas = document.getElementById('gradeLevelChart');
+        if (!canvas) return;
+
+        // 销毁旧图表
+        if (levelChart) {
+          levelChart.destroy();
+        }
+
+        // 计算等级分布
+        const summaryData = computeSummaryFromStudents(students, "总分");
+        const total = summaryData.total_students;
+
+        // 计算各等级人数
+        const excellentCount = Math.round(total * summaryData.excellent_rate / 100);
+        const goodCount = Math.round(total * summaryData.good_rate / 100) - excellentCount;
+        const passCount = Math.round(total * summaryData.pass_rate / 100) - goodCount - excellentCount;
+        const failCount = total - excellentCount - goodCount - passCount;
+
+        const ctx = canvas.getContext('2d');
+        levelChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['不及格', '及格', '良好', '优秀'],
+            datasets: [{
+              data: [failCount, passCount, goodCount, excellentCount],
+              backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#ef4444'],
+              borderWidth: 0,
+              spacing: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+              legend: {
+                display: true,
+                position: 'right',
+                labels: {
+                  font: { size: 13 },
+                  padding: 15,
+                  generateLabels: function(chart) {
+                    const data = chart.data;
+                    const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    return data.labels.map((label, i) => {
+                      const value = data.datasets[0].data[i];
+                      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                      return {
+                        text: `${label}: ${value}人 (${percentage}%)`,
+                        fillStyle: data.datasets[0].backgroundColor[i],
+                        hidden: false,
+                        index: i
+                      };
+                    });
+                  }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = ((value / total) * 100).toFixed(1);
+                    return `${label}: ${value}人 (${percentage}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 科目雷达图设置弹窗
+      const radarSettingsModal = document.getElementById('radarSettingsModal');
+      const radarSettingsBtn = document.getElementById('radarSettingsBtn');
+      const cancelRadarSettings = document.getElementById('cancelRadarSettings');
+      const saveRadarSettings = document.getElementById('saveRadarSettings');
+      const radarSubjectCheckboxes = document.getElementById('radarSubjectCheckboxes');
+
+      // 打开设置弹窗
+      radarSettingsBtn?.addEventListener('click', () => {
+        // 提取可用科目
+        extractAvailableSubjects();
+
+        // 渲染复选框
+        radarSubjectCheckboxes.innerHTML = allAvailableSubjects.map(subject => `
+          <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+            <input type="checkbox" value="${subject}" ${selectedRadarSubjects.includes(subject) ? 'checked' : ''}
+              style="width: 18px; height: 18px; cursor: pointer;">
+            <span style="font-size: 14px;">${subject}</span>
+          </label>
+        `).join('');
+
+        radarSettingsModal?.classList.add('active');
+      });
+
+      // 关闭弹窗
+      cancelRadarSettings?.addEventListener('click', () => {
+        radarSettingsModal?.classList.remove('active');
+      });
+
+      // 点击背景关闭
+      radarSettingsModal?.addEventListener('click', (e) => {
+        if (e.target === radarSettingsModal) {
+          radarSettingsModal.classList.remove('active');
+        }
+      });
+
+      // 保存设置
+      saveRadarSettings?.addEventListener('click', () => {
+        const checkboxes = radarSubjectCheckboxes.querySelectorAll('input[type="checkbox"]:checked');
+        const selected = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selected.length < 3) {
+          alert('请至少选择3个科目');
+          return;
+        }
+
+        selectedRadarSubjects = selected;
+        radarSettingsModal?.classList.remove('active');
+
+        // 重新渲染雷达图
+        renderSubjectRadar();
+      });
+
       async function bootstrap() {
         loadColumnSettings();
         renderRangeSubjectOptions();
@@ -2710,6 +3193,8 @@
         await loadStudents();
         addScoreRow();
         initCollapsibleSections();
+        renderGradeDashboard();
+        renderStatisticsCharts();
       }
       bootstrap();
     </script>

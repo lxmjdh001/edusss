@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试仪表盘</title>
+  <script src="chart.min.js"></script>
+</head>
+<body style="padding: 40px; background: #f7fafc;">
+  <h1>测试Chart.js仪表盘</h1>
+  <div id="testDashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 20px;"></div>
+
+  <script>
+    console.log('Chart.js loaded:', typeof Chart !== 'undefined');
+
+    const container = document.getElementById('testDashboard');
+    const stats = [
+      { label: '学生总数', value: 2, percentage: 10, color: '#9f7aea' },
+      { label: '班级数', value: 1, percentage: 20, color: '#4299e1' },
+      { label: '考试场次', value: 1, percentage: 5, color: '#38b2ac' },
+      { label: '平均总分', value: 539.5, percentage: 72, color: '#ed8936' },
+      { label: '最高总分', value: 781, percentage: 100, color: '#48bb78' },
+      { label: '及格率', value: '50%', percentage: 50, color: '#ecc94b' },
+      { label: '良好率', value: '50%', percentage: 50, color: '#ed64a6' },
+      { label: '优秀率', value: '0%', percentage: 0, color: '#f56565' }
+    ];
+
+    stats.forEach((stat, index) => {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      `;
+
+      const content = document.createElement('div');
+      content.innerHTML = `
+        <div style="font-size: 14px; color: #718096; margin-bottom: 8px;">${stat.label}</div>
+        <div style="font-size: 32px; font-weight: bold; color: #2d3748;">${stat.value}</div>
+      `;
+
+      const chartContainer = document.createElement('div');
+      chartContainer.style.cssText = 'width: 80px; height: 80px;';
+
+      const canvas = document.createElement('canvas');
+      chartContainer.appendChild(canvas);
+
+      card.appendChild(content);
+      card.appendChild(chartContainer);
+      container.appendChild(card);
+
+      // 创建Chart.js圆环图
+      try {
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            datasets: [{
+              data: [stat.percentage, 100 - stat.percentage],
+              backgroundColor: [stat.color, '#edf2f7'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            cutout: '70%',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            }
+          }
+        });
+        console.log(`Chart ${index} created successfully`);
+      } catch (error) {
+        console.error(`Error creating chart ${index}:`, error);
+      }
+    });
+  </script>
+</body>
+</html>
