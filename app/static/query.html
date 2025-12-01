@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>学生成绩查询</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
       :root {
         --bg: #f5f5f5;
@@ -248,12 +249,59 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        border-bottom: 2px solid var(--border);
+      }
+      .tab-button {
+        padding: 12px 24px;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--subtext);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: -2px;
+      }
+      .tab-button:hover {
+        color: var(--text);
+      }
+      .tab-button.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 30px;
+      }
+      .chart-section {
+        margin-top: 24px;
+      }
+      .chart-section h3 {
+        margin: 0 0 16px;
+        font-size: 16px;
+        color: var(--text);
+        font-weight: 600;
+      }
       @media (max-width: 600px) {
         .query-card, .result-card {
           padding: 30px 20px;
         }
         .info-grid {
           grid-template-columns: 1fr;
+        }
+        .chart-container {
+          height: 250px;
         }
       }
     </style>
@@ -303,21 +351,54 @@
           </div>
         </div>
 
-        <div class="info-grid">
-          <div class="info-item">
-            <label>总分</label>
-            <div class="value" id="totalScore">650</div>
+        <!-- 标签页导航 -->
+        <div class="tabs">
+          <button class="tab-button active" data-tab="current">当前成绩</button>
+          <button class="tab-button" data-tab="trends">成绩概览</button>
+        </div>
+
+        <!-- 当前成绩标签页 -->
+        <div class="tab-content active" id="currentTab">
+          <div class="info-grid">
+            <div class="info-item">
+              <label>总分</label>
+              <div class="value" id="totalScore">650</div>
+            </div>
+            <div class="info-item">
+              <label>平均分</label>
+              <div class="value" id="avgScore">72.2</div>
+            </div>
           </div>
-          <div class="info-item">
-            <label>平均分</label>
-            <div class="value" id="avgScore">72.2</div>
+
+          <div class="scores-section">
+            <h3>各科成绩</h3>
+            <div class="score-list" id="scoreList">
+              <!-- 动态生成 -->
+            </div>
           </div>
         </div>
 
-        <div class="scores-section">
-          <h3>各科成绩</h3>
-          <div class="score-list" id="scoreList">
-            <!-- 动态生成 -->
+        <!-- 成绩走势标签页 -->
+        <div class="tab-content" id="trendsTab">
+          <div class="chart-section">
+            <h3>总分与平均分走势</h3>
+            <div class="chart-container">
+              <canvas id="scoreChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-section">
+            <h3>各科目成绩走势</h3>
+            <div class="chart-container">
+              <canvas id="subjectChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-section">
+            <h3>各科目优良率走势</h3>
+            <div class="chart-container">
+              <canvas id="rateChart"></canvas>
+            </div>
           </div>
         </div>
 
@@ -402,6 +483,16 @@
         loading.classList.remove("show");
         submitBtn.disabled = false;
 
+        // 存储当前学生学号并重置趋势数据
+        currentStudentNo = student.student_no;
+        trendData = null;
+
+        // 重置到当前成绩标签页
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.tab-button[data-tab="current"]').classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById('currentTab').classList.add('active');
+
         // 填充学生信息
         document.getElementById("studentName").textContent = student.name;
         document.getElementById("studentNo").textContent = `学号：${student.student_no}`;
@@ -450,6 +541,229 @@
 
       function hideError() {
         errorMessage.classList.remove("show");
+      }
+
+      // 标签页切换功能
+      let currentStudentNo = null;
+      let trendData = null;
+      let scoreChart = null;
+      let subjectChart = null;
+      let rateChart = null;
+
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', async () => {
+          const targetTab = button.getAttribute('data-tab');
+
+          // 更新按钮状态
+          document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+
+          // 更新内容显示
+          document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+          document.getElementById(targetTab + 'Tab').classList.add('active');
+
+          // 如果切换到走势标签页，加载趋势数据
+          if (targetTab === 'trends' && currentStudentNo && !trendData) {
+            await loadTrendData(currentStudentNo);
+          }
+        });
+      });
+
+      async function loadTrendData(studentNo) {
+        try {
+          const res = await fetch(`${API_BASE}/student-trend/${studentNo}`);
+
+          if (!res.ok) {
+            throw new Error('无法加载趋势数据');
+          }
+
+          trendData = await res.json();
+          renderCharts(trendData);
+        } catch (error) {
+          console.error('加载趋势数据失败:', error);
+          document.getElementById('trendsTab').innerHTML = '<p style="text-align: center; color: var(--subtext); padding: 40px;">暂无历史成绩数据</p>';
+        }
+      }
+
+      function renderCharts(data) {
+        if (!data.exams || data.exams.length === 0) {
+          document.getElementById('trendsTab').innerHTML = '<p style="text-align: center; color: var(--subtext); padding: 40px;">暂无历史成绩数据</p>';
+          return;
+        }
+
+        const exams = data.exams;
+        const examNames = exams.map(e => e.exam_name);
+        const totalScores = exams.map(e => e.total_score);
+        const avgScores = exams.map(e => e.average_score);
+
+        // 1. 总分与平均分走势图
+        const scoreCtx = document.getElementById('scoreChart');
+        if (scoreChart) scoreChart.destroy();
+        scoreChart = new Chart(scoreCtx, {
+          type: 'line',
+          data: {
+            labels: examNames,
+            datasets: [
+              {
+                label: '总分',
+                data: totalScores,
+                borderColor: '#333333',
+                backgroundColor: 'rgba(51, 51, 51, 0.1)',
+                tension: 0.3,
+                fill: true
+              },
+              {
+                label: '平均分',
+                data: avgScores,
+                borderColor: '#666666',
+                backgroundColor: 'rgba(102, 102, 102, 0.1)',
+                tension: 0.3,
+                fill: true
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+
+        // 2. 各科目成绩走势图
+        const allSubjects = new Set();
+        exams.forEach(exam => {
+          Object.keys(exam.subject_scores).forEach(subject => allSubjects.add(subject));
+        });
+
+        const subjectArray = Array.from(allSubjects);
+        const colors = [
+          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+          '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0'
+        ];
+
+        const subjectDatasets = subjectArray.map((subject, index) => {
+          return {
+            label: subject,
+            data: exams.map(exam => exam.subject_scores[subject] || null),
+            borderColor: colors[index % colors.length],
+            backgroundColor: colors[index % colors.length] + '33',
+            tension: 0.3,
+            fill: false
+          };
+        });
+
+        const subjectCtx = document.getElementById('subjectChart');
+        if (subjectChart) subjectChart.destroy();
+        subjectChart = new Chart(subjectCtx, {
+          type: 'line',
+          data: {
+            labels: examNames,
+            datasets: subjectDatasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100
+              }
+            }
+          }
+        });
+
+        // 3. 各科目优良率走势图
+        const excellentRates = exams.map(exam => {
+          const subjects = Object.values(exam.subject_scores);
+          const excellentCount = subjects.filter(score => score >= 90).length;
+          return subjects.length > 0 ? (excellentCount / subjects.length * 100).toFixed(1) : 0;
+        });
+
+        const goodRates = exams.map(exam => {
+          const subjects = Object.values(exam.subject_scores);
+          const goodCount = subjects.filter(score => score >= 80).length;
+          return subjects.length > 0 ? (goodCount / subjects.length * 100).toFixed(1) : 0;
+        });
+
+        const passRates = exams.map(exam => {
+          const subjects = Object.values(exam.subject_scores);
+          const passCount = subjects.filter(score => score >= 60).length;
+          return subjects.length > 0 ? (passCount / subjects.length * 100).toFixed(1) : 0;
+        });
+
+        const failRates = exams.map(exam => {
+          const subjects = Object.values(exam.subject_scores);
+          const failCount = subjects.filter(score => score < 60).length;
+          return subjects.length > 0 ? (failCount / subjects.length * 100).toFixed(1) : 0;
+        });
+
+        const rateCtx = document.getElementById('rateChart');
+        if (rateChart) rateChart.destroy();
+        rateChart = new Chart(rateCtx, {
+          type: 'bar',
+          data: {
+            labels: examNames,
+            datasets: [
+              {
+                label: '优秀率 (≥90分)',
+                data: excellentRates,
+                backgroundColor: '#4BC0C0'
+              },
+              {
+                label: '良好率 (≥80分)',
+                data: goodRates,
+                backgroundColor: '#36A2EB'
+              },
+              {
+                label: '及格率 (≥60分)',
+                data: passRates,
+                backgroundColor: '#FFCE56'
+              },
+              {
+                label: '不及格率 (<60分)',
+                data: failRates,
+                backgroundColor: '#FF6384'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  callback: function(value) {
+                    return value + '%';
+                  }
+                }
+              }
+            }
+          }
+        });
       }
     </script>
   </body>
