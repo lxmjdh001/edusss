@@ -7,10 +7,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
 from ..database import get_db
+from ..dependencies import get_active_member
 from ..models import (
     PointsClass, PointsStudent, PointsGroup,
     PointRecord, GroupPointRecord, ShopItem,
-    Purchase, PointRule, Student
+    Purchase, PointRule, Student, Member
 )
 
 router = APIRouter(prefix="/api/points", tags=["points"])
@@ -19,7 +20,10 @@ router = APIRouter(prefix="/api/points", tags=["points"])
 # ==================== 班级管理 ====================
 
 @router.get("/classes")
-def get_classes(db: Session = Depends(get_db)):
+def get_classes(
+    db: Session = Depends(get_db),
+    current_user: Member = Depends(get_active_member),
+):
     """获取所有班级列表（包含成绩系统的班级）"""
     # 从成绩系统获取所有班级
     grade_classes = db.query(Student.class_name, Student.grade_name).filter(

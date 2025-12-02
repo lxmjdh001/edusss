@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database import init_db
-from .routes import invite_codes, members, query_codes, students, points
+from .routes import invite_codes, members, query_codes, students, points, auth, activation_codes
 
 app = FastAPI(
     title="学校成绩管理系统",
@@ -24,8 +24,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(members.router)
 app.include_router(invite_codes.router)
+app.include_router(activation_codes.router)
 app.include_router(query_codes.router)
 app.include_router(students.router)
 app.include_router(points.router)
@@ -44,9 +46,11 @@ def startup_event():
 
 @app.get("/", include_in_schema=False)
 def serve_frontend():
-    if INDEX_FILE.exists():
-        return FileResponse(INDEX_FILE)
-    raise HTTPException(status_code=404, detail="前端文件未找到，请检查部署。")
+    # 直接返回登录页面，让前端JS处理认证检查和跳转
+    login_file = STATIC_DIR / "login.html"
+    if login_file.exists():
+        return FileResponse(login_file)
+    raise HTTPException(status_code=404, detail="登录页面未找到")
 
 
 @app.get("/points.html", include_in_schema=False)

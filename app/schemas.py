@@ -327,3 +327,25 @@ class ActivationCodeResponse(ORMModel):
 
 class AdminAuth(BaseModel):
     password: str = Field(..., description="管理员密码")
+
+
+# ============ 登录注册 Schemas ============
+
+class RegisterRequest(BaseModel):
+    """注册请求"""
+    invite_code: str = Field(..., max_length=32, description="激活码")
+    username: str = Field(..., max_length=64, description="用户名")
+    password: str = Field(..., min_length=6, max_length=128, description="密码")
+
+
+class LoginRequest(BaseModel):
+    """登录请求"""
+    username: str = Field(..., description="用户名")
+    password: str = Field(..., description="密码")
+
+
+class AuthResponse(BaseModel):
+    """认证响应"""
+    token: str
+    member: Member
+    message: str = "操作成功"

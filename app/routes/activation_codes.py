@@ -41,8 +41,8 @@ def _generate_unique_activation_code(
         if code in reserved_codes:
             continue
         existing = (
-            db.query(models.ActivationCode)
-            .filter(models.ActivationCode.code == code)
+            db.query(models.InviteCode)
+            .filter(models.InviteCode.code == code)
             .first()
         )
         if not existing:
@@ -50,11 +50,11 @@ def _generate_unique_activation_code(
             return code
 
 
-def _attach_activation_user_info(codes: Iterable[models.ActivationCode]):
+def _attach_activation_user_info(codes: Iterable[models.InviteCode]):
     """为激活码实例补充激活用户名信息"""
     for code in codes:
-        user = code.users[0] if getattr(code, "users", None) else None
-        code.activated_by_username = user.username if user else None
+        user = getattr(code, "used_by_member", None)
+        code.activated_by_username = user.account if user else None
 
 
 @router.post("/verify-admin")
@@ -86,9 +86,9 @@ def list_activation_codes(
         )
 
     codes = (
-        db.query(models.ActivationCode)
-        .options(joinedload(models.ActivationCode.users))
-        .order_by(models.ActivationCode.created_at.desc())
+        db.query(models.InviteCode)
+        .options(joinedload(models.InviteCode.used_by_member))
+        .order_by(models.InviteCode.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()
@@ -118,7 +118,7 @@ def create_activation_code(
 
     code = _generate_unique_activation_code(db)
 
-    new_code = models.ActivationCode(
+    new_code = models.InviteCode(
         code=code,
         valid_days=code_data.valid_days,
         is_used=False
@@ -149,11 +149,11 @@ def create_activation_code_batch(
         )
 
     reserved_codes: Set[str] = set()
-    new_codes: List[models.ActivationCode] = []
+    new_codes: List[models.InviteCode] = []
 
     for _ in range(batch_data.count):
         code = _generate_unique_activation_code(db, reserved_codes)
-        activation_code = models.ActivationCode(
+        activation_code = models.InviteCode(
             code=code,
             valid_days=batch_data.valid_days,
             is_used=False
@@ -186,16 +186,16 @@ def export_activation_codes(
         )
 
     query = (
-        db.query(models.ActivationCode)
-        .options(joinedload(models.ActivationCode.users))
-        .order_by(models.ActivationCode.created_at.desc())
+        db.query(models.InviteCode)
+        .options(joinedload(models.InviteCode.used_by_member))
+        .order_by(models.InviteCode.created_at.desc())
     )
 
     if valid_days is not None:
-        query = query.filter(models.ActivationCode.valid_days == valid_days)
+        query = query.filter(models.InviteCode.valid_days == valid_days)
 
     if is_used is not None:
-        query = query.filter(models.ActivationCode.is_used == is_used)
+        query = query.filter(models.InviteCode.is_used == is_used)
 
     codes = query.all()
     _attach_activation_user_info(codes)
@@ -242,7 +242,7 @@ def delete_activation_code(
             detail="密码错误"
         )
 
-    code = db.query(models.ActivationCode).filter(models.ActivationCode.id == code_id).first()
+    code = db.query(models.InviteCode).filter(models.InviteCode.id == code_id).first()
 
     if not code:
         raise HTTPException(
@@ -274,8 +274,8 @@ def get_activation_stats(password: str, db: Annotated[Session, Depends(get_db)])
             detail="密码错误"
         )
 
-    total = db.query(models.ActivationCode).count()
-    used = db.query(models.ActivationCode).filter(models.ActivationCode.is_used == True).count()
+    total = db.query(models.InviteCode).count()
+    used = db.query(models.InviteCode).filter(models.InviteCode.is_used == True).count()
     unused = total - used
 
     return {

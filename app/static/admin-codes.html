@@ -42,61 +42,8 @@
             padding: 20px;
         }
 
-        .auth-section {
-            background: white;
-            border-radius: 8px;
-            padding: 30px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            border: 1px solid #e0e0e0;
-        }
-
-        .auth-section h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-
-        .password-input-group {
-            display: flex;
-            gap: 10px;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        .password-input-group input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #d0d0d0;
-            border-radius: 4px;
-            font-size: 15px;
-        }
-
-        .password-input-group input:focus {
-            outline: none;
-            border-color: #333;
-            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .password-input-group button {
-            padding: 12px 30px;
-            background: #333;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .password-input-group button:hover {
-            background: #000;
-        }
-
         .main-content {
-            display: none;
+            display: block;
         }
 
         .stats-grid {
@@ -345,6 +292,7 @@
             border-color: rgba(255, 255, 255, 0.5);
         }
     </style>
+    <script src="/static/auth-guard.js"></script>
 </head>
 <body>
     <div class="header">
@@ -354,16 +302,6 @@
     </div>
 
     <div class="container">
-        <!-- 密码验证区域 -->
-        <div class="auth-section" id="authSection">
-            <h2>请输入管理员密码</h2>
-            <div id="authAlertBox"></div>
-            <div class="password-input-group">
-                <input type="password" id="adminPassword" placeholder="请输入管理员密码">
-                <button onclick="verifyPassword()">验证</button>
-            </div>
-        </div>
-
         <!-- 主内容区域 -->
         <div class="main-content" id="mainContent">
             <div id="alertBox"></div>
@@ -494,9 +432,21 @@
     </div>
 
     <script>
+        // 初始化认证守卫，要求用户登录并检查权限
+        authGuard.init({
+            required: true,
+            onAuth: (user) => {
+                // 检查是否是管理员（VIP3）
+                if (user.vip_level < 3) {
+                    alert('需要管理员权限才能访问此页面');
+                    window.location.href = '/static/grades.html';
+                }
+            }
+        });
+
         const EXPIRING_THRESHOLD_DAYS = 7;
         const MS_IN_DAY = 24 * 60 * 60 * 1000;
-        let adminPassword = '';
+        const ADMIN_PASSWORD = 'ddjia2022'; // 固定管理员密码
         let activationCodes = [];
         let showExpiringOnly = false;
 
@@ -508,41 +458,15 @@
             }, 5000);
         }
 
-        async function verifyPassword() {
-            const password = document.getElementById('adminPassword').value;
-
-            if (!password) {
-                showAlert('请输入密码', 'error', 'authAlertBox');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/activation-codes/verify-admin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ password })
-                });
-
-                if (response.ok) {
-                    adminPassword = password;
-                    document.getElementById('authSection').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                    loadCodes();
-                    loadStats();
-                } else {
-                    showAlert('密码错误', 'error', 'authAlertBox');
-                }
-            } catch (error) {
-                console.error('验证失败:', error);
-                showAlert('网络错误', 'error', 'authAlertBox');
-            }
-        }
+        // 页面加载时直接加载数据
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCodes();
+            loadStats();
+        });
 
         async function loadStats() {
             try {
-                const response = await fetch(`/api/activation-codes/stats/summary?password=${encodeURIComponent(adminPassword)}`);
+                const response = await fetch(`/api/activation-codes/stats/summary?password=${encodeURIComponent(ADMIN_PASSWORD)}`);
                 const data = await response.json();
 
                 document.getElementById('totalCodes').textContent = data.total;
@@ -555,12 +479,20 @@
 
         async function loadCodes() {
             try {
-                const response = await fetch(`/api/activation-codes?password=${encodeURIComponent(adminPassword)}`);
-                activationCodes = await response.json();
+                const response = await fetch(`/api/activation-codes?password=${encodeURIComponent(ADMIN_PASSWORD)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    activationCodes = Array.isArray(data) ? data : [];
+                } else {
+                    activationCodes = [];
+                    showAlert('加载激活码失败：' + (await response.text()));
+                }
                 renderCodes();
             } catch (error) {
                 console.error('加载激活码失败:', error);
+                activationCodes = [];
                 showAlert('加载激活码失败');
+                renderCodes();
             }
         }
 
@@ -642,7 +574,7 @@
             const validDays = parseInt(document.getElementById('validDays').value);
 
             try {
-                const response = await fetch(`/api/activation-codes?password=${encodeURIComponent(adminPassword)}`, {
+                const response = await fetch(`/api/activation-codes?password=${encodeURIComponent(ADMIN_PASSWORD)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -688,7 +620,7 @@
             }
 
             try {
-                const response = await fetch(`/api/activation-codes/batch?password=${encodeURIComponent(adminPassword)}`, {
+                const response = await fetch(`/api/activation-codes/batch?password=${encodeURIComponent(ADMIN_PASSWORD)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -723,13 +655,8 @@
         }
 
         async function exportCodes() {
-            if (!adminPassword) {
-                showAlert('请先验证管理员密码');
-                return;
-            }
-
             const params = new URLSearchParams();
-            params.set('password', adminPassword);
+            params.set('password', ADMIN_PASSWORD);
 
             const validDays = document.getElementById('exportValidDays').value;
             const usage = document.getElementById('exportUsage').value;
@@ -777,7 +704,7 @@
             }
 
             try {
-                const response = await fetch(`/api/activation-codes/${codeId}?password=${encodeURIComponent(adminPassword)}`, {
+                const response = await fetch(`/api/activation-codes/${codeId}?password=${encodeURIComponent(ADMIN_PASSWORD)}`, {
                     method: 'DELETE'
                 });
 
@@ -797,19 +724,9 @@
 
         function logout() {
             if (confirm('确定要退出吗？')) {
-                adminPassword = '';
-                document.getElementById('authSection').style.display = 'block';
-                document.getElementById('mainContent').style.display = 'none';
-                document.getElementById('adminPassword').value = '';
+                authGuard.logout();
             }
         }
-
-        // 回车键验证密码
-        document.getElementById('adminPassword').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                verifyPassword();
-            }
-        });
     </script>
 </body>
 </html>

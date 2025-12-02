@@ -9,6 +9,7 @@ from sqlalchemy import or_
 
 from .. import models, schemas
 from ..database import get_db
+from ..dependencies import get_admin_user
 from ..utils import hash_password
 
 router = APIRouter(prefix="/api/members", tags=["members"])
@@ -24,6 +25,7 @@ def list_members(
         description="支持手机号、账号或学生姓名模糊搜索",
     ),
     db: Session = Depends(get_db),
+    admin: models.Member = Depends(get_admin_user),
 ):
     query = db.query(models.Member)
     if vip_level:

@@ -11,6 +11,7 @@ from openpyxl import Workbook, load_workbook
 
 from .. import models, schemas
 from ..database import get_db
+from ..dependencies import get_active_member, get_admin_user
 from ..utils import generate_code
 from datetime import datetime, timedelta
 
@@ -55,6 +56,7 @@ def list_students(
     class_name: Optional[str] = None,
     exam_name: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: models.Member = Depends(get_active_member),
 ):
     query = db.query(models.Student)
     if keyword:
@@ -795,7 +797,11 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=schemas.Student, status_code=201)
-def create_student(payload: schemas.StudentCreate, db: Session = Depends(get_db)):
+def create_student(
+    payload: schemas.StudentCreate,
+    db: Session = Depends(get_db),
+    current_user: models.Member = Depends(get_active_member),
+):
     if db.query(models.Student).filter_by(student_no=payload.student_no).first():
         raise HTTPException(status_code=400, detail="学号已存在")
     student = models.Student(
@@ -821,6 +827,7 @@ def update_student(
     student_id: int,
     payload: schemas.StudentUpdate,
     db: Session = Depends(get_db),
+    current_user: models.Member = Depends(get_active_member),
 ):
     student = db.get(models.Student, student_id)
     if not student:
@@ -846,7 +853,11 @@ def update_student(
 
 
 @router.delete("/{student_id}", status_code=204)
-def delete_student(student_id: int, db: Session = Depends(get_db)):
+def delete_student(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Member = Depends(get_active_member),
+):
     student = db.get(models.Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="学生不存在")
@@ -873,6 +884,7 @@ async def import_students(
     grade_name: Optional[str] = Form(None),
     exam_name: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    current_user: models.Member = Depends(get_active_member),
 ):
     contents = await file.read()
     try:

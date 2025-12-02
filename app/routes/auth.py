@@ -1,0 +1,222 @@
+"""
+用户认证路由：注册、登录、登出
+"""
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
+
+from .. import models, schemas
+from ..database import get_db
+from ..dependencies import get_current_user, get_active_member
+from ..utils import hash_password, verify_password, generate_session_token, get_session_expiry
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=schemas.AuthResponse, status_code=status.HTTP_201_CREATED)
+def register(
+    payload: schemas.RegisterRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """
+    用户注册
+    需要提供有效的激活码
+    """
+    # 验证激活码
+    invite_code = db.query(models.InviteCode).filter(
+        models.InviteCode.code == payload.invite_code
+    ).first()
+
+    if not invite_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="激活码不存在"
+        )
+
+    if invite_code.is_used:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="激活码已被使用"
+        )
+
+    # 检查用户名是否已存在
+    if db.query(models.Member).filter(models.Member.account == payload.username).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="用户名已存在"
+        )
+
+    # 计算会员到期时间
+    expires_at = datetime.utcnow() + timedelta(days=invite_code.valid_days)
+
+    # 创建会员（使用username作为account，phone设为username）
+    member = models.Member(
+        phone=payload.username,  # 使用username作为phone（保持兼容）
+        account=payload.username,
+        password_hash=hash_password(payload.password),
+        student_name=None,  # 教师账号不需要学生姓名
+        vip_level=invite_code.vip_level,
+        expires_at=expires_at,
+        is_active=True,
+    )
+    db.add(member)
+    db.flush()  # 获取member.id
+
+    # 标记激活码为已使用
+    invite_code.is_used = True
+    invite_code.used_at = datetime.utcnow()
+    invite_code.used_by_member_id = member.id
+
+    # 创建登录会话
+    session_token = generate_session_token()
+    session = models.Session(
+        session_token=session_token,
+        member_id=member.id,
+        expires_at=get_session_expiry(days=7),
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    db.add(session)
+
+    db.commit()
+    db.refresh(member)
+
+    # 设置Cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        max_age=7 * 24 * 60 * 60,  # 7天
+        samesite="lax",
+    )
+
+    return schemas.AuthResponse(
+        token=session_token,
+        member=member,
+        message="注册成功"
+    )
+
+
+@router.post("/login", response_model=schemas.AuthResponse)
+def login(
+    payload: schemas.LoginRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """
+    用户登录
+    支持使用账号或手机号登录
+    """
+    # 查找用户（通过用户名）
+    member = db.query(models.Member).filter(
+        models.Member.account == payload.username
+    ).first()
+
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码错误"
+        )
+
+    # 验证密码
+    if not verify_password(payload.password, member.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码错误"
+        )
+
+    # 检查账号状态
+    if not member.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="账号已被禁用"
+        )
+
+    if member.expires_at and member.expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="账号已过期，请联系管理员续费"
+        )
+
+    # 创建登录会话
+    session_token = generate_session_token()
+    session = models.Session(
+        session_token=session_token,
+        member_id=member.id,
+        expires_at=get_session_expiry(days=7),
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    db.add(session)
+    db.commit()
+
+    # 设置Cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        max_age=7 * 24 * 60 * 60,  # 7天
+        samesite="lax",
+    )
+
+    return schemas.AuthResponse(
+        token=session_token,
+        member=member,
+        message="登录成功"
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    response: Response,
+    current_user: models.Member = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    用户登出
+    删除当前会话
+    """
+    # 删除当前用户的所有会话（可选：只删除当前会话）
+    db.query(models.Session).filter(
+        models.Session.member_id == current_user.id
+    ).delete()
+    db.commit()
+
+    # 清除Cookie
+    response.delete_cookie(key="session_token")
+
+    return None
+
+
+@router.get("/me", response_model=schemas.Member)
+def get_current_user_info(
+    current_user: models.Member = Depends(get_active_member),
+):
+    """
+    获取当前登录用户信息
+    """
+    return current_user
+
+
+@router.get("/check", response_model=dict)
+def check_auth_status(
+    current_user: models.Member = Depends(get_current_user),
+):
+    """
+    检查登录状态
+    """
+    return {
+        "authenticated": True,
+        "user_id": current_user.id,
+        "account": current_user.account,
+        "vip_level": current_user.vip_level,
+        "is_active": current_user.is_active,
+        "expires_at": current_user.expires_at,
+    }

@@ -203,3 +203,17 @@ class PointRule(Base, TimestampMixin):
     points = Column(Integer, nullable=False)
     rule_type = Column(String(20), nullable=False)  # 'student' or 'group'
     is_active = Column(Boolean, default=True, nullable=False)
+
+
+class Session(Base, TimestampMixin):
+    """用户登录会话表"""
+    __tablename__ = "sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_token = Column(String(64), unique=True, nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+
+    member = relationship("Member", backref="sessions")

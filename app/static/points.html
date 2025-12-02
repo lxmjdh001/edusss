@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>班级积分宠物成长系统</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/auth-guard.js"></script>
 <base target="_blank">
 </head>
 <body>
@@ -813,7 +814,10 @@
   </script>
   <script src="/static/script.js?t=" + new Date().getTime()></script>
   <!-- 增强包：多选规则+批量清空 -->
-  
-  
+
+  <script>
+    // 初始化认证守卫
+    authGuard.init({ required: true });
+  </script>
 </body>
 </html>
