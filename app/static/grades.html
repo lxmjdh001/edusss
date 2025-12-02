@@ -1008,6 +1008,29 @@
             </div>
           </section>
           <section class="collapsible-section">
+            <div class="collapsible-header" data-target="rankImportSection">
+              <h2>导入排名</h2>
+              <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="rankImportSection">
+              <div class="collapsible-body">
+                <p class="hint-text">导入全年级学生的年级排名和班级排名数据。系统会根据学号和考试名称自动匹配并更新排名信息。</p>
+                <div class="import-actions">
+                  <button class="btn secondary" id="downloadRankTemplate">下载排名模板</button>
+                </div>
+                <form class="inline-form" id="rankImportForm">
+                  <label>
+                    <span>选择排名文件 (Excel)</span>
+                    <input type="file" id="rankImportFile" accept=".xlsx,.xls" required />
+                  </label>
+                  <div class="import-actions">
+                    <button class="btn" type="submit">上传并导入排名</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
+          <section class="collapsible-section">
             <div class="collapsible-header" data-target="exportSection">
               <h2>成绩导出</h2>
               <span class="collapsible-toggle">▼</span>
@@ -3480,6 +3503,18 @@
         }
       }
 
+      async function downloadRankTemplate(event) {
+        event?.preventDefault();
+        try {
+          const res = await fetch(`${API_BASE}/rank-template`);
+          if (!res.ok) throw new Error("排名模板下载失败");
+          const blob = await res.blob();
+          downloadBlob(blob, "排名导入模板.xlsx");
+        } catch (error) {
+          showToast(error.message, true);
+        }
+      }
+
       async function handleImport(event) {
         event.preventDefault();
         if (!importFileInput?.files.length) {
@@ -3505,6 +3540,40 @@
           importForm?.reset();
           await loadStudents();
           await loadClassStats();
+        } catch (error) {
+          showToast(error.message, true);
+        }
+      }
+
+      async function handleRankImport(event) {
+        event.preventDefault();
+        const rankFileInput = document.getElementById('rankImportFile');
+        if (!rankFileInput?.files.length) {
+          showToast("请先选择 Excel 文件", true);
+          return;
+        }
+        const formData = new FormData();
+        formData.append("file", rankFileInput.files[0]);
+        try {
+          const res = await fetch(`${API_BASE}/import-ranks`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "导入排名失败");
+          }
+          const summary = await res.json();
+          let message = `导入完成：更新 ${summary.updated} 条记录`;
+          if (summary.not_found > 0) {
+            message += `，未找到 ${summary.not_found} 条记录`;
+          }
+          if (summary.errors && summary.errors.length > 0) {
+            message += `\n前${summary.errors.length}个错误：\n${summary.errors.join('\n')}`;
+          }
+          showToast(message);
+          document.getElementById('rankImportForm')?.reset();
+          await loadStudents();
         } catch (error) {
           showToast(error.message, true);
         }
@@ -3833,6 +3902,8 @@
         renderTopStudents();
       });
       downloadTemplateBtn?.addEventListener("click", downloadTemplate);
+      document.getElementById('downloadRankTemplate')?.addEventListener("click", downloadRankTemplate);
+      document.getElementById('rankImportForm')?.addEventListener("submit", handleRankImport);
       addStudentBtn?.addEventListener("click", () => openModal());
       cancelModal.addEventListener("click", closeModal);
       modalBackdrop.addEventListener("click", (event) => {

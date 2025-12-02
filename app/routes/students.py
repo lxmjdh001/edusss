@@ -764,6 +764,28 @@ def get_class_subject_stats(
     )
 
 
+@router.get("/template")
+def download_template():
+    wb = Workbook()
+    ws = wb.active
+    headers = ["姓名", "学号", "班级", "年级", "考试名称", "考试日期", "备注"] + DEFAULT_SUBJECTS
+    ws.append(headers)
+    ws.append(["张三", "2024001", "高一(1)班", "高一", "期中考试", "2024-01-15", "可填写备注"] + ["" for _ in DEFAULT_SUBJECTS])
+    return _workbook_response(wb, "grade_template.xlsx")
+
+
+@router.get("/rank-template")
+def download_rank_template():
+    """下载排名导入模板"""
+    wb = Workbook()
+    ws = wb.active
+    headers = ["姓名", "学号", "考试名称", "年级排名", "班级排名"]
+    ws.append(headers)
+    ws.append(["张三", "2024001", "期中考试", "15", "3"])
+    ws.append(["李四", "2024002", "期中考试", "28", "5"])
+    return _workbook_response(wb, "rank_import_template.xlsx")
+
+
 @router.get("/{student_id}", response_model=schemas.Student)
 def get_student(student_id: int, db: Session = Depends(get_db)):
     student = db.get(models.Student, student_id)
@@ -842,16 +864,6 @@ def _workbook_response(wb: Workbook, filename: str) -> StreamingResponse:
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
-@router.get("/template")
-def download_template():
-    wb = Workbook()
-    ws = wb.active
-    headers = ["姓名", "学号", "班级", "年级", "考试名称", "考试日期", "备注"] + DEFAULT_SUBJECTS
-    ws.append(headers)
-    ws.append(["张三", "2024001", "高一(1)班", "高一", "期中考试", "2024-01-15", "可填写备注"] + ["" for _ in DEFAULT_SUBJECTS])
-    return _workbook_response(wb, "grade_template.xlsx")
 
 
 @router.post("/import")
@@ -950,6 +962,93 @@ async def import_students(
             imported += 1
     db.commit()
     return {"imported": imported, "updated": updated}
+
+
+@router.post("/import-ranks")
+async def import_ranks(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """导入年级排名和班级排名数据"""
+    contents = await file.read()
+    try:
+        wb = load_workbook(BytesIO(contents))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="无法读取 Excel 文件") from exc
+
+    ws = wb.active
+    header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
+    if not header_row:
+        raise HTTPException(status_code=400, detail="表格为空")
+
+    header_map: Dict[str, int] = {str(value).strip(): idx for idx, value in enumerate(header_row) if value}
+
+    # 验证必需列
+    for required in ["姓名", "学号", "考试名称"]:
+        if required not in header_map:
+            raise HTTPException(status_code=400, detail=f"缺少必要列：{required}")
+
+    updated = 0
+    not_found = 0
+    errors = []
+
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if row is None:
+            continue
+
+        name = _get_cell_value(row, header_map, "姓名")
+        student_no = _get_cell_value(row, header_map, "学号")
+        exam_name = _get_cell_value(row, header_map, "考试名称")
+
+        if not student_no or not exam_name:
+            continue
+
+        # 获取排名数据
+        grade_rank_value = _get_cell_value(row, header_map, "年级排名")
+        class_rank_value = _get_cell_value(row, header_map, "班级排名")
+
+        grade_rank = None
+        class_rank = None
+
+        if grade_rank_value:
+            try:
+                grade_rank = int(grade_rank_value)
+            except (ValueError, TypeError):
+                errors.append(f"第{row_idx}行：年级排名格式错误")
+                continue
+
+        if class_rank_value:
+            try:
+                class_rank = int(class_rank_value)
+            except (ValueError, TypeError):
+                errors.append(f"第{row_idx}行：班级排名格式错误")
+                continue
+
+        # 查找匹配的学生记录（根据学号和考试名称）
+        existing = db.query(models.Student).filter(
+            models.Student.student_no == student_no,
+            models.Student.exam_name == exam_name
+        ).first()
+
+        if existing:
+            # 更新排名数据
+            if grade_rank is not None:
+                existing.grade_rank = grade_rank
+            if class_rank is not None:
+                existing.class_rank = class_rank
+            db.add(existing)
+            updated += 1
+        else:
+            not_found += 1
+            errors.append(f"第{row_idx}行：未找到学号 {student_no} 在考试 {exam_name} 的记录")
+
+    db.commit()
+
+    return {
+        "updated": updated,
+        "not_found": not_found,
+        "errors": errors[:10] if errors else []  # 只返回前10个错误
+    }
 
 
 @router.get("/export")
