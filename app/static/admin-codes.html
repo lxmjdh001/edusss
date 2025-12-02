@@ -389,6 +389,7 @@
                 <button class="btn" onclick="openCreateModal()">+ 新建激活码</button>
                 <button class="btn" onclick="openBatchModal()">批量创建</button>
                 <button class="btn" onclick="openExportModal()">导出激活码</button>
+                <button class="btn btn-secondary" id="toggleExpiringBtn" onclick="toggleExpiringFilter()">显示快到期</button>
                 <button class="btn btn-secondary" onclick="loadCodes()">刷新</button>
             </div>
 
@@ -493,7 +494,11 @@
     </div>
 
     <script>
+        const EXPIRING_THRESHOLD_DAYS = 7;
+        const MS_IN_DAY = 24 * 60 * 60 * 1000;
         let adminPassword = '';
+        let activationCodes = [];
+        let showExpiringOnly = false;
 
         function showAlert(message, type = 'error', boxId = 'alertBox') {
             const alertBox = document.getElementById(boxId);
@@ -551,38 +556,78 @@
         async function loadCodes() {
             try {
                 const response = await fetch(`/api/activation-codes?password=${encodeURIComponent(adminPassword)}`);
-                const codes = await response.json();
-
-                const tbody = document.getElementById('codesTableBody');
-
-                if (codes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">暂无激活码</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = codes.map(code => `
-                    <tr>
-                        <td class="code-display">${code.code}</td>
-                        <td>${code.valid_days} 天</td>
-                        <td>
-                            ${code.is_used
-                                ? '<span class="badge badge-danger">已使用</span>'
-                                : '<span class="badge badge-success">未使用</span>'}
-                        </td>
-                        <td>${new Date(code.generated_at).toLocaleString('zh-CN')}</td>
-                        <td>${code.used_at ? new Date(code.used_at).toLocaleString('zh-CN') : '-'}</td>
-                        <td>${code.activated_by_username || '-'}</td>
-                        <td>
-                            ${!code.is_used
-                                ? `<button class="btn btn-small btn-delete" onclick="deleteCode(${code.id})">删除</button>`
-                                : '-'}
-                        </td>
-                    </tr>
-                `).join('');
+                activationCodes = await response.json();
+                renderCodes();
             } catch (error) {
                 console.error('加载激活码失败:', error);
                 showAlert('加载激活码失败');
             }
+        }
+
+        function renderCodes() {
+            const tbody = document.getElementById('codesTableBody');
+            if (!tbody) {
+                return;
+            }
+
+            const filteredCodes = showExpiringOnly
+                ? activationCodes.filter(code => isExpiringSoon(code))
+                : activationCodes;
+
+            const toggleBtn = document.getElementById('toggleExpiringBtn');
+            if (toggleBtn) {
+                toggleBtn.textContent = showExpiringOnly ? '显示全部' : '显示快到期';
+            }
+
+            if (filteredCodes.length === 0) {
+                const message = showExpiringOnly ? '暂无快到期激活码' : '暂无激活码';
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">${message}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filteredCodes.map(code => `
+                <tr>
+                    <td class="code-display">${code.code}</td>
+                    <td>${code.valid_days} 天</td>
+                    <td>
+                        ${code.is_used
+                            ? '<span class="badge badge-danger">已使用</span>'
+                            : '<span class="badge badge-success">未使用</span>'}
+                    </td>
+                    <td>${new Date(code.generated_at).toLocaleString('zh-CN')}</td>
+                    <td>${code.used_at ? new Date(code.used_at).toLocaleString('zh-CN') : '-'}</td>
+                    <td>${code.activated_by_username || '-'}</td>
+                    <td>
+                        ${!code.is_used
+                            ? `<button class="btn btn-small btn-delete" onclick="deleteCode(${code.id})">删除</button>`
+                            : '-'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function isExpiringSoon(code) {
+            if (!code || code.is_used) {
+                return false;
+            }
+
+            const generatedTime = new Date(code.generated_at).getTime();
+            const validDays = Number(code.valid_days);
+
+            if (Number.isNaN(generatedTime) || Number.isNaN(validDays)) {
+                return false;
+            }
+
+            const expiryTime = generatedTime + validDays * MS_IN_DAY;
+            const now = Date.now();
+            const thresholdTime = now + EXPIRING_THRESHOLD_DAYS * MS_IN_DAY;
+
+            return expiryTime >= now && expiryTime <= thresholdTime;
+        }
+
+        function toggleExpiringFilter() {
+            showExpiringOnly = !showExpiringOnly;
+            renderCodes();
         }
 
         function openCreateModal() {
