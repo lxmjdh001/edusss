@@ -657,7 +657,19 @@
             <h1>数据看板</h1>
             <p>成绩统计概览</p>
           </div>
-          <div class="actions">
+          <div class="actions" style="gap: 12px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn secondary" id="filterClassBtn" style="display: flex; align-items: center; gap: 6px;">
+                <span>📚</span>
+                <span id="filterClassText">全部班级</span>
+                <span style="font-size: 12px; opacity: 0.7;" id="classCount"></span>
+              </button>
+              <button class="btn secondary" id="filterExamBtn" style="display: flex; align-items: center; gap: 6px;">
+                <span>📝</span>
+                <span id="filterExamText">全部考试</span>
+                <span style="font-size: 12px; opacity: 0.7;" id="examCount"></span>
+              </button>
+            </div>
             <button class="btn secondary" id="refreshBtn">刷新数据</button>
           </div>
         </div>
@@ -1268,6 +1280,54 @@
       </div>
     </div>
 
+    <!-- 班级筛选弹窗 -->
+    <div class="modal-backdrop" id="classFilterModal" role="dialog" aria-modal="true">
+      <div class="modal" style="max-width: 600px;">
+        <h2>📚 筛选班级</h2>
+        <p class="hint-text">可以选择一个或多个班级进行数据统计</p>
+        <div style="margin: 20px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-weight: 600; font-size: 14px;">已选择 <span id="selectedClassCount">0</span> 个班级</span>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn secondary" id="selectAllClasses" style="padding: 6px 12px; font-size: 13px;">全选</button>
+              <button type="button" class="btn secondary" id="clearAllClasses" style="padding: 6px 12px; font-size: 13px;">清空</button>
+            </div>
+          </div>
+          <div id="classCheckboxList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+            <!-- 动态填充班级复选框 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn secondary" id="cancelClassFilter">取消</button>
+          <button type="button" class="btn" id="confirmClassFilter">应用筛选</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 考试筛选弹窗 -->
+    <div class="modal-backdrop" id="examFilterModal" role="dialog" aria-modal="true">
+      <div class="modal" style="max-width: 600px;">
+        <h2>📝 筛选考试</h2>
+        <p class="hint-text">可以选择一个或多个考试进行数据统计</p>
+        <div style="margin: 20px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-weight: 600; font-size: 14px;">已选择 <span id="selectedExamCount">0</span> 个考试</span>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn secondary" id="selectAllExams" style="padding: 6px 12px; font-size: 13px;">全选</button>
+              <button type="button" class="btn secondary" id="clearAllExams" style="padding: 6px 12px; font-size: 13px;">清空</button>
+            </div>
+          </div>
+          <div id="examCheckboxList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+            <!-- 动态填充考试复选框 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn secondary" id="cancelExamFilter">取消</button>
+          <button type="button" class="btn" id="confirmExamFilter">应用筛选</button>
+        </div>
+      </div>
+    </div>
+
     <div class="notification" id="notify"></div>
 
     <script>
@@ -1320,6 +1380,34 @@
       const compareExam1Select = document.getElementById("compareExam1Select");
       const compareExam2Select = document.getElementById("compareExam2Select");
       const compareExamsBtn = document.getElementById("compareExamsBtn");
+
+      // 筛选器相关元素
+      const filterClassBtn = document.getElementById("filterClassBtn");
+      const filterExamBtn = document.getElementById("filterExamBtn");
+      const filterClassText = document.getElementById("filterClassText");
+      const filterExamText = document.getElementById("filterExamText");
+      const classCount = document.getElementById("classCount");
+      const examCount = document.getElementById("examCount");
+      const classFilterModal = document.getElementById("classFilterModal");
+      const examFilterModal = document.getElementById("examFilterModal");
+      const classCheckboxList = document.getElementById("classCheckboxList");
+      const examCheckboxList = document.getElementById("examCheckboxList");
+      const selectedClassCount = document.getElementById("selectedClassCount");
+      const selectedExamCount = document.getElementById("selectedExamCount");
+      const selectAllClasses = document.getElementById("selectAllClasses");
+      const clearAllClasses = document.getElementById("clearAllClasses");
+      const selectAllExams = document.getElementById("selectAllExams");
+      const clearAllExams = document.getElementById("clearAllExams");
+      const cancelClassFilter = document.getElementById("cancelClassFilter");
+      const confirmClassFilter = document.getElementById("confirmClassFilter");
+      const cancelExamFilter = document.getElementById("cancelExamFilter");
+      const confirmExamFilter = document.getElementById("confirmExamFilter");
+
+      // 筛选器状态
+      let selectedClasses = [];
+      let selectedExams = [];
+      let allClassList = [];
+      let allExamList = [];
       const examComparisonResult = document.getElementById("examComparisonResult");
       const comparisonStats = document.getElementById("comparisonStats");
       const comparisonChart = document.getElementById("comparisonChart");
@@ -1892,7 +1980,19 @@
       async function loadStudents() {
         try {
           const res = await fetch(API_BASE);
-          students = (await res.json()).map(enrichStudent);
+          let allStudents = (await res.json()).map(enrichStudent);
+
+          // 应用班级筛选
+          if (selectedClasses.length > 0) {
+            allStudents = allStudents.filter(s => selectedClasses.includes(s.class_name));
+          }
+
+          // 应用考试筛选
+          if (selectedExams.length > 0) {
+            allStudents = allStudents.filter(s => selectedExams.includes(s.exam_name));
+          }
+
+          students = allStudents;
           renderFilters();
           renderTable();
           updateSummary();
@@ -2965,6 +3065,196 @@
           showToast(error.message, true);
         }
       }
+
+      // ========== 筛选器功能 ==========
+
+      // 加载班级和考试列表
+      async function loadFilterOptions() {
+        try {
+          const res = await fetch(`${API_BASE}/`);
+          if (!res.ok) throw new Error("加载数据失败");
+          const students = await res.json();
+
+          // 提取唯一的班级和考试
+          const classSet = new Set();
+          const examSet = new Set();
+
+          students.forEach(student => {
+            if (student.class_name) classSet.add(student.class_name);
+            if (student.exam_name) examSet.add(student.exam_name);
+          });
+
+          allClassList = Array.from(classSet).sort();
+          allExamList = Array.from(examSet).sort();
+
+          // 渲染班级复选框
+          renderClassCheckboxes();
+          // 渲染考试复选框
+          renderExamCheckboxes();
+        } catch (error) {
+          console.error("加载筛选选项失败:", error);
+        }
+      }
+
+      // 渲染班级复选框列表
+      function renderClassCheckboxes() {
+        classCheckboxList.innerHTML = allClassList.map(className => `
+          <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                 onmouseover="this.style.background='#f3f4f6'"
+                 onmouseout="this.style.background='transparent'">
+            <input type="checkbox" value="${className}" ${selectedClasses.includes(className) ? 'checked' : ''}
+                   style="width: 16px; height: 16px; cursor: pointer;">
+            <span style="font-size: 14px;">${className}</span>
+          </label>
+        `).join('');
+
+        updateSelectedClassCount();
+      }
+
+      // 渲染考试复选框列表
+      function renderExamCheckboxes() {
+        examCheckboxList.innerHTML = allExamList.map(examName => `
+          <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                 onmouseover="this.style.background='#f3f4f6'"
+                 onmouseout="this.style.background='transparent'">
+            <input type="checkbox" value="${examName}" ${selectedExams.includes(examName) ? 'checked' : ''}
+                   style="width: 16px; height: 16px; cursor: pointer;">
+            <span style="font-size: 14px;">${examName}</span>
+          </label>
+        `).join('');
+
+        updateSelectedExamCount();
+      }
+
+      // 更新已选择班级数量
+      function updateSelectedClassCount() {
+        const checkboxes = classCheckboxList.querySelectorAll('input[type="checkbox"]');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        selectedClassCount.textContent = checked.length;
+      }
+
+      // 更新已选择考试数量
+      function updateSelectedExamCount() {
+        const checkboxes = examCheckboxList.querySelectorAll('input[type="checkbox"]');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        selectedExamCount.textContent = checked.length;
+      }
+
+      // 更新筛选器按钮文本
+      function updateFilterButtonText() {
+        if (selectedClasses.length === 0) {
+          filterClassText.textContent = "全部班级";
+          classCount.textContent = "";
+        } else if (selectedClasses.length === 1) {
+          filterClassText.textContent = selectedClasses[0];
+          classCount.textContent = "";
+        } else {
+          filterClassText.textContent = "多个班级";
+          classCount.textContent = `(${selectedClasses.length})`;
+        }
+
+        if (selectedExams.length === 0) {
+          filterExamText.textContent = "全部考试";
+          examCount.textContent = "";
+        } else if (selectedExams.length === 1) {
+          filterExamText.textContent = selectedExams[0];
+          examCount.textContent = "";
+        } else {
+          filterExamText.textContent = "多个考试";
+          examCount.textContent = `(${selectedExams.length})`;
+        }
+      }
+
+      // 打开班级筛选弹窗
+      filterClassBtn?.addEventListener("click", () => {
+        renderClassCheckboxes();
+        classFilterModal.classList.add("active");
+      });
+
+      // 打开考试筛选弹窗
+      filterExamBtn?.addEventListener("click", () => {
+        renderExamCheckboxes();
+        examFilterModal.classList.add("active");
+      });
+
+      // 班级复选框change事件
+      classCheckboxList?.addEventListener("change", updateSelectedClassCount);
+
+      // 考试复选框change事件
+      examCheckboxList?.addEventListener("change", updateSelectedExamCount);
+
+      // 全选班级
+      selectAllClasses?.addEventListener("click", () => {
+        classCheckboxList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+        updateSelectedClassCount();
+      });
+
+      // 清空班级选择
+      clearAllClasses?.addEventListener("click", () => {
+        classCheckboxList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateSelectedClassCount();
+      });
+
+      // 全选考试
+      selectAllExams?.addEventListener("click", () => {
+        examCheckboxList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+        updateSelectedExamCount();
+      });
+
+      // 清空考试选择
+      clearAllExams?.addEventListener("click", () => {
+        examCheckboxList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateSelectedExamCount();
+      });
+
+      // 取消班级筛选
+      cancelClassFilter?.addEventListener("click", () => {
+        classFilterModal.classList.remove("active");
+      });
+
+      // 确认班级筛选
+      confirmClassFilter?.addEventListener("click", () => {
+        const checkboxes = classCheckboxList.querySelectorAll('input[type="checkbox"]:checked');
+        selectedClasses = Array.from(checkboxes).map(cb => cb.value);
+        updateFilterButtonText();
+        classFilterModal.classList.remove("active");
+
+        // 刷新仪表盘数据
+        loadStudents();
+        showToast(`已应用班级筛选 (${selectedClasses.length || '全部'})`);
+      });
+
+      // 取消考试筛选
+      cancelExamFilter?.addEventListener("click", () => {
+        examFilterModal.classList.remove("active");
+      });
+
+      // 确认考试筛选
+      confirmExamFilter?.addEventListener("click", () => {
+        const checkboxes = examCheckboxList.querySelectorAll('input[type="checkbox"]:checked');
+        selectedExams = Array.from(checkboxes).map(cb => cb.value);
+        updateFilterButtonText();
+        examFilterModal.classList.remove("active");
+
+        // 刷新仪表盘数据
+        loadStudents();
+        showToast(`已应用考试筛选 (${selectedExams.length || '全部'})`);
+      });
+
+      // 点击弹窗外部关闭
+      classFilterModal?.addEventListener("click", (e) => {
+        if (e.target === classFilterModal) {
+          classFilterModal.classList.remove("active");
+        }
+      });
+
+      examFilterModal?.addEventListener("click", (e) => {
+        if (e.target === examFilterModal) {
+          examFilterModal.classList.remove("active");
+        }
+      });
+
+      // ========== 结束筛选器功能 ==========
 
       refreshBtn.addEventListener("click", () => {
         loadStudents();
@@ -4223,6 +4513,7 @@
         loadProgressSettings();
         renderRangeSubjectOptions();
         await loadGradeConfig();
+        await loadFilterOptions(); // 加载筛选选项
         await loadStudents();
         addScoreRow();
         initCollapsibleSections();
