@@ -1939,7 +1939,7 @@
       }
 
       // 渲染雷达图
-      function renderDetailRadarChart(student) {
+      async function renderDetailRadarChart(student) {
         const ctx = document.getElementById('overviewRadarChart');
         if (!ctx) return;
 
@@ -1947,8 +1947,21 @@
         const subjects = scores.map(s => s.subject);
         const values = scores.map(s => s.score);
 
-        // 计算班级平均分（模拟数据）
-        const classAvg = values.map(v => v * 0.95);
+        // 获取班级平均分（从API获取真实数据）
+        let classAvg = values.map(v => v * 0.95); // 默认值
+        try {
+          const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
+          if (response.ok) {
+            const classStats = await response.json();
+            const statsMap = {};
+            classStats.subject_stats.forEach(stat => {
+              statsMap[stat.subject] = stat.average;
+            });
+            classAvg = subjects.map(subject => statsMap[subject] || 0);
+          }
+        } catch (error) {
+          console.error('获取班级统计数据失败:', error);
+        }
 
         if (detailRadarChart) {
           detailRadarChart.destroy();
@@ -2131,9 +2144,36 @@
       }
 
       // 渲染详细分析标签页
-      function renderAnalysisTab(student) {
+      async function renderAnalysisTab(student) {
         const scores = student.scores || [];
         const avgScore = student.average_score || 0;
+
+        // 获取班级科目统计数据（班级平均分、排名等）
+        let classStats = null;
+        let classStudents = [];
+        try {
+          // 获取班级统计数据
+          const statsResponse = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
+          if (statsResponse.ok) {
+            classStats = await statsResponse.json();
+          }
+
+          // 获取同班同学数据用于计算排名
+          const studentsResponse = await fetch(`${API_BASE}/?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
+          if (studentsResponse.ok) {
+            classStudents = await studentsResponse.json();
+          }
+        } catch (error) {
+          console.error('获取班级数据失败:', error);
+        }
+
+        // 创建班级平均分映射
+        const classAvgMap = {};
+        if (classStats) {
+          classStats.subject_stats.forEach(stat => {
+            classAvgMap[stat.subject] = stat.average;
+          });
+        }
 
         // 生成各科目详细分析
         const subjectAnalysisList = document.getElementById('subjectAnalysisList');
@@ -2144,11 +2184,22 @@
           // 计算得分率
           const rate = score;
 
-          // 计算班级排名（模拟）
-          const rank = Math.floor(Math.random() * 15) + 1;
+          // 计算班级排名（基于真实数据）
+          let rank = 1;
+          if (classStudents.length > 0) {
+            classStudents.forEach(s => {
+              const subjectScore = (s.scores || []).find(sc => sc.subject === subject);
+              if (subjectScore && subjectScore.score > score) {
+                rank++;
+              }
+            });
+          } else {
+            rank = '-';
+          }
 
-          // 与平均分差距（模拟）
-          const diff = (score - avgScore).toFixed(1);
+          // 与班级平均分差距（使用真实班级平均）
+          const classAvg = classAvgMap[subject] || avgScore;
+          const diff = (score - classAvg).toFixed(1);
           const diffText = diff > 0 ? `+${diff}` : diff;
           const diffColor = diff >= 0 ? '#059669' : '#dc2626';
 
@@ -2158,7 +2209,7 @@
               <div style="font-size: 13px; color: #6b7280; line-height: 1.8;">
                 <div>得分率: <strong style="color: #111827;">${rate.toFixed(1)}%</strong></div>
                 <div>班级排名: <strong style="color: #111827;">${rank}</strong></div>
-                <div>与平均分差距: <strong style="color: ${diffColor};">${diffText}分</strong></div>
+                <div>与班级平均差距: <strong style="color: ${diffColor};">${diffText}分</strong></div>
                 <div style="margin-top: 8px; color: ${score >= 80 ? '#059669' : score >= 60 ? '#d97706' : '#dc2626'};">
                   ${score >= 90 ? '✓ 优秀，继续保持' : score >= 80 ? '○ 良好，需要继续努力' : score >= 60 ? '△ 及格，属于及格线' : '✗ 低于及格线，需重点关注'}
                 </div>
@@ -2167,22 +2218,29 @@
           `;
         }).join('');
 
-        // 生成弱项分析
+        // 生成弱项分析（使用班级平均分）
         const weaknessAnalysis = document.getElementById('weaknessAnalysis');
-        const weakSubjects = scores.filter(s => s.score < 80).sort((a, b) => a.score - b.score);
+        const weakSubjects = scores.map(s => {
+          const classAvg = classAvgMap[s.subject] || avgScore;
+          return {
+            ...s,
+            belowAvg: s.score < classAvg,
+            diff: classAvg - s.score
+          };
+        }).filter(s => s.belowAvg).sort((a, b) => b.diff - a.diff);
 
         if (weakSubjects.length > 0) {
           weaknessAnalysis.innerHTML = `
             <ul style="margin: 0; padding-left: 20px; color: #374151; line-height: 2;">
               ${weakSubjects.map(s => `
-                <li><strong>${s.subject}</strong>科目低于平均水平${(avgScore - s.score).toFixed(1)}分，需要加强学习。</li>
+                <li><strong>${s.subject}</strong>科目低于班级平均水平${s.diff.toFixed(1)}分，需要加强学习。</li>
               `).join('')}
-              ${weakSubjects.length > 2 ? `<li>建议重点关注<strong>${weakSubjects[0].subject}</strong>和<strong>${weakSubjects[1].subject}</strong>，处于班级后40%，建议重点关注。</li>` : ''}
+              ${weakSubjects.length > 2 ? `<li>建议重点关注<strong>${weakSubjects[0].subject}</strong>和<strong>${weakSubjects[1].subject}</strong>，这两科与班级平均差距较大。</li>` : ''}
               <li>建议加强弱项训练，多做练习。</li>
             </ul>
           `;
         } else {
-          weaknessAnalysis.innerHTML = '<p style="margin: 0; color: #059669;">各科成绩均衡，继续保持！</p>';
+          weaknessAnalysis.innerHTML = '<p style="margin: 0; color: #059669;">所有科目均达到或超过班级平均分，继续保持！</p>';
         }
       }
 

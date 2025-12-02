@@ -256,3 +256,17 @@ class ClassComparison(BaseModel):
     pass_rate: float
     good_rate: float
     excellent_rate: float
+
+
+class SubjectStat(BaseModel):
+    subject: str
+    average: float
+    max_score: float
+    min_score: float
+
+
+class ClassSubjectStats(BaseModel):
+    class_name: str
+    exam_name: str
+    student_count: int
+    subject_stats: List[SubjectStat]

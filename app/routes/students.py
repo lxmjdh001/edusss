@@ -719,6 +719,51 @@ def get_class_comparison(
     return result
 
 
+@router.get("/class-subject-stats", response_model=schemas.ClassSubjectStats)
+def get_class_subject_stats(
+    class_name: str = Query(..., description="班级名称"),
+    exam_name: str = Query(..., description="考试名称"),
+    db: Session = Depends(get_db)
+):
+    """获取班级各科目统计数据（用于计算班级平均分等）"""
+    records = db.query(models.Student).filter(
+        models.Student.class_name == class_name,
+        models.Student.exam_name == exam_name
+    ).all()
+
+    if not records:
+        raise HTTPException(status_code=404, detail="未找到该班级的考试记录")
+
+    # 统计各科目的成绩
+    subject_data = {}
+    for record in records:
+        scores = record.scores or []
+        for score_item in scores:
+            subject = score_item.get("subject")
+            score = score_item.get("score", 0)
+            if subject not in subject_data:
+                subject_data[subject] = []
+            subject_data[subject].append(score)
+
+    # 计算各科目的统计信息
+    subject_stats = []
+    for subject, scores in subject_data.items():
+        if scores:
+            subject_stats.append(schemas.SubjectStat(
+                subject=subject,
+                average=round(sum(scores) / len(scores), 2),
+                max_score=round(max(scores), 2),
+                min_score=round(min(scores), 2)
+            ))
+
+    return schemas.ClassSubjectStats(
+        class_name=class_name,
+        exam_name=exam_name,
+        student_count=len(records),
+        subject_stats=subject_stats
+    )
+
+
 @router.get("/{student_id}", response_model=schemas.Student)
 def get_student(student_id: int, db: Session = Depends(get_db)):
     student = db.get(models.Student, student_id)
