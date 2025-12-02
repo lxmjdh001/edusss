@@ -17,6 +17,7 @@ pip install -r requirements.txt
 
 # 4. 运行数据库迁移
 python migrate_sessions_table.py
+python migrate_add_exam_date.py
 
 # 5. 初始化管理员账号（如果还没有）
 python init_admin_account.py
@@ -43,7 +44,8 @@ sudo systemctl restart edusss
 
 ## 数据库变更
 
-新增 `sessions` 表用于管理用户登录会话。
+1. 新增 `sessions` 表用于管理用户登录会话
+2. 为 `students` 表添加 `exam_date` 字段（DateTime类型）
 
 ## 管理员账号
 

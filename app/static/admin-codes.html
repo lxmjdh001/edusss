@@ -273,10 +273,15 @@
             letter-spacing: 1px;
         }
 
-        .logout-btn {
+        .header-buttons {
             position: absolute;
             top: 20px;
             right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
             background: rgba(255, 255, 255, 0.1);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -285,9 +290,10 @@
             cursor: pointer;
             font-size: 14px;
             transition: background 0.3s;
+            text-decoration: none;
         }
 
-        .logout-btn:hover {
+        .header-btn:hover {
             background: rgba(255, 255, 255, 0.2);
             border-color: rgba(255, 255, 255, 0.5);
         }
@@ -296,7 +302,10 @@
 </head>
 <body>
     <div class="header">
-        <button class="logout-btn" onclick="logout()">退出</button>
+        <div class="header-buttons">
+            <a href="/static/grades.html" class="header-btn">返回首页</a>
+            <button class="header-btn" onclick="logout()">退出</button>
+        </div>
         <h1>激活码管理</h1>
         <p>管理系统激活码</p>
     </div>
