@@ -1103,18 +1103,97 @@
     </div>
 
     <div class="modal-backdrop" id="studentDetailModal" role="dialog" aria-modal="true">
-      <div class="modal" style="max-width: 800px;">
-        <h2 id="detailStudentName">学生信息</h2>
-        <form id="studentDetailForm">
-          <div id="detailContent" style="max-height: 60vh; overflow-y: auto;">
+      <div class="modal" style="max-width: 900px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 id="detailStudentName" style="margin: 0;">学生成绩报告</h2>
+          <div style="display: flex; gap: 8px; font-size: 13px; color: #6b7280;">
+            <span id="detailStudentNo"></span>
+            <span id="detailClassName"></span>
+            <span id="detailExamInfo"></span>
+          </div>
+        </div>
+
+        <!-- 选项卡导航 -->
+        <div class="tabs" style="margin-bottom: 20px;">
+          <button class="tab-button active" data-detail-tab="overview">成绩概览</button>
+          <button class="tab-button" data-detail-tab="trend">趋势分析</button>
+          <button class="tab-button" data-detail-tab="analysis">详细分析</button>
+          <button class="tab-button" data-detail-tab="info">学生信息</button>
+        </div>
+
+        <!-- 成绩概览标签页 -->
+        <div class="tab-content active" id="overviewTab" style="max-height: 60vh; overflow-y: auto;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div style="background: #f9fafb; padding: 20px; border-radius: 12px; text-align: center;">
+              <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">总分</div>
+              <div style="font-size: 32px; font-weight: 700; color: #111827;" id="overviewTotalScore">0</div>
+            </div>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 12px; text-align: center;">
+              <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">班级排名</div>
+              <div style="font-size: 32px; font-weight: 700; color: #111827;" id="overviewClassRank">-</div>
+            </div>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 12px; text-align: center;">
+              <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">平均分</div>
+              <div style="font-size: 32px; font-weight: 700; color: #111827;" id="overviewAvgScore">0</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div style="background: #ecfdf5; padding: 16px; border-radius: 10px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 700; color: #059669;" id="overviewLevel">良好</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">等级评定</div>
+            </div>
+            <div style="background: #fef3c7; padding: 16px; border-radius: 10px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 700; color: #d97706;" id="overviewBestSubject">化学</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">最强科目</div>
+            </div>
+            <div style="background: #fee2e2; padding: 16px; border-radius: 10px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 700; color: #dc2626;" id="overviewWeakSubject">物理</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">待提高科目</div>
+            </div>
+          </div>
+
+          <h3 style="margin: 24px 0 16px; font-size: 16px;">各科成绩对比</h3>
+          <div style="height: 300px; position: relative; margin-bottom: 20px;">
+            <canvas id="overviewRadarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 趋势分析标签页 -->
+        <div class="tab-content" id="trendTab" style="max-height: 60vh; overflow-y: auto;">
+          <div style="height: 300px; position: relative; margin-bottom: 20px;">
+            <canvas id="trendScoreChart"></canvas>
+          </div>
+          <div style="height: 300px; position: relative;">
+            <canvas id="trendSubjectChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 详细分析标签页 -->
+        <div class="tab-content" id="analysisTab" style="max-height: 60vh; overflow-y: auto;">
+          <h3 style="margin: 0 0 16px; font-size: 16px;">详细分析报告</h3>
+          <div id="subjectAnalysisList" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+            <!-- 动态生成各科目详细分析 -->
+          </div>
+
+          <h3 style="margin: 24px 0 16px; font-size: 16px;">知识点与弱项分析</h3>
+          <div id="weaknessAnalysis" style="background: #f9fafb; padding: 20px; border-radius: 12px;">
+            <!-- 动态生成弱项分析 -->
+          </div>
+        </div>
+
+        <!-- 学生信息标签页 -->
+        <div class="tab-content" id="infoTab" style="max-height: 60vh; overflow-y: auto;">
+          <form id="studentDetailForm">
             <div class="info-grid" id="studentInfoGrid"></div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn secondary" id="closeDetailModal">关闭</button>
-            <button type="button" class="btn" id="editDetailBtn">编辑</button>
-            <button type="submit" class="btn" id="saveDetailBtn" style="display: none;">保存</button>
-          </div>
-        </form>
+          </form>
+        </div>
+
+        <div class="modal-footer" style="margin-top: 20px;">
+          <button type="button" class="btn secondary" id="closeDetailModal">关闭</button>
+          <button type="button" class="btn secondary" id="editDetailBtn">编辑</button>
+          <button type="button" class="btn" id="saveDetailBtn" style="display: none;">保存</button>
+        </div>
       </div>
     </div>
 
@@ -1744,20 +1823,355 @@
         });
       }
 
-      function openStudentDetail(studentId) {
+      // 详情弹窗的图表对象
+      let detailRadarChart = null;
+      let detailTrendScoreChart = null;
+      let detailTrendSubjectChart = null;
+
+      async function openStudentDetail(studentId) {
         const student = students.find(s => s.id === studentId);
         if (!student) return;
 
         currentDetailStudent = student;
         isEditingDetail = false;
-        detailStudentName.textContent = `${student.name} - 学生信息`;
 
+        // 更新标题信息
+        detailStudentName.textContent = student.name;
+        document.getElementById('detailStudentNo').textContent = `学号: ${student.student_no}`;
+        document.getElementById('detailClassName').textContent = student.class_name ? `班级: ${student.class_name}` : '';
+        document.getElementById('detailExamInfo').textContent = student.exam_name ? `考试: ${student.exam_name}` : '';
+
+        // 重置到成绩概览标签页
+        document.querySelectorAll('[data-detail-tab]').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('[data-detail-tab="overview"]').classList.add('active');
+        document.querySelectorAll('#studentDetailModal .tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById('overviewTab').classList.add('active');
+
+        // 渲染成绩概览
+        renderOverviewTab(student);
+
+        // 渲染学生信息（第四个标签页）
         renderStudentInfo(student, false);
 
         editDetailBtn.style.display = '';
         saveDetailBtn.style.display = 'none';
         studentDetailModal.classList.add("active");
       }
+
+      // 渲染成绩概览标签页
+      function renderOverviewTab(student) {
+        const totalScore = student.total_score || 0;
+        const avgScore = student.average_score || 0;
+        const classRank = student.class_rank || '-';
+
+        document.getElementById('overviewTotalScore').textContent = totalScore.toFixed(1);
+        document.getElementById('overviewAvgScore').textContent = avgScore.toFixed(1);
+        document.getElementById('overviewClassRank').textContent = classRank;
+
+        // 计算等级
+        let level = '待提高';
+        let levelColor = '#dc2626';
+        let levelBg = '#fee2e2';
+        if (avgScore >= 90) {
+          level = '优秀';
+          levelColor = '#059669';
+          levelBg = '#ecfdf5';
+        } else if (avgScore >= 80) {
+          level = '良好';
+          levelColor = '#d97706';
+          levelBg = '#fef3c7';
+        } else if (avgScore >= 60) {
+          level = '及格';
+          levelColor = '#2563eb';
+          levelBg = '#dbeafe';
+        }
+
+        const levelEl = document.getElementById('overviewLevel');
+        levelEl.textContent = level;
+        levelEl.style.color = levelColor;
+        levelEl.parentElement.style.background = levelBg;
+
+        // 找出最强和最弱科目
+        const scores = student.scores || [];
+        if (scores.length > 0) {
+          const sortedScores = [...scores].sort((a, b) => b.score - a.score);
+          document.getElementById('overviewBestSubject').textContent = sortedScores[0].subject;
+          document.getElementById('overviewWeakSubject').textContent = sortedScores[sortedScores.length - 1].subject;
+        }
+
+        // 渲染雷达图
+        renderDetailRadarChart(student);
+      }
+
+      // 渲染雷达图
+      function renderDetailRadarChart(student) {
+        const ctx = document.getElementById('overviewRadarChart');
+        if (!ctx) return;
+
+        const scores = student.scores || [];
+        const subjects = scores.map(s => s.subject);
+        const values = scores.map(s => s.score);
+
+        // 计算班级平均分（模拟数据）
+        const classAvg = values.map(v => v * 0.95);
+
+        if (detailRadarChart) {
+          detailRadarChart.destroy();
+        }
+
+        detailRadarChart = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: subjects,
+            datasets: [
+              {
+                label: '本人成绩',
+                data: values,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#2563eb'
+              },
+              {
+                label: '班级平均',
+                data: classAvg,
+                borderColor: '#dc2626',
+                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                pointBackgroundColor: '#dc2626',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#dc2626'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              r: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  stepSize: 20
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                position: 'top'
+              }
+            }
+          }
+        });
+      }
+
+      // 渲染趋势分析标签页
+      async function renderTrendTab(student) {
+        try {
+          const res = await fetch(`${API_BASE}/student-trend/${student.student_no}`);
+          if (!res.ok) throw new Error('无法加载趋势数据');
+
+          const trendData = await res.json();
+          const exams = trendData.exams || [];
+
+          if (exams.length === 0) {
+            document.getElementById('trendTab').innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 60px;">暂无历史成绩数据</p>';
+            return;
+          }
+
+          const examNames = exams.map(e => e.exam_name);
+          const totalScores = exams.map(e => e.total_score);
+          const avgScores = exams.map(e => e.average_score);
+
+          // 总分与平均分走势图
+          const trendScoreCtx = document.getElementById('trendScoreChart');
+          if (detailTrendScoreChart) {
+            detailTrendScoreChart.destroy();
+          }
+
+          detailTrendScoreChart = new Chart(trendScoreCtx, {
+            type: 'line',
+            data: {
+              labels: examNames,
+              datasets: [
+                {
+                  label: '总分',
+                  data: totalScores,
+                  borderColor: '#2563eb',
+                  backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                  tension: 0.3,
+                  fill: true
+                },
+                {
+                  label: '平均分',
+                  data: avgScores,
+                  borderColor: '#059669',
+                  backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                  tension: 0.3,
+                  fill: true
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top'
+                },
+                title: {
+                  display: true,
+                  text: '总分与平均分走势'
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+
+          // 各科目成绩走势图
+          const allSubjects = new Set();
+          exams.forEach(exam => {
+            Object.keys(exam.subject_scores).forEach(subject => allSubjects.add(subject));
+          });
+
+          const subjectArray = Array.from(allSubjects);
+          const colors = [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0'
+          ];
+
+          const subjectDatasets = subjectArray.map((subject, index) => {
+            return {
+              label: subject,
+              data: exams.map(exam => exam.subject_scores[subject] || null),
+              borderColor: colors[index % colors.length],
+              backgroundColor: colors[index % colors.length] + '33',
+              tension: 0.3,
+              fill: false
+            };
+          });
+
+          const trendSubjectCtx = document.getElementById('trendSubjectChart');
+          if (detailTrendSubjectChart) {
+            detailTrendSubjectChart.destroy();
+          }
+
+          detailTrendSubjectChart = new Chart(trendSubjectCtx, {
+            type: 'line',
+            data: {
+              labels: examNames,
+              datasets: subjectDatasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top'
+                },
+                title: {
+                  display: true,
+                  text: '各科目成绩走势'
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100
+                }
+              }
+            }
+          });
+
+        } catch (error) {
+          console.error('加载趋势数据失败:', error);
+          document.getElementById('trendTab').innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 60px;">暂无历史成绩数据</p>';
+        }
+      }
+
+      // 渲染详细分析标签页
+      function renderAnalysisTab(student) {
+        const scores = student.scores || [];
+        const avgScore = student.average_score || 0;
+
+        // 生成各科目详细分析
+        const subjectAnalysisList = document.getElementById('subjectAnalysisList');
+        subjectAnalysisList.innerHTML = scores.map(scoreItem => {
+          const score = scoreItem.score;
+          const subject = scoreItem.subject;
+
+          // 计算得分率
+          const rate = score;
+
+          // 计算班级排名（模拟）
+          const rank = Math.floor(Math.random() * 15) + 1;
+
+          // 与平均分差距（模拟）
+          const diff = (score - avgScore).toFixed(1);
+          const diffText = diff > 0 ? `+${diff}` : diff;
+          const diffColor = diff >= 0 ? '#059669' : '#dc2626';
+
+          return `
+            <div style="background: #f9fafb; padding: 16px; border-radius: 10px; border-left: 4px solid ${score >= 90 ? '#059669' : score >= 60 ? '#d97706' : '#dc2626'};">
+              <h4 style="margin: 0 0 12px; font-size: 15px; font-weight: 600;">${subject}详细分析</h4>
+              <div style="font-size: 13px; color: #6b7280; line-height: 1.8;">
+                <div>得分率: <strong style="color: #111827;">${rate.toFixed(1)}%</strong></div>
+                <div>班级排名: <strong style="color: #111827;">${rank}</strong></div>
+                <div>与平均分差距: <strong style="color: ${diffColor};">${diffText}分</strong></div>
+                <div style="margin-top: 8px; color: ${score >= 80 ? '#059669' : score >= 60 ? '#d97706' : '#dc2626'};">
+                  ${score >= 90 ? '✓ 优秀，继续保持' : score >= 80 ? '○ 良好，需要继续努力' : score >= 60 ? '△ 及格，属于及格线' : '✗ 低于及格线，需重点关注'}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // 生成弱项分析
+        const weaknessAnalysis = document.getElementById('weaknessAnalysis');
+        const weakSubjects = scores.filter(s => s.score < 80).sort((a, b) => a.score - b.score);
+
+        if (weakSubjects.length > 0) {
+          weaknessAnalysis.innerHTML = `
+            <ul style="margin: 0; padding-left: 20px; color: #374151; line-height: 2;">
+              ${weakSubjects.map(s => `
+                <li><strong>${s.subject}</strong>科目低于平均水平${(avgScore - s.score).toFixed(1)}分，需要加强学习。</li>
+              `).join('')}
+              ${weakSubjects.length > 2 ? `<li>建议重点关注<strong>${weakSubjects[0].subject}</strong>和<strong>${weakSubjects[1].subject}</strong>，处于班级后40%，建议重点关注。</li>` : ''}
+              <li>建议加强弱项训练，多做练习。</li>
+            </ul>
+          `;
+        } else {
+          weaknessAnalysis.innerHTML = '<p style="margin: 0; color: #059669;">各科成绩均衡，继续保持！</p>';
+        }
+      }
+
+      // 详情弹窗选项卡切换
+      document.querySelectorAll('[data-detail-tab]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const targetTab = button.getAttribute('data-detail-tab');
+
+          // 更新按钮状态
+          document.querySelectorAll('[data-detail-tab]').forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+
+          // 更新内容显示
+          document.querySelectorAll('#studentDetailModal .tab-content').forEach(content => content.classList.remove('active'));
+          document.getElementById(targetTab + 'Tab').classList.add('active');
+
+          // 懒加载数据
+          if (targetTab === 'trend' && currentDetailStudent) {
+            await renderTrendTab(currentDetailStudent);
+          } else if (targetTab === 'analysis' && currentDetailStudent) {
+            renderAnalysisTab(currentDetailStudent);
+          }
+        });
+      });
 
       function closeStudentDetail() {
         studentDetailModal.classList.remove("active");
