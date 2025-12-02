@@ -270,3 +270,60 @@ class ClassSubjectStats(BaseModel):
     exam_name: str
     student_count: int
     subject_stats: List[SubjectStat]
+
+
+# ============ 用户认证系统 Schemas ============
+
+class UserBase(ORMModel):
+    username: str = Field(..., max_length=64, description="用户名")
+
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=6, max_length=128, description="密码")
+    activation_code: str = Field(..., max_length=32, description="激活码")
+
+
+class UserLogin(BaseModel):
+    username: str = Field(..., max_length=64)
+    password: str = Field(..., min_length=6, max_length=128)
+
+
+class UserResponse(UserBase):
+    id: int
+    expires_at: Optional[datetime]
+    is_active: bool
+    last_login_at: Optional[datetime]
+    created_at: datetime
+
+
+class LoginResponse(BaseModel):
+    user: UserResponse
+    token: str
+    message: str = "登录成功"
+
+
+class ActivationCodeBase(ORMModel):
+    valid_days: int = Field(..., ge=1, description="有效天数")
+
+
+class ActivationCodeCreate(ActivationCodeBase):
+    pass
+
+
+class ActivationCodeBatchCreate(ActivationCodeBase):
+    count: int = Field(..., ge=1, le=500, description="批量创建数量")
+
+
+class ActivationCodeResponse(ORMModel):
+    id: int
+    code: str
+    valid_days: int
+    is_used: bool
+    used_at: Optional[datetime]
+    generated_at: datetime
+    created_at: datetime
+    activated_by_username: Optional[str] = None
+
+
+class AdminAuth(BaseModel):
+    password: str = Field(..., description="管理员密码")
