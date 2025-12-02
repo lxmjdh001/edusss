@@ -618,6 +618,37 @@
         color: #9ca3af;
         margin-top: 2px;
       }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        border-bottom: 2px solid var(--border);
+      }
+      .tab-button {
+        padding: 12px 24px;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--subtext);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: -2px;
+        font-size: 14px;
+      }
+      .tab-button:hover {
+        color: var(--text);
+        background: rgba(0, 0, 0, 0.02);
+      }
+      .tab-button.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
       @media (max-width: 720px) {
         header.top-nav {
           flex-direction: column;
@@ -633,6 +664,10 @@
         .btn {
           flex: 1;
           justify-content: center;
+        }
+        .tab-button {
+          padding: 10px 16px;
+          font-size: 13px;
         }
       }
     </style>
@@ -661,12 +696,12 @@
             <div style="display: flex; gap: 8px; align-items: center;">
               <button class="btn secondary" id="filterClassBtn" style="display: flex; align-items: center; gap: 6px;">
                 <span>📚</span>
-                <span id="filterClassText">全部班级</span>
+                <span id="filterClassText">选择班级</span>
                 <span style="font-size: 12px; opacity: 0.7;" id="classCount"></span>
               </button>
               <button class="btn secondary" id="filterExamBtn" style="display: flex; align-items: center; gap: 6px;">
                 <span>📝</span>
-                <span id="filterExamText">全部考试</span>
+                <span id="filterExamText">选择考试</span>
                 <span style="font-size: 12px; opacity: 0.7;" id="examCount"></span>
               </button>
             </div>
@@ -2151,26 +2186,30 @@
         }
       }
 
-      // 详情弹窗选项卡切换
-      document.querySelectorAll('[data-detail-tab]').forEach(button => {
-        button.addEventListener('click', async () => {
-          const targetTab = button.getAttribute('data-detail-tab');
+      // 详情弹窗选项卡切换（使用事件委托）
+      studentDetailModal?.addEventListener('click', async (e) => {
+        const button = e.target.closest('[data-detail-tab]');
+        if (!button) return;
 
-          // 更新按钮状态
-          document.querySelectorAll('[data-detail-tab]').forEach(btn => btn.classList.remove('active'));
-          button.classList.add('active');
+        const targetTab = button.getAttribute('data-detail-tab');
 
-          // 更新内容显示
-          document.querySelectorAll('#studentDetailModal .tab-content').forEach(content => content.classList.remove('active'));
-          document.getElementById(targetTab + 'Tab').classList.add('active');
+        // 更新按钮状态
+        document.querySelectorAll('#studentDetailModal [data-detail-tab]').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
 
-          // 懒加载数据
-          if (targetTab === 'trend' && currentDetailStudent) {
-            await renderTrendTab(currentDetailStudent);
-          } else if (targetTab === 'analysis' && currentDetailStudent) {
-            renderAnalysisTab(currentDetailStudent);
-          }
-        });
+        // 更新内容显示
+        document.querySelectorAll('#studentDetailModal .tab-content').forEach(content => content.classList.remove('active'));
+        const targetContent = document.getElementById(targetTab + 'Tab');
+        if (targetContent) {
+          targetContent.classList.add('active');
+        }
+
+        // 懒加载数据
+        if (targetTab === 'trend' && currentDetailStudent) {
+          await renderTrendTab(currentDetailStudent);
+        } else if (targetTab === 'analysis' && currentDetailStudent) {
+          renderAnalysisTab(currentDetailStudent);
+        }
       });
 
       function closeStudentDetail() {
