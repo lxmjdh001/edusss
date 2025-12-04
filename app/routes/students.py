@@ -1149,3 +1149,115 @@ def update_range(subject: str, payload: List[schemas.RangeSegment], db: Session 
     db.commit()
     db.refresh(record)
     return [schemas.RangeSegment(**segment) for segment in record.config]
+
+
+@router.post("/calculate-ranks")
+def calculate_ranks(db: Session = Depends(get_db)):
+    """自动计算所有考试的年级排名和班级排名"""
+    # 获取所有考试名称和年级
+    exam_grades = db.query(
+        models.Student.exam_name,
+        models.Student.grade_name
+    ).distinct().all()
+
+    updated = 0
+
+    for exam_name, grade_name in exam_grades:
+        if not exam_name or not grade_name:
+            continue
+
+        # 获取该年级该考试的所有学生，按总分降序排列
+        students = db.query(models.Student).filter(
+            models.Student.exam_name == exam_name,
+            models.Student.grade_name == grade_name
+        ).order_by(models.Student.total_score.desc().nullslast()).all()
+
+        # 计算年级排名
+        for rank, student in enumerate(students, 1):
+            if student.total_score is not None:
+                student.grade_rank = rank
+                updated += 1
+
+        # 按班级分组计算班级排名
+        class_students = {}
+        for student in students:
+            if student.class_name:
+                if student.class_name not in class_students:
+                    class_students[student.class_name] = []
+                class_students[student.class_name].append(student)
+
+        # 为每个班级计算排名
+        for class_name, class_student_list in class_students.items():
+            # 按总分降序排列
+            class_student_list.sort(key=lambda s: s.total_score if s.total_score is not None else -1, reverse=True)
+            for rank, student in enumerate(class_student_list, 1):
+                if student.total_score is not None:
+                    student.class_rank = rank
+
+    db.commit()
+    return {"updated": updated}
+
+
+@router.get("/backup")
+def backup_data(db: Session = Depends(get_db)):
+    """备份所有成绩数据"""
+    students = db.query(models.Student).all()
+    ranges = db.query(models.SubjectRange).all()
+
+    data = {
+        "students": [_serialize_student(s) for s in students],
+        "ranges": {r.subject: r.config for r in ranges}
+    }
+    return data
+
+
+@router.post("/restore")
+def restore_data(data: Dict, db: Session = Depends(get_db)):
+    """从备份恢复数据"""
+    restored = 0
+
+    # 恢复学生数据
+    if "students" in data:
+        for student_data in data["students"]:
+            # 查找是否存在相同学号和考试的记录
+            existing = db.query(models.Student).filter(
+                models.Student.student_no == student_data.get("student_no"),
+                models.Student.exam_name == student_data.get("exam_name")
+            ).first()
+
+            if existing:
+                # 更新现有记录
+                for key, value in student_data.items():
+                    if key not in ["id", "created_at", "updated_at"]:
+                        setattr(existing, key, value)
+            else:
+                # 创建新记录
+                new_student = models.Student(**{
+                    k: v for k, v in student_data.items()
+                    if k not in ["id", "created_at", "updated_at"]
+                })
+                db.add(new_student)
+            restored += 1
+
+    # 恢复区间设置
+    if "ranges" in data:
+        for subject, config in data["ranges"].items():
+            record = db.query(models.SubjectRange).filter(
+                models.SubjectRange.subject == subject
+            ).first()
+            if record:
+                record.config = config
+            else:
+                record = models.SubjectRange(subject=subject, config=config)
+                db.add(record)
+
+    db.commit()
+    return {"restored": restored}
+
+
+@router.delete("/clear-all")
+def clear_all_data(db: Session = Depends(get_db)):
+    """清空所有成绩数据（危险操作）"""
+    deleted = db.query(models.Student).delete()
+    db.commit()
+    return {"deleted": deleted}

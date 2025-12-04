@@ -65,6 +65,47 @@
         background: rgba(37, 99, 235, 0.12);
         color: var(--primary);
       }
+      nav .has-submenu {
+        position: relative;
+      }
+      nav .has-submenu > button {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      nav .submenu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 8px;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.15);
+        min-width: 180px;
+        padding: 8px;
+        list-style: none;
+        z-index: 1000;
+      }
+      nav .has-submenu:hover .submenu {
+        display: block;
+      }
+      nav .submenu li {
+        margin: 0;
+      }
+      nav .submenu a {
+        display: block;
+        padding: 10px 14px;
+        color: var(--text);
+        text-decoration: none;
+        border-radius: 8px;
+        transition: background 0.2s ease;
+        font-weight: 500;
+      }
+      nav .submenu a:hover {
+        background: rgba(37, 99, 235, 0.08);
+        color: var(--primary);
+      }
       .app-shell {
         max-width: 1400px;
         margin: 0 auto;
@@ -489,9 +530,19 @@
       }
       .info-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
         gap: 16px;
         margin-top: 16px;
+      }
+      @media (max-width: 900px) {
+        .info-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 600px) {
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
       }
       .info-item {
         padding: 12px;
@@ -682,7 +733,13 @@
           <li><button data-target="grade">成绩管理</button></li>
           <li><button data-target="data">数据管理</button></li>
           <li><a href="points.html" style="text-decoration: none;"><button>🎮 积分系统</button></a></li>
-          <li id="adminCodesBtn" style="display: none;"><a href="/static/admin-codes.html" style="text-decoration: none;"><button>🔑 激活码管理</button></a></li>
+          <li id="systemMenuBtn" class="has-submenu" style="display: none;">
+            <button>⚙️ 系统管理</button>
+            <ul class="submenu">
+              <li><a href="/static/admin-codes.html">🔑 激活码管理</a></li>
+              <li><a href="/static/users.html">👥 用户管理</a></li>
+            </ul>
+          </li>
         </ul>
       </nav>
     </header>
@@ -694,8 +751,8 @@
             <h1>数据看板</h1>
             <p>成绩统计概览</p>
           </div>
-          <div class="actions" style="gap: 12px;">
-            <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="actions" style="gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
               <button class="btn secondary" id="filterClassBtn" style="display: flex; align-items: center; gap: 6px;">
                 <span>📚</span>
                 <span id="filterClassText">选择班级</span>
@@ -706,8 +763,11 @@
                 <span id="filterExamText">选择考试</span>
                 <span style="font-size: 12px; opacity: 0.7;" id="examCount"></span>
               </button>
+              <button class="btn secondary" id="refreshBtn" style="display: flex; align-items: center; gap: 6px;">
+                <span>🔄</span>
+                <span>刷新数据</span>
+              </button>
             </div>
-            <button class="btn secondary" id="refreshBtn">刷新数据</button>
           </div>
         </div>
 
@@ -788,33 +848,15 @@
             <canvas id="dashboardTrendChart"></canvas>
           </div>
           <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);">
-            <h3 style="margin: 0 0 16px 0; font-size: 16px;">排名前5学生</h3>
-            <div id="topStudentsGrid" style="display: flex; flex-direction: column; gap: 12px;"></div>
-          </div>
-        </section>
-
-        <section class="grade-card" style="margin-top: 24px;">
-          <h2>考试对比分析</h2>
-          <p class="hint-text">选择两场考试进行对比分析，查看平均分、及格率等指标的变化</p>
-          <div class="inline-form-row" style="margin-top: 16px;">
-            <label>
-              第一场考试
-              <select id="compareExam1Select">
-                <option value="">请选择考试</option>
-              </select>
-            </label>
-            <label>
-              第二场考试
-              <select id="compareExam2Select">
-                <option value="">请选择考试</option>
-              </select>
-            </label>
-            <button class="btn" id="compareExamsBtn" style="align-self: flex-end;">开始对比</button>
-          </div>
-          <div id="examComparisonResult" style="margin-top: 24px; display: none;">
-            <div class="stats-grid" id="comparisonStats"></div>
-            <div style="padding: 20px; margin-top: 20px;">
-              <canvas id="comparisonChart" width="800" height="400"></canvas>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div>
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #059669;">🏆 排名前5学生</h3>
+                <div id="topStudentsGrid" style="display: flex; flex-direction: column; gap: 12px;"></div>
+              </div>
+              <div>
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #dc2626;">📉 排名后5学生</h3>
+                <div id="bottomStudentsGrid" style="display: flex; flex-direction: column; gap: 12px;"></div>
+              </div>
             </div>
           </div>
         </section>
@@ -894,6 +936,88 @@
               <p style="margin: 0; color: #6b7280; text-align: center;">暂无数据</p>
             </div>
           </div>
+          </div>
+        </section>
+
+        <!-- 班级对比分析 -->
+        <section class="grade-card" style="margin-top: 24px;" id="classComparisonSection">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+              <h2 style="margin: 0; font-size: 20px;">📊 班级对比分析</h2>
+              <p style="color: #718096; font-size: 14px; margin: 4px 0 0 0;">选择班级进行多维度对比分析</p>
+            </div>
+            <button class="btn primary" id="selectClassesBtn" style="padding: 8px 16px;">
+              <span>📋</span>
+              <span>选择班级</span>
+            </button>
+          </div>
+
+          <!-- 已选择班级标签 -->
+          <div id="selectedClassesTags" style="min-height: 40px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: #f9fafb; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px;">
+            <span style="color: #6b7280; font-size: 14px;">请选择班级进行对比（至少选择2个班级）</span>
+          </div>
+
+          <!-- 对比内容容器 -->
+          <div id="classComparisonContent" style="display: none;">
+
+            <!-- 1. 班级平均分对比 -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #111827;">
+                <span style="margin-right: 8px;">📈</span>总分平均分对比
+              </h3>
+              <div style="height: 350px; position: relative; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                <canvas id="classAvgComparisonChart"></canvas>
+              </div>
+            </div>
+
+            <!-- 2. 各班详细数据对比表格 -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #111827;">
+                <span style="margin-right: 8px;">📋</span>各班详细数据
+              </h3>
+              <div style="overflow-x: auto; background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: #f9fafb;">
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">排名</th>
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">班级</th>
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">人数</th>
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">平均分</th>
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">最高分</th>
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">及格率</th>
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">良好率</th>
+                      <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb;">优秀率</th>
+                    </tr>
+                  </thead>
+                  <tbody id="classDetailTableBody">
+                    <tr>
+                      <td colspan="8" style="padding: 20px; text-align: center; color: #6b7280;">暂无数据</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 3. 各科平均分对比 -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #111827;">
+                <span style="margin-right: 8px;">📊</span>各科平均分对比
+              </h3>
+              <div style="height: 400px; position: relative; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                <canvas id="subjectComparisonChart"></canvas>
+              </div>
+            </div>
+
+            <!-- 4. 三率统计对比 -->
+            <div>
+              <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #111827;">
+                <span style="margin-right: 8px;">📈</span>及格率·良好率·优秀率对比
+              </h3>
+              <div style="height: 350px; position: relative; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                <canvas id="ratesComparisonChart"></canvas>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -982,7 +1106,7 @@
           </section>
           <section class="collapsible-section">
             <div class="collapsible-header" data-target="importSection">
-              <h2>批量导入</h2>
+              <h2>批量导入成绩</h2>
               <span class="collapsible-toggle">▼</span>
             </div>
             <div class="collapsible-content" id="importSection">
@@ -993,12 +1117,18 @@
                 </div>
                 <form class="inline-form" id="importForm">
                   <div class="inline-form-row">
-                    <label>班级 <input type="text" id="importClass" placeholder="例：高一(1)班" /></label>
-                    <label>年级 <input type="text" id="importGrade" placeholder="例：高一" /></label>
-                  </div>
-                  <div class="inline-form-row">
-                    <label>考试名称 <input type="text" id="importExam" placeholder="例：期中考试" /></label>
-                    <label>Excel 文件
+                    <label style="flex: 1;">年级
+                      <input type="text" id="importGrade" list="gradeList" placeholder="请选择或输入新年级" />
+                      <datalist id="gradeList"></datalist>
+                    </label>
+                    <label style="flex: 1;">班级
+                      <input type="text" id="importClass" list="classList" placeholder="请选择或输入新班级" />
+                      <datalist id="classList"></datalist>
+                    </label>
+                    <label style="flex: 1;">考试名称
+                      <input type="text" id="importExam" placeholder="例：期中考试" required />
+                    </label>
+                    <label style="flex: 1;">Excel 文件
                       <input type="file" id="importFile" accept=".xlsx,.xls" required />
                     </label>
                   </div>
@@ -1011,14 +1141,15 @@
           </section>
           <section class="collapsible-section">
             <div class="collapsible-header" data-target="rankImportSection">
-              <h2>导入排名</h2>
+              <h2>导入年级排名</h2>
               <span class="collapsible-toggle">▼</span>
             </div>
             <div class="collapsible-content" id="rankImportSection">
               <div class="collapsible-body">
-                <p class="hint-text">导入全年级学生的年级排名和班级排名数据。系统会根据学号和考试名称自动匹配并更新排名信息。</p>
+                <p class="hint-text">导入全年级学生的年级排名和班级排名数据。如果某次考试所有科目成绩都已录入，系统可自动计算年级排名和班级排名，无需手动导入。</p>
                 <div class="import-actions">
                   <button class="btn secondary" id="downloadRankTemplate">下载排名模板</button>
+                  <button class="btn" id="autoCalculateRanksBtn">自动计算排名</button>
                 </div>
                 <form class="inline-form" id="rankImportForm">
                   <label>
@@ -1054,6 +1185,35 @@
                 </div>
                 <div class="import-actions">
                   <button class="btn secondary" id="exportBtn">导出 Excel</button>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="collapsible-section">
+            <div class="collapsible-header" data-target="backupSection">
+              <h2>数据备份与恢复</h2>
+              <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="backupSection">
+              <div class="collapsible-body">
+                <p class="hint-text">备份所有成绩数据到文件，或从备份文件恢复数据。</p>
+                <div class="import-actions" style="gap: 12px;">
+                  <button class="btn secondary" id="backupDataBtn">导出数据备份</button>
+                </div>
+                <form class="inline-form" id="restoreForm" style="margin-top: 20px;">
+                  <label>
+                    <span>选择备份文件恢复数据</span>
+                    <input type="file" id="restoreFile" accept=".json" />
+                  </label>
+                  <div class="import-actions">
+                    <button class="btn" type="submit">恢复数据</button>
+                  </div>
+                </form>
+                <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
+                  <p class="hint-text" style="color: var(--danger); font-weight: 500;">危险操作：清空所有数据</p>
+                  <div class="import-actions" style="margin-top: 12px;">
+                    <button class="btn" id="clearDataBtn" style="background: var(--danger); border-color: var(--danger);">清空所有数据</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1216,6 +1376,28 @@
           <h3 style="margin: 24px 0 16px; font-size: 16px;">各科成绩对比</h3>
           <div style="height: 300px; position: relative; margin-bottom: 20px;">
             <canvas id="overviewRadarChart"></canvas>
+          </div>
+
+          <!-- 单科统计表格 -->
+          <h3 style="margin: 24px 0 16px; font-size: 16px;">📊 单科统计</h3>
+          <div style="overflow-x: auto; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">科目</th>
+                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">平均分</th>
+                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">最高分</th>
+                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">及格人数</th>
+                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">良好人数</th>
+                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">优秀人数</th>
+                </tr>
+              </thead>
+              <tbody id="overviewSubjectStatsBody">
+                <tr>
+                  <td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">加载中...</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1467,6 +1649,40 @@
       </div>
     </div>
 
+    <!-- 班级选择模态框 -->
+    <div class="modal-backdrop" id="classSelectionModal" role="dialog" aria-modal="true">
+      <div class="modal" style="max-width: 700px;">
+        <h2>📋 选择对比班级</h2>
+        <p class="hint-text">请选择至少2个班级进行对比分析（最多选择6个）</p>
+
+        <!-- 考试筛选 -->
+        <div style="margin: 16px 0;">
+          <label style="font-weight: 600; font-size: 14px; color: #111827; margin-bottom: 8px; display: block;">筛选考试</label>
+          <select id="classComparisonExamFilter" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+            <option value="">全部考试</option>
+          </select>
+        </div>
+
+        <div style="margin: 20px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-weight: 600; font-size: 14px;">已选择 <span id="selectedClassCount">0</span> 个班级</span>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn secondary" id="selectAllClasses" style="padding: 6px 12px; font-size: 13px;">全选</button>
+              <button type="button" class="btn secondary" id="clearAllClasses" style="padding: 6px 12px; font-size: 13px;">清空</button>
+            </div>
+          </div>
+          <div id="classCheckboxList" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+            <!-- 动态填充班级复选框 -->
+            <p style="grid-column: 1 / -1; text-align: center; color: #6b7280; padding: 20px;">加载班级列表中...</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn secondary" id="cancelClassSelection">取消</button>
+          <button type="button" class="btn" id="confirmClassSelection">开始对比</button>
+        </div>
+      </div>
+    </div>
+
     <div class="notification" id="notify"></div>
 
     <script>
@@ -1474,9 +1690,9 @@
       authGuard.init({
         required: true,
         onAuth: (user) => {
-          // 如果是管理员（VIP3），显示激活码管理按钮
+          // 如果是管理员（VIP3），显示系统管理菜单
           if (user.vip_level >= 3) {
-            document.getElementById('adminCodesBtn').style.display = 'block';
+            document.getElementById('systemMenuBtn').style.display = 'block';
           }
         }
       });
@@ -1509,6 +1725,11 @@
       const rangeSubjectSelect = document.getElementById("rangeSubjectSelect");
       const rangeForm = document.getElementById("rangeForm");
       const rangeRows = document.getElementById("rangeRows");
+      const autoCalculateRanksBtn = document.getElementById("autoCalculateRanksBtn");
+      const backupDataBtn = document.getElementById("backupDataBtn");
+      const restoreForm = document.getElementById("restoreForm");
+      const restoreFile = document.getElementById("restoreFile");
+      const clearDataBtn = document.getElementById("clearDataBtn");
       const columnSettingsBtn = document.getElementById("columnSettingsBtn");
       const columnSettingsModal = document.getElementById("columnSettingsModal");
       const columnCheckboxes = document.getElementById("columnCheckboxes");
@@ -1527,9 +1748,6 @@
       const editClassName = document.getElementById("editClassName");
       const editGradeName = document.getElementById("editGradeName");
       const cancelClassEdit = document.getElementById("cancelClassEdit");
-      const compareExam1Select = document.getElementById("compareExam1Select");
-      const compareExam2Select = document.getElementById("compareExam2Select");
-      const compareExamsBtn = document.getElementById("compareExamsBtn");
 
       // 筛选器相关元素
       const filterClassBtn = document.getElementById("filterClassBtn");
@@ -1558,9 +1776,6 @@
       let selectedExams = [];
       let allClassList = [];
       let allExamList = [];
-      const examComparisonResult = document.getElementById("examComparisonResult");
-      const comparisonStats = document.getElementById("comparisonStats");
-      const comparisonChart = document.getElementById("comparisonChart");
       const selectStudentsBtn = document.getElementById("selectStudentsBtn");
       const selectSubjectsBtn = document.getElementById("selectSubjectsBtn");
       const studentSelectModal = document.getElementById("studentSelectModal");
@@ -1824,19 +2039,23 @@
 
       function renderFilters() {
         const classes = new Set();
+        const grades = new Set();
         const exams = new Set();
         students.forEach((student) => {
           if (student.class_name) classes.add(student.class_name);
+          if (student.grade_name) grades.add(student.grade_name);
           if (student.exam_name) exams.add(student.exam_name);
         });
         availableClasses = [...classes];
         availableExams = [...exams];
+        const availableGrades = [...grades];
+
         populateSelect(classFilter, availableClasses, "全部班级", true);
         populateSelect(examFilter, availableExams, "全部考试", true);
         populateSelect(exportClassSelect, availableClasses, "全部班级", true);
         populateSelect(exportExamSelect, availableExams, "全部考试", true);
-        populateSelect(compareExam1Select, availableExams, "请选择考试", true);
-        populateSelect(compareExam2Select, availableExams, "请选择考试", true);
+        populateDatalist('gradeList', availableGrades);
+        populateDatalist('classList', availableClasses);
         renderSubjectTabs();
       }
 
@@ -1844,6 +2063,12 @@
         if (!selectEl) return;
         const options = includeEmpty ? `<option value="">${placeholder}</option>` : "";
         selectEl.innerHTML = options + values.map((value) => `<option value="${value}">${value}</option>`).join("");
+      }
+
+      function populateDatalist(datalistId, values) {
+        const datalist = document.getElementById(datalistId);
+        if (!datalist) return;
+        datalist.innerHTML = values.map((value) => `<option value="${value}">`).join("");
       }
 
       function loadColumnSettings() {
@@ -1972,6 +2197,9 @@
 
         // 渲染雷达图
         renderDetailRadarChart(student);
+
+        // 加载单科统计数据
+        loadDetailSubjectStats(student.exam_name, student.class_name);
       }
 
       // 渲染雷达图
@@ -2049,6 +2277,104 @@
             }
           }
         });
+      }
+
+      // 加载单科统计数据（显示该考试/班级的所有学生统计）
+      async function loadDetailSubjectStats(examName, className) {
+        const tbody = document.getElementById('overviewSubjectStatsBody');
+
+        if (!examName) {
+          tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">暂无考试信息</td></tr>';
+          return;
+        }
+
+        // 显示加载中
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">加载中...</td></tr>';
+
+        try {
+          // 构建查询参数 - 获取该考试的所有学生成绩
+          const params = new URLSearchParams();
+          params.append('exam_name', examName);
+          if (className) {
+            params.append('class_name', className);
+          }
+
+          console.log('正在加载单科统计:', examName, className);
+
+          // 获取该考试的所有学生成绩
+          const res = await fetch(`${API_BASE}/?${params.toString()}`);
+          if (!res.ok) {
+            throw new Error('获取统计数据失败');
+          }
+
+          const allStudents = await res.json();
+          console.log('获取到学生数据:', allStudents.length, '人');
+
+          if (allStudents.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">暂无统计数据</td></tr>';
+            return;
+          }
+
+          // 按科目统计
+          const subjectStats = {};
+
+          allStudents.forEach(student => {
+            if (!student.scores || !Array.isArray(student.scores)) return;
+
+            student.scores.forEach(score => {
+              const subject = score.subject;
+              const scoreValue = parseFloat(score.score);
+
+              if (isNaN(scoreValue)) return;
+
+              if (!subjectStats[subject]) {
+                subjectStats[subject] = {
+                  subject: subject,
+                  scores: [],
+                  passCount: 0,
+                  goodCount: 0,
+                  excellentCount: 0
+                };
+              }
+
+              subjectStats[subject].scores.push(scoreValue);
+
+              // 计算及格、良好、优秀人数 (假设60及格，75良好，90优秀)
+              if (scoreValue >= 60) subjectStats[subject].passCount++;
+              if (scoreValue >= 75) subjectStats[subject].goodCount++;
+              if (scoreValue >= 90) subjectStats[subject].excellentCount++;
+            });
+          });
+
+          console.log('统计结果:', subjectStats);
+
+          // 生成表格行
+          const statsArray = Object.values(subjectStats);
+          if (statsArray.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">暂无科目数据</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = statsArray.map(stat => {
+            const avgScore = (stat.scores.reduce((a, b) => a + b, 0) / stat.scores.length).toFixed(1);
+            const maxScore = Math.max(...stat.scores).toFixed(1);
+
+            return `
+              <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 12px 16px; color: #111827; font-weight: 600;"><strong>${stat.subject}</strong></td>
+                <td style="padding: 12px 16px; color: #111827;"><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-weight: 600;">${avgScore}</span></td>
+                <td style="padding: 12px 16px; color: #111827;">${maxScore}</td>
+                <td style="padding: 12px 16px; color: #111827;">${stat.passCount}</td>
+                <td style="padding: 12px 16px; color: #111827;">${stat.goodCount}</td>
+                <td style="padding: 12px 16px; color: #111827;">${stat.excellentCount}</td>
+              </tr>
+            `;
+          }).join('');
+
+        } catch (error) {
+          console.error('加载单科统计失败:', error);
+          tbody.innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #dc2626;">加载失败: ${error.message}</td></tr>`;
+        }
       }
 
       // 渲染趋势分析标签页
@@ -2317,14 +2643,11 @@
           { key: 'name', label: '姓名', type: 'text', required: true },
           { key: 'student_no', label: '学号', type: 'text', required: true },
           { key: 'gender', label: '性别', type: 'text' },
-          { key: 'birthday', label: '生日', type: 'date' },
           { key: 'class_name', label: '班级', type: 'text' },
           { key: 'grade_name', label: '年级', type: 'text' },
           { key: 'exam_name', label: '考试名称', type: 'text' },
           { key: 'class_rank', label: '班级排名', type: 'number' },
           { key: 'grade_rank', label: '年级排名', type: 'number' },
-          { key: 'parent_name', label: '家长姓名', type: 'text' },
-          { key: 'parent_phone', label: '家长电话', type: 'tel' },
           { key: 'notes', label: '备注', type: 'textarea', fullWidth: true }
         ];
 
@@ -2979,6 +3302,7 @@
 
       function renderTopStudents() {
         const topStudentsGrid = document.getElementById('topStudentsGrid');
+        const bottomStudentsGrid = document.getElementById('bottomStudentsGrid');
         if (!topStudentsGrid) return;
 
         // 获取所有考试名称
@@ -2991,7 +3315,10 @@
         const recentExams = Array.from(examNames).slice(-trendExamCount);
 
         if (recentExams.length === 0) {
-          topStudentsGrid.innerHTML = '<p style="color: #6b7280; text-align: center; grid-column: 1 / -1;">暂无考试数据</p>';
+          topStudentsGrid.innerHTML = '<p style="color: #6b7280; text-align: center;">暂无考试数据</p>';
+          if (bottomStudentsGrid) {
+            bottomStudentsGrid.innerHTML = '<p style="color: #6b7280; text-align: center;">暂无考试数据</p>';
+          }
           return;
         }
 
@@ -3021,7 +3348,7 @@
         });
 
         // 计算平均分并按平均分排序
-        const topStudents = Array.from(studentScores.values())
+        const allStudents = Array.from(studentScores.values())
           .map(student => ({
             ...student,
             examCount: student.scores.length,
@@ -3031,18 +3358,26 @@
               : null
           }))
           .filter(student => student.examCount >= Math.min(1, recentExams.length)) // 至少参加1场考试
-          .sort((a, b) => b.avgScore - a.avgScore) // 按平均分降序排序
-          .slice(0, 5);
+          .sort((a, b) => b.avgScore - a.avgScore); // 按平均分降序排序
 
-        if (topStudents.length === 0) {
-          topStudentsGrid.innerHTML = '<p style="color: #6b7280; text-align: center; grid-column: 1 / -1;">暂无学生数据</p>';
+        if (allStudents.length === 0) {
+          topStudentsGrid.innerHTML = '<p style="color: #6b7280; text-align: center;">暂无学生数据</p>';
+          if (bottomStudentsGrid) {
+            bottomStudentsGrid.innerHTML = '<p style="color: #6b7280; text-align: center;">暂无学生数据</p>';
+          }
           return;
         }
 
-        // 渲染学生卡片
+        // 前5名学生
+        const topStudents = allStudents.slice(0, 5);
+
+        // 后5名学生
+        const bottomStudents = allStudents.slice(-5).reverse();
+
+        // 渲染前5名学生卡片
         topStudentsGrid.innerHTML = topStudents.map((student, index) => `
           <div class="top-student-card">
-            <div class="rank-badge">${index + 1}</div>
+            <div class="rank-badge" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">${index + 1}</div>
             <div class="student-info-group">
               <div class="student-name">${student.name}</div>
               <div class="student-detail">
@@ -3053,11 +3388,36 @@
               </div>
             </div>
             <div class="score-display">
-              <div class="avg-score">${student.avgScore.toFixed(1)}</div>
+              <div class="avg-score" style="color: #059669;">${student.avgScore.toFixed(1)}</div>
               <div class="score-label">平均总分</div>
             </div>
           </div>
         `).join('');
+
+        // 渲染后5名学生卡片
+        if (bottomStudentsGrid) {
+          bottomStudentsGrid.innerHTML = bottomStudents.map((student, index) => {
+            const actualRank = allStudents.length - bottomStudents.length + index + 1;
+            return `
+              <div class="top-student-card">
+                <div class="rank-badge" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">${actualRank}</div>
+                <div class="student-info-group">
+                  <div class="student-name">${student.name}</div>
+                  <div class="student-detail">
+                    <span>学号: ${student.student_no}</span>
+                    <span>${student.class_name || '-'}</span>
+                    <span>参加: ${student.examCount} 场考试</span>
+                    ${student.avgRank !== null ? `<span>平均排名: ${student.avgRank.toFixed(1)}</span>` : ''}
+                  </div>
+                </div>
+                <div class="score-display">
+                  <div class="avg-score" style="color: #dc2626;">${student.avgScore.toFixed(1)}</div>
+                  <div class="score-label">平均总分</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
       }
 
       // 填充学生复选框列表
@@ -3312,187 +3672,6 @@
         }
       }
 
-      function compareExams() {
-        const exam1Name = compareExam1Select.value;
-        const exam2Name = compareExam2Select.value;
-
-        if (!exam1Name || !exam2Name) {
-          showToast('请选择两场考试进行对比', true);
-          return;
-        }
-
-        if (exam1Name === exam2Name) {
-          showToast('请选择不同的考试进行对比', true);
-          return;
-        }
-
-        // 获取两场考试的学生数据
-        const exam1Students = students.filter(s => s.exam_name === exam1Name);
-        const exam2Students = students.filter(s => s.exam_name === exam2Name);
-
-        if (exam1Students.length === 0 || exam2Students.length === 0) {
-          showToast('所选考试没有数据', true);
-          return;
-        }
-
-        // 计算两场考试的统计数据
-        const exam1Stats = computeSummaryFromStudents(exam1Students, "总分");
-        const exam2Stats = computeSummaryFromStudents(exam2Students, "总分");
-
-        // 显示对比结果
-        renderComparisonStats(exam1Name, exam2Name, exam1Stats, exam2Stats);
-        renderComparisonChart(exam1Name, exam2Name, exam1Stats, exam2Stats);
-
-        examComparisonResult.style.display = 'block';
-      }
-
-      function renderComparisonStats(exam1Name, exam2Name, exam1Stats, exam2Stats) {
-        const metrics = [
-          { label: '学生人数', key: 'total_students', unit: '人' },
-          { label: '平均总分', key: 'average_total', unit: '分' },
-          { label: '及格率', key: 'pass_rate', unit: '%' },
-          { label: '良好率', key: 'good_rate', unit: '%' },
-          { label: '优秀率', key: 'excellent_rate', unit: '%' }
-        ];
-
-        const cards = metrics.map(metric => {
-          const value1 = exam1Stats[metric.key];
-          const value2 = exam2Stats[metric.key];
-          const diff = value2 - value1;
-          const diffText = diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
-          const diffColor = diff > 0 ? '#10b981' : (diff < 0 ? '#ef4444' : '#6b7280');
-          const arrow = diff > 0 ? '↑' : (diff < 0 ? '↓' : '→');
-
-          return `
-            <div class="stat-card">
-              <h3>${metric.label}</h3>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-                <div>
-                  <div style="font-size: 14px; color: var(--subtext);">${exam1Name}</div>
-                  <div style="font-size: 20px; font-weight: 600; margin-top: 4px;">${value1.toFixed(2)}${metric.unit}</div>
-                </div>
-                <div style="font-size: 24px; color: ${diffColor};">${arrow}</div>
-                <div>
-                  <div style="font-size: 14px; color: var(--subtext);">${exam2Name}</div>
-                  <div style="font-size: 20px; font-weight: 600; margin-top: 4px;">${value2.toFixed(2)}${metric.unit}</div>
-                </div>
-              </div>
-              <div style="margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: ${diff === 0 ? '#f3f4f6' : (diff > 0 ? '#d1fae5' : '#fee2e2')}; text-align: center;">
-                <span style="color: ${diffColor}; font-weight: 600;">${diffText}${metric.unit}</span>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        comparisonStats.innerHTML = cards;
-      }
-
-      function renderComparisonChart(exam1Name, exam2Name, exam1Stats, exam2Stats) {
-        const canvas = comparisonChart;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
-        const padding = 80;
-        const chartWidth = width - padding * 2;
-        const chartHeight = height - padding * 2;
-
-        ctx.clearRect(0, 0, width, height);
-
-        // 数据指标
-        const metrics = [
-          { label: '平均分', key: 'average_total' },
-          { label: '及格率', key: 'pass_rate' },
-          { label: '良好率', key: 'good_rate' },
-          { label: '优秀率', key: 'excellent_rate' }
-        ];
-
-        const barWidth = chartWidth / (metrics.length * 2 + metrics.length + 1);
-        const groupSpacing = barWidth;
-
-        // 找出最大值用于缩放
-        const allValues = metrics.flatMap(m => [exam1Stats[m.key], exam2Stats[m.key]]);
-        const maxValue = Math.max(...allValues);
-        const yMax = Math.ceil(maxValue / 10) * 10 + 10;
-
-        // 绘制Y轴网格线和标签
-        ctx.strokeStyle = '#e5e7eb';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 5; i++) {
-          const y = padding + (chartHeight / 5) * i;
-          ctx.beginPath();
-          ctx.moveTo(padding, y);
-          ctx.lineTo(width - padding, y);
-          ctx.stroke();
-
-          const value = yMax - (yMax / 5) * i;
-          ctx.fillStyle = '#6b7280';
-          ctx.font = '12px sans-serif';
-          ctx.textAlign = 'right';
-          ctx.fillText(value.toFixed(0), padding - 10, y + 4);
-        }
-
-        // 绘制柱状图
-        metrics.forEach((metric, i) => {
-          const groupX = padding + (i * (barWidth * 2 + groupSpacing)) + groupSpacing;
-
-          // 第一场考试的柱子
-          const value1 = exam1Stats[metric.key];
-          const height1 = (value1 / yMax) * chartHeight;
-          const y1 = padding + chartHeight - height1;
-
-          ctx.fillStyle = '#3b82f6';
-          ctx.fillRect(groupX, y1, barWidth, height1);
-
-          // 显示数值
-          ctx.fillStyle = '#1e40af';
-          ctx.font = 'bold 11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(value1.toFixed(1), groupX + barWidth / 2, y1 - 5);
-
-          // 第二场考试的柱子
-          const value2 = exam2Stats[metric.key];
-          const height2 = (value2 / yMax) * chartHeight;
-          const y2 = padding + chartHeight - height2;
-
-          ctx.fillStyle = '#10b981';
-          ctx.fillRect(groupX + barWidth, y2, barWidth, height2);
-
-          // 显示数值
-          ctx.fillStyle = '#059669';
-          ctx.font = 'bold 11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(value2.toFixed(1), groupX + barWidth + barWidth / 2, y2 - 5);
-
-          // X轴标签
-          ctx.fillStyle = '#374151';
-          ctx.font = '13px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(metric.label, groupX + barWidth, height - padding + 25);
-        });
-
-        // 绘制图例
-        const legendY = 30;
-        ctx.fillStyle = '#3b82f6';
-        ctx.fillRect(padding, legendY, 20, 12);
-        ctx.fillStyle = '#374151';
-        ctx.font = '13px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(exam1Name, padding + 25, legendY + 10);
-
-        ctx.fillStyle = '#10b981';
-        ctx.fillRect(padding + 150, legendY, 20, 12);
-        ctx.fillStyle = '#374151';
-        ctx.fillText(exam2Name, padding + 175, legendY + 10);
-
-        // 绘制标题
-        ctx.fillStyle = '#111827';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('考试对比分析', width / 2, legendY + 10);
-      }
-
       function downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -3603,6 +3782,108 @@
           if (!res.ok) throw new Error("导出失败");
           const blob = await res.blob();
           downloadBlob(blob, "成绩导出.xlsx");
+        } catch (error) {
+          showToast(error.message, true);
+        }
+      }
+
+      async function handleAutoCalculateRanks() {
+        if (!confirm('确认要自动计算所有考试的年级排名和班级排名吗？\n\n此操作将根据总分重新计算排名，已有的排名数据将被覆盖。')) {
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/calculate-ranks`, {
+            method: "POST"
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "计算排名失败");
+          }
+          const summary = await res.json();
+          showToast(`排名计算完成：更新了 ${summary.updated || 0} 条记录`);
+          await loadStudents();
+        } catch (error) {
+          showToast(error.message, true);
+        }
+      }
+
+      async function handleBackupData() {
+        try {
+          const res = await fetch(`${API_BASE}/backup`);
+          if (!res.ok) throw new Error("备份失败");
+          const data = await res.json();
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+          downloadBlob(blob, `成绩数据备份_${timestamp}.json`);
+          showToast('数据备份成功');
+        } catch (error) {
+          showToast(error.message, true);
+        }
+      }
+
+      async function handleRestoreData(event) {
+        event.preventDefault();
+        if (!restoreFile?.files.length) {
+          showToast("请先选择备份文件", true);
+          return;
+        }
+
+        if (!confirm('确认要恢复数据吗？\n\n此操作将覆盖当前所有数据，建议先进行备份！')) {
+          return;
+        }
+
+        try {
+          const file = restoreFile.files[0];
+          const text = await file.text();
+          const data = JSON.parse(text);
+
+          const res = await fetch(`${API_BASE}/restore`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "恢复数据失败");
+          }
+
+          const summary = await res.json();
+          showToast(`数据恢复完成：恢复了 ${summary.restored || 0} 条记录`);
+          restoreForm?.reset();
+          await loadStudents();
+          await loadClassStats();
+        } catch (error) {
+          showToast(error.message, true);
+        }
+      }
+
+      async function handleClearData() {
+        if (!confirm('⚠️ 危险操作警告 ⚠️\n\n确认要清空所有成绩数据吗？\n\n此操作不可恢复，建议先进行数据备份！')) {
+          return;
+        }
+
+        if (!confirm('⚠️ 最后确认 ⚠️\n\n真的要删除所有数据吗？删除后无法恢复！')) {
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/clear-all`, {
+            method: "DELETE"
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "清空数据失败");
+          }
+
+          const summary = await res.json();
+          showToast(`已清空 ${summary.deleted || 0} 条记录`);
+          await loadStudents();
+          await loadClassStats();
         } catch (error) {
           showToast(error.message, true);
         }
@@ -3917,6 +4198,10 @@
       downloadTemplateBtn?.addEventListener("click", downloadTemplate);
       document.getElementById('downloadRankTemplate')?.addEventListener("click", downloadRankTemplate);
       document.getElementById('rankImportForm')?.addEventListener("submit", handleRankImport);
+      autoCalculateRanksBtn?.addEventListener("click", handleAutoCalculateRanks);
+      backupDataBtn?.addEventListener("click", handleBackupData);
+      restoreForm?.addEventListener("submit", handleRestoreData);
+      clearDataBtn?.addEventListener("click", handleClearData);
       addStudentBtn?.addEventListener("click", () => openModal());
       cancelModal.addEventListener("click", closeModal);
       modalBackdrop.addEventListener("click", (event) => {
@@ -4056,8 +4341,6 @@
           showToast(error.message, true);
         }
       }
-
-      compareExamsBtn?.addEventListener("click", compareExams);
 
       // 学生成绩对比走势图事件监听
 
@@ -4345,15 +4628,35 @@
           scoreDistChart.destroy();
         }
 
-        // 计算分数段分布
-        const ranges = [
-          { label: '728-730', min: 728, max: 730 },
-          { label: '731-733', min: 731, max: 733 },
-          { label: '734-736', min: 734, max: 736 },
-          { label: '737-739', min: 737, max: 739 },
-          { label: '740-742', min: 740, max: 742 },
-          { label: '743-745', min: 743, max: 745 }
-        ];
+        // 获取所有学生的总分
+        const scores = students
+          .filter(s => s.total_score != null && s.total_score > 0)
+          .map(s => Number(s.total_score));
+
+        if (scores.length === 0) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = '14px PingFang SC';
+          ctx.fillStyle = '#6b7280';
+          ctx.textAlign = 'center';
+          ctx.fillText('暂无分数数据', canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        // 计算分数范围
+        const minScore = Math.floor(Math.min(...scores) / 50) * 50; // 向下取整到50的倍数
+        const maxScore = Math.ceil(Math.max(...scores) / 50) * 50; // 向上取整到50的倍数
+        const interval = 50; // 每个区间50分
+
+        // 动态生成分数段
+        const ranges = [];
+        for (let i = minScore; i < maxScore; i += interval) {
+          ranges.push({
+            label: `${i}-${i + interval - 1}`,
+            min: i,
+            max: i + interval - 1
+          });
+        }
 
         const distribution = ranges.map(range => {
           return students.filter(s => {
@@ -4429,9 +4732,9 @@
         });
         allAvailableSubjects = Array.from(subjectsSet).sort();
 
-        // 初始化选择的科目（默认选择前5个，如果少于5个则全选）
+        // 初始化选择的科目（默认全选所有科目）
         if (selectedRadarSubjects.length === 0) {
-          selectedRadarSubjects = allAvailableSubjects.slice(0, Math.min(5, allAvailableSubjects.length));
+          selectedRadarSubjects = [...allAvailableSubjects];
         }
 
         return allAvailableSubjects;
@@ -4449,8 +4752,8 @@
         // 提取可用科目
         extractAvailableSubjects();
 
-        // 使用用户选择的科目
-        const subjects = selectedRadarSubjects.length > 0 ? selectedRadarSubjects : allAvailableSubjects.slice(0, 5);
+        // 使用用户选择的科目（默认全部）
+        const subjects = selectedRadarSubjects.length > 0 ? selectedRadarSubjects : allAvailableSubjects;
         const subjectAvgs = subjects.map(subject => {
           let total = 0;
           let count = 0;
@@ -5102,6 +5405,499 @@
         // 重新渲染图表
         renderProgressRegressionCharts();
       });
+
+      // ============ 班级对比功能 ============
+      let selectedComparisonClasses = [];
+      let classComparisonCharts = {
+        avgChart: null,
+        subjectChart: null,
+        ratesChart: null
+      };
+
+      // 打开班级选择模态框
+      document.getElementById('selectClassesBtn')?.addEventListener('click', () => {
+        openClassSelectionModal();
+      });
+
+      // 打开班级选择模态框
+      async function openClassSelectionModal() {
+        const modal = document.getElementById('classSelectionModal');
+        const examFilter = document.getElementById('classComparisonExamFilter');
+        const classList = document.getElementById('classCheckboxList');
+
+        // 加载考试列表到筛选器
+        const exams = [...new Set(students.map(s => s.exam_name).filter(Boolean))];
+        examFilter.innerHTML = '<option value="">全部考试</option>' +
+          exams.map(exam => `<option value="${exam}">${exam}</option>`).join('');
+
+        // 加载班级列表
+        await loadClassListForComparison();
+
+        modal.classList.add('active');
+      }
+
+      // 加载班级列表
+      async function loadClassListForComparison() {
+        const classList = document.getElementById('classCheckboxList');
+        const examFilter = document.getElementById('classComparisonExamFilter');
+        const selectedExam = examFilter.value;
+
+        try {
+          // 从当前学生数据中提取班级
+          let filteredStudents = students;
+          if (selectedExam) {
+            filteredStudents = students.filter(s => s.exam_name === selectedExam);
+          }
+
+          const classes = [...new Set(filteredStudents.map(s => s.class_name).filter(Boolean))];
+
+          if (classes.length === 0) {
+            classList.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #6b7280; padding: 20px;">暂无班级数据</p>';
+            return;
+          }
+
+          // 渲染班级复选框
+          classList.innerHTML = classes.map((className, index) => {
+            const isChecked = selectedComparisonClasses.includes(className);
+            const studentCount = filteredStudents.filter(s => s.class_name === className).length;
+
+            return `
+              <label style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 2px solid ${isChecked ? '#2563eb' : '#e5e7eb'}; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: ${isChecked ? '#eff6ff' : 'white'};">
+                <input type="checkbox" value="${className}" ${isChecked ? 'checked' : ''}
+                  onchange="toggleClassSelection('${className}')"
+                  style="width: 18px; height: 18px; cursor: pointer;">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; font-size: 14px; color: #111827;">${className}</div>
+                  <div style="font-size: 12px; color: #6b7280;">${studentCount} 名学生</div>
+                </div>
+              </label>
+            `;
+          }).join('');
+
+          updateSelectedClassCount();
+        } catch (error) {
+          console.error('加载班级列表失败:', error);
+          classList.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #dc2626; padding: 20px;">加载失败</p>';
+        }
+      }
+
+      // 切换班级选择
+      function toggleClassSelection(className) {
+        const index = selectedComparisonClasses.indexOf(className);
+        if (index > -1) {
+          selectedComparisonClasses.splice(index, 1);
+        } else {
+          if (selectedComparisonClasses.length >= 6) {
+            alert('最多只能选择6个班级');
+            event.target.checked = false;
+            return;
+          }
+          selectedComparisonClasses.push(className);
+        }
+        updateSelectedClassCount();
+        loadClassListForComparison(); // 重新渲染以更新样式
+      }
+
+      // 更新已选择班级数量
+      function updateSelectedClassCount() {
+        const countEl = document.getElementById('selectedClassCount');
+        if (countEl) {
+          countEl.textContent = selectedComparisonClasses.length;
+        }
+      }
+
+      // 全选班级
+      document.getElementById('selectAllClasses')?.addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('#classCheckboxList input[type="checkbox"]');
+        const classes = Array.from(checkboxes).map(cb => cb.value).slice(0, 6);
+        selectedComparisonClasses = classes;
+        loadClassListForComparison();
+      });
+
+      // 清空选择
+      document.getElementById('clearAllClasses')?.addEventListener('click', () => {
+        selectedComparisonClasses = [];
+        loadClassListForComparison();
+      });
+
+      // 考试筛选变化
+      document.getElementById('classComparisonExamFilter')?.addEventListener('change', () => {
+        selectedComparisonClasses = []; // 重置选择
+        loadClassListForComparison();
+      });
+
+      // 取消选择
+      document.getElementById('cancelClassSelection')?.addEventListener('click', () => {
+        document.getElementById('classSelectionModal').classList.remove('active');
+      });
+
+      // 确认选择并开始对比
+      document.getElementById('confirmClassSelection')?.addEventListener('click', () => {
+        if (selectedComparisonClasses.length < 2) {
+          alert('请至少选择2个班级进行对比');
+          return;
+        }
+
+        document.getElementById('classSelectionModal').classList.remove('active');
+        renderClassComparison();
+      });
+
+      // 渲染班级对比
+      async function renderClassComparison() {
+        const examFilter = document.getElementById('classComparisonExamFilter').value;
+
+        // 显示对比内容区域
+        document.getElementById('classComparisonContent').style.display = 'block';
+
+        // 更新已选择班级标签
+        updateSelectedClassesTags();
+
+        // 收集各班数据
+        const classesData = await Promise.all(
+          selectedComparisonClasses.map(className => getClassData(className, examFilter))
+        );
+
+        // 渲染各个图表
+        renderClassAvgComparison(classesData);
+        renderClassDetailTable(classesData);
+        renderSubjectComparison(classesData);
+        renderRatesComparison(classesData);
+
+        // 滚动到对比区域
+        document.getElementById('classComparisonSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // 更新已选择班级标签
+      function updateSelectedClassesTags() {
+        const container = document.getElementById('selectedClassesTags');
+        if (selectedComparisonClasses.length === 0) {
+          container.innerHTML = '<span style="color: #6b7280; font-size: 14px;">请选择班级进行对比（至少选择2个班级）</span>';
+          return;
+        }
+
+        container.innerHTML = selectedComparisonClasses.map((className, index) => {
+          const colors = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+          const color = colors[index % colors.length];
+          return `
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: ${color}; color: white; border-radius: 6px; font-size: 14px; font-weight: 500;">
+              ${className}
+              <button onclick="removeComparisonClass('${className}')" style="background: none; border: none; color: white; cursor: pointer; padding: 0; margin: 0; font-size: 16px; line-height: 1;">×</button>
+            </span>
+          `;
+        }).join('');
+      }
+
+      // 移除对比班级
+      function removeComparisonClass(className) {
+        selectedComparisonClasses = selectedComparisonClasses.filter(c => c !== className);
+        if (selectedComparisonClasses.length < 2) {
+          document.getElementById('classComparisonContent').style.display = 'none';
+        }
+        updateSelectedClassesTags();
+        if (selectedComparisonClasses.length >= 2) {
+          renderClassComparison();
+        }
+      }
+
+      // 获取班级数据
+      async function getClassData(className, examName) {
+        let classStudents = students.filter(s => s.class_name === className);
+        if (examName) {
+          classStudents = classStudents.filter(s => s.exam_name === examName);
+        }
+
+        if (classStudents.length === 0) {
+          return {
+            className,
+            studentCount: 0,
+            avgScore: 0,
+            maxScore: 0,
+            passRate: 0,
+            goodRate: 0,
+            excellentRate: 0,
+            subjectAvgs: {}
+          };
+        }
+
+        const totalScores = classStudents.map(s => s.total_score || 0);
+        const avgScores = classStudents.map(s => s.average_score || 0);
+
+        const avgScore = avgScores.reduce((a, b) => a + b, 0) / avgScores.length;
+        const maxScore = Math.max(...totalScores);
+
+        // 计算三率
+        const passCount = avgScores.filter(s => s >= 60).length;
+        const goodCount = avgScores.filter(s => s >= 75).length;
+        const excellentCount = avgScores.filter(s => s >= 90).length;
+
+        // 计算各科平均分
+        const subjectAvgs = {};
+        classStudents.forEach(student => {
+          if (student.scores && Array.isArray(student.scores)) {
+            student.scores.forEach(score => {
+              if (!subjectAvgs[score.subject]) {
+                subjectAvgs[score.subject] = [];
+              }
+              subjectAvgs[score.subject].push(parseFloat(score.score));
+            });
+          }
+        });
+
+        // 计算平均值
+        Object.keys(subjectAvgs).forEach(subject => {
+          const scores = subjectAvgs[subject];
+          subjectAvgs[subject] = scores.reduce((a, b) => a + b, 0) / scores.length;
+        });
+
+        return {
+          className,
+          studentCount: classStudents.length,
+          avgScore: avgScore.toFixed(1),
+          maxScore: maxScore.toFixed(1),
+          passRate: ((passCount / classStudents.length) * 100).toFixed(1),
+          goodRate: ((goodCount / classStudents.length) * 100).toFixed(1),
+          excellentRate: ((excellentCount / classStudents.length) * 100).toFixed(1),
+          subjectAvgs
+        };
+      }
+
+      // 1. 渲染班级平均分对比柱状图
+      function renderClassAvgComparison(classesData) {
+        const ctx = document.getElementById('classAvgComparisonChart');
+        if (!ctx) return;
+
+        if (classComparisonCharts.avgChart) {
+          classComparisonCharts.avgChart.destroy();
+        }
+
+        const colors = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+
+        classComparisonCharts.avgChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: classesData.map(d => d.className),
+            datasets: [{
+              label: '平均分',
+              data: classesData.map(d => parseFloat(d.avgScore)),
+              backgroundColor: classesData.map((_, i) => colors[i % colors.length]),
+              borderColor: classesData.map((_, i) => colors[i % colors.length]),
+              borderWidth: 2,
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => `平均分: ${context.parsed.y.toFixed(1)}分`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  stepSize: 10
+                },
+                title: {
+                  display: true,
+                  text: '平均分'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 2. 渲染各班详细数据表格
+      function renderClassDetailTable(classesData) {
+        const tbody = document.getElementById('classDetailTableBody');
+        if (!tbody) return;
+
+        // 按平均分排序
+        const sortedData = [...classesData].sort((a, b) => parseFloat(b.avgScore) - parseFloat(a.avgScore));
+
+        tbody.innerHTML = sortedData.map((data, index) => {
+          const rankColors = ['#f59e0b', '#94a3b8', '#cd7f32'];
+          const rankColor = index < 3 ? rankColors[index] : '#6b7280';
+
+          return `
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 12px 16px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: ${rankColor}; color: white; font-weight: 700; font-size: 14px;">
+                  ${index + 1}
+                </span>
+              </td>
+              <td style="padding: 12px 16px; font-weight: 600; color: #111827;">${data.className}</td>
+              <td style="padding: 12px 16px; color: #111827;">${data.studentCount}</td>
+              <td style="padding: 12px 16px;"><span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 4px; font-weight: 600;">${data.avgScore}</span></td>
+              <td style="padding: 12px 16px; color: #111827;">${data.maxScore}</td>
+              <td style="padding: 12px 16px; color: #111827;">${data.passRate}%</td>
+              <td style="padding: 12px 16px; color: #111827;">${data.goodRate}%</td>
+              <td style="padding: 12px 16px; color: #111827;">${data.excellentRate}%</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 3. 渲染各科平均分对比
+      function renderSubjectComparison(classesData) {
+        const ctx = document.getElementById('subjectComparisonChart');
+        if (!ctx) return;
+
+        if (classComparisonCharts.subjectChart) {
+          classComparisonCharts.subjectChart.destroy();
+        }
+
+        // 提取所有科目
+        const allSubjects = new Set();
+        classesData.forEach(data => {
+          Object.keys(data.subjectAvgs).forEach(subject => allSubjects.add(subject));
+        });
+        const subjects = Array.from(allSubjects);
+
+        if (subjects.length === 0) {
+          return;
+        }
+
+        const colors = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+
+        const datasets = classesData.map((data, index) => ({
+          label: data.className,
+          data: subjects.map(subject => data.subjectAvgs[subject] || 0),
+          backgroundColor: colors[index % colors.length],
+          borderColor: colors[index % colors.length],
+          borderWidth: 2,
+          borderRadius: 6
+        }));
+
+        classComparisonCharts.subjectChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: subjects,
+            datasets: datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)}分`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  stepSize: 10
+                },
+                title: {
+                  display: true,
+                  text: '平均分'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 4. 渲染三率对比
+      function renderRatesComparison(classesData) {
+        const ctx = document.getElementById('ratesComparisonChart');
+        if (!ctx) return;
+
+        if (classComparisonCharts.ratesChart) {
+          classComparisonCharts.ratesChart.destroy();
+        }
+
+        const colors = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+
+        classComparisonCharts.ratesChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: classesData.map(d => d.className),
+            datasets: [
+              {
+                label: '及格率',
+                data: classesData.map(d => parseFloat(d.passRate)),
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 7
+              },
+              {
+                label: '良好率',
+                data: classesData.map(d => parseFloat(d.goodRate)),
+                borderColor: '#d97706',
+                backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 7
+              },
+              {
+                label: '优秀率',
+                data: classesData.map(d => parseFloat(d.excellentRate)),
+                borderColor: '#059669',
+                backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 7
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  stepSize: 10,
+                  callback: (value) => value + '%'
+                },
+                title: {
+                  display: true,
+                  text: '百分比'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // ============ 班级对比功能结束 ============
 
       async function bootstrap() {
         loadColumnSettings();
