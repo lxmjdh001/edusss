@@ -1493,17 +1493,20 @@
           </div>
 
           <!-- 单科统计 -->
-          <h3 style="margin: 24px 0 16px; font-size: 16px;">📊 单科统计</h3>
-          <!-- 表头 -->
-          <div class="subject-stats-header">
-            <div>科目</div>
-            <div>分数</div>
-            <div>班级排名</div>
-            <div style="text-align: center;">与班级均分差值</div>
-            <div style="text-align: center;">等级</div>
-          </div>
-          <div id="overviewSubjectStatsContainer" style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="padding: 20px; text-align: center; color: #6b7280;">加载中...</div>
+          <h3 style="margin: 24px 0 16px; font-size: 16px;">📊 各科成绩详情</h3>
+          <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+            <!-- 表头 -->
+            <div style="display: grid; grid-template-columns: 80px 80px 100px 120px 80px; gap: 16px; padding: 12px 20px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-weight: 600; font-size: 13px; color: #6b7280;">
+              <div>科目</div>
+              <div style="text-align: center;">分数</div>
+              <div style="text-align: center;">班级排名</div>
+              <div style="text-align: center;">与班级均分差值</div>
+              <div style="text-align: center;">等级</div>
+            </div>
+            <!-- 数据行 -->
+            <div id="overviewSubjectStatsContainer">
+              <div style="padding: 20px; text-align: center; color: #6b7280;">加载中...</div>
+            </div>
           </div>
         </div>
 
@@ -2511,13 +2514,40 @@
               gradeText = '待提高';
             }
 
+            // 排名徽章样式
+            let rankBadgeStyle = 'background: #f3f4f6; color: #6b7280;';
+            if (stat.rank === 1) {
+              rankBadgeStyle = 'background: #fef3c7; color: #92400e;';
+            } else if (stat.rank === 2) {
+              rankBadgeStyle = 'background: #e5e7eb; color: #374151;';
+            }
+
+            // 差值颜色
+            const diffColor = diff >= 0 ? '#10b981' : '#ef4444';
+
+            // 等级徽章样式
+            let gradeBadgeStyle = '';
+            if (scoreValue >= 90) {
+              gradeBadgeStyle = 'background: #3b82f6; color: white;';
+            } else if (scoreValue >= 75) {
+              gradeBadgeStyle = 'background: #10b981; color: white;';
+            } else if (scoreValue >= 60) {
+              gradeBadgeStyle = 'background: #f59e0b; color: white;';
+            } else {
+              gradeBadgeStyle = 'background: #ef4444; color: white;';
+            }
+
             return `
-              <div class="subject-stats-item">
-                <div class="subject-name">${subject}</div>
-                <div class="subject-score">${scoreValue}</div>
-                <div class="subject-rank ${rankClass}">${rankText}</div>
-                <div class="subject-diff ${diffClass}">${diffText}</div>
-                <div class="subject-grade ${gradeClass}">${gradeText}</div>
+              <div style="display: grid; grid-template-columns: 80px 80px 100px 120px 80px; gap: 16px; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; align-items: center; transition: background 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; color: #111827; font-size: 14px;">${subject}</div>
+                <div style="text-align: center; font-size: 18px; font-weight: 700; color: #2563eb;">${scoreValue}</div>
+                <div style="text-align: center;">
+                  <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; ${rankBadgeStyle}">${rankText}</span>
+                </div>
+                <div style="text-align: center; font-size: 16px; font-weight: 700; color: ${diffColor};">${diffText}</div>
+                <div style="text-align: center;">
+                  <span style="display: inline-block; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 600; ${gradeBadgeStyle}">${gradeText}</span>
+                </div>
               </div>
             `;
           }).join('');
