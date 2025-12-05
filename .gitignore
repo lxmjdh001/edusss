@@ -1,0 +1,2 @@
+# Ignore generated SQLite database file
+data/grade_manager.db
