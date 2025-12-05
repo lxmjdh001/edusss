@@ -721,6 +721,119 @@
           font-size: 13px;
         }
       }
+      /* 单科统计卡片样式 */
+      .subject-stats-item {
+        display: grid;
+        grid-template-columns: 90px 1fr 90px 110px 85px;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s ease;
+      }
+      .subject-stats-item:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: #d1d5db;
+      }
+      .subject-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #111827;
+      }
+      .subject-score {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2563eb;
+        text-align: left;
+      }
+      .subject-rank {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .subject-rank.rank-1 {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .subject-rank.rank-2 {
+        background: #e5e7eb;
+        color: #374151;
+      }
+      .subject-rank.rank-other {
+        background: #f3f4f6;
+        color: #6b7280;
+      }
+      .subject-diff {
+        font-size: 18px;
+        font-weight: 700;
+        text-align: center;
+      }
+      .subject-diff.positive {
+        color: #10b981;
+      }
+      .subject-diff.negative {
+        color: #ef4444;
+      }
+      .subject-grade {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .subject-grade.excellent {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .subject-grade.good {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .subject-grade.pass {
+        background: #fed7aa;
+        color: #9a3412;
+      }
+      .subject-stats-header {
+        display: grid;
+        grid-template-columns: 90px 1fr 90px 110px 85px;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        background: #f9fafb;
+        border-radius: 8px;
+        margin-bottom: 8px;
+      }
+      .subject-stats-header > div {
+        font-size: 13px;
+        font-weight: 600;
+        color: #6b7280;
+      }
+      @media (max-width: 768px) {
+        .subject-stats-header {
+          display: none;
+        }
+        .subject-stats-item {
+          grid-template-columns: 1fr;
+          gap: 12px;
+          padding: 14px 16px;
+        }
+        .subject-score {
+          font-size: 24px;
+        }
+        .subject-diff {
+          font-size: 16px;
+        }
+      }
     </style>
     <script src="/static/auth-guard.js"></script>
   </head>
@@ -1378,26 +1491,18 @@
             <canvas id="overviewRadarChart"></canvas>
           </div>
 
-          <!-- 单科统计表格 -->
+          <!-- 单科统计 -->
           <h3 style="margin: 24px 0 16px; font-size: 16px;">📊 单科统计</h3>
-          <div style="overflow-x: auto; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr>
-                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">科目</th>
-                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">平均分</th>
-                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">最高分</th>
-                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">及格人数</th>
-                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">良好人数</th>
-                  <th style="background: #f3f4f6; padding: 12px 16px; text-align: left; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; font-size: 13px;">优秀人数</th>
-                </tr>
-              </thead>
-              <tbody id="overviewSubjectStatsBody">
-                <tr>
-                  <td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">加载中...</td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- 表头 -->
+          <div class="subject-stats-header">
+            <div>科目</div>
+            <div>分数</div>
+            <div>班级排名</div>
+            <div style="text-align: center;">与班级均分差值</div>
+            <div style="text-align: center;">等级</div>
+          </div>
+          <div id="overviewSubjectStatsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="padding: 20px; text-align: center; color: #6b7280;">加载中...</div>
           </div>
         </div>
 
@@ -2199,7 +2304,7 @@
         renderDetailRadarChart(student);
 
         // 加载单科统计数据
-        loadDetailSubjectStats(student.exam_name, student.class_name);
+        loadDetailSubjectStats(student);
       }
 
       // 渲染雷达图
@@ -2279,29 +2384,28 @@
         });
       }
 
-      // 加载单科统计数据（显示该考试/班级的所有学生统计）
-      async function loadDetailSubjectStats(examName, className) {
-        const tbody = document.getElementById('overviewSubjectStatsBody');
+      // 加载单科统计数据（显示该学生的单科成绩及排名）
+      async function loadDetailSubjectStats(student) {
+        const container = document.getElementById('overviewSubjectStatsContainer');
 
-        if (!examName) {
-          tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">暂无考试信息</td></tr>';
+        if (!student || !student.scores || student.scores.length === 0) {
+          container.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">暂无成绩信息</div>';
           return;
         }
 
         // 显示加载中
-        tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">加载中...</td></tr>';
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">加载中...</div>';
 
         try {
-          // 构建查询参数 - 获取该考试的所有学生成绩
+          // 获取该考试该班级的所有学生成绩用于排名计算
           const params = new URLSearchParams();
-          params.append('exam_name', examName);
-          if (className) {
-            params.append('class_name', className);
+          params.append('exam_name', student.exam_name);
+          if (student.class_name) {
+            params.append('class_name', student.class_name);
           }
 
-          console.log('正在加载单科统计:', examName, className);
+          console.log('正在加载单科统计:', student.exam_name, student.class_name);
 
-          // 获取该考试的所有学生成绩
           const res = await fetch(`${API_BASE}/?${params.toString()}`);
           if (!res.ok) {
             throw new Error('获取统计数据失败');
@@ -2310,70 +2414,108 @@
           const allStudents = await res.json();
           console.log('获取到学生数据:', allStudents.length, '人');
 
-          if (allStudents.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">暂无统计数据</td></tr>';
-            return;
-          }
+          // 按科目计算排名和平均分
+          const subjectData = {};
 
-          // 按科目统计
-          const subjectStats = {};
+          allStudents.forEach(s => {
+            if (!s.scores || !Array.isArray(s.scores)) return;
 
-          allStudents.forEach(student => {
-            if (!student.scores || !Array.isArray(student.scores)) return;
-
-            student.scores.forEach(score => {
+            s.scores.forEach(score => {
               const subject = score.subject;
               const scoreValue = parseFloat(score.score);
 
               if (isNaN(scoreValue)) return;
 
-              if (!subjectStats[subject]) {
-                subjectStats[subject] = {
-                  subject: subject,
-                  scores: [],
-                  passCount: 0,
-                  goodCount: 0,
-                  excellentCount: 0
-                };
+              if (!subjectData[subject]) {
+                subjectData[subject] = [];
               }
 
-              subjectStats[subject].scores.push(scoreValue);
-
-              // 计算及格、良好、优秀人数 (假设60及格，75良好，90优秀)
-              if (scoreValue >= 60) subjectStats[subject].passCount++;
-              if (scoreValue >= 75) subjectStats[subject].goodCount++;
-              if (scoreValue >= 90) subjectStats[subject].excellentCount++;
+              subjectData[subject].push({
+                studentNo: s.student_no,
+                score: scoreValue
+              });
             });
           });
 
-          console.log('统计结果:', subjectStats);
+          // 计算每个科目的排名和平均分
+          const subjectStats = {};
+          Object.keys(subjectData).forEach(subject => {
+            const scores = subjectData[subject];
+            // 按分数降序排序
+            scores.sort((a, b) => b.score - a.score);
 
-          // 生成表格行
-          const statsArray = Object.values(subjectStats);
-          if (statsArray.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">暂无科目数据</td></tr>';
-            return;
-          }
+            // 计算平均分
+            const average = scores.reduce((sum, item) => sum + item.score, 0) / scores.length;
 
-          tbody.innerHTML = statsArray.map(stat => {
-            const avgScore = (stat.scores.reduce((a, b) => a + b, 0) / stat.scores.length).toFixed(1);
-            const maxScore = Math.max(...stat.scores).toFixed(1);
+            // 找到该学生在这个科目的排名
+            const rankIndex = scores.findIndex(item => item.studentNo === student.student_no);
+
+            subjectStats[subject] = {
+              average: average,
+              rank: rankIndex + 1,
+              totalCount: scores.length
+            };
+          });
+
+          console.log('单科统计结果:', subjectStats);
+
+          // 生成卡片列表
+          const cardsHtml = student.scores.map(score => {
+            const subject = score.subject;
+            const scoreValue = parseFloat(score.score);
+            const stat = subjectStats[subject];
+
+            if (!stat) return '';
+
+            // 计算与班级均分的差值
+            const diff = scoreValue - stat.average;
+            const diffText = diff >= 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
+            const diffClass = diff >= 0 ? 'positive' : 'negative';
+
+            // 判断排名样式
+            let rankClass = 'rank-other';
+            let rankText = `第${stat.rank}名`;
+            if (stat.rank === 1) {
+              rankClass = 'rank-1';
+              rankText = '第1名';
+            } else if (stat.rank === 2) {
+              rankClass = 'rank-2';
+              rankText = '第2名';
+            }
+
+            // 判断等级
+            let gradeClass = '';
+            let gradeText = '';
+            if (scoreValue >= 90) {
+              gradeClass = 'excellent';
+              gradeText = '优秀';
+            } else if (scoreValue >= 75) {
+              gradeClass = 'good';
+              gradeText = '良好';
+            } else if (scoreValue >= 60) {
+              gradeClass = 'pass';
+              gradeText = '及格';
+            } else {
+              gradeClass = 'pass';
+              gradeText = '待提高';
+            }
 
             return `
-              <tr style="border-bottom: 1px solid #f3f4f6;">
-                <td style="padding: 12px 16px; color: #111827; font-weight: 600;"><strong>${stat.subject}</strong></td>
-                <td style="padding: 12px 16px; color: #111827;"><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-weight: 600;">${avgScore}</span></td>
-                <td style="padding: 12px 16px; color: #111827;">${maxScore}</td>
-                <td style="padding: 12px 16px; color: #111827;">${stat.passCount}</td>
-                <td style="padding: 12px 16px; color: #111827;">${stat.goodCount}</td>
-                <td style="padding: 12px 16px; color: #111827;">${stat.excellentCount}</td>
-              </tr>
+              <div class="subject-stats-item">
+                <div class="subject-name">${subject}</div>
+                <div class="subject-score">${scoreValue}</div>
+                <div class="subject-rank ${rankClass}">${rankText}</div>
+                <div class="subject-diff ${diffClass}">${diffText}</div>
+                <div class="subject-grade ${gradeClass}">${gradeText}</div>
+              </div>
             `;
           }).join('');
 
+          container.innerHTML = cardsHtml || '<div style="padding: 20px; text-align: center; color: #6b7280;">暂无科目数据</div>';
+
         } catch (error) {
           console.error('加载单科统计失败:', error);
-          tbody.innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #dc2626;">加载失败: ${error.message}</td></tr>`;
+          container.innerHTML = `<div style="padding: 20px; text-align: center; color: #dc2626;">加载失败: ${error.message}</div>`;
         }
       }
 

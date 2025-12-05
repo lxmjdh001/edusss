@@ -69,7 +69,7 @@ class QueryCode(Base, TimestampMixin):
 
 class Student(Base, TimestampMixin):
     __tablename__ = "students"
-    __table_args__ = (UniqueConstraint("student_no", name="uq_student_no"),)
+    __table_args__ = (UniqueConstraint("student_no", "exam_name", name="uq_student_exam"),)
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(80), nullable=False)

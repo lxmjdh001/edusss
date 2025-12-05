@@ -802,8 +802,16 @@ def create_student(
     db: Session = Depends(get_db),
     current_user: models.Member = Depends(get_active_member),
 ):
-    if db.query(models.Student).filter_by(student_no=payload.student_no).first():
-        raise HTTPException(status_code=400, detail="学号已存在")
+    existing = (
+        db.query(models.Student)
+        .filter(
+            models.Student.student_no == payload.student_no,
+            models.Student.exam_name == payload.exam_name,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="同一考试中该学号已存在")
     student = models.Student(
         name=payload.name,
         student_no=payload.student_no,
@@ -832,9 +840,21 @@ def update_student(
     student = db.get(models.Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="学生不存在")
-    if payload.student_no and payload.student_no != student.student_no:
-        if db.query(models.Student).filter_by(student_no=payload.student_no).first():
-            raise HTTPException(status_code=400, detail="学号已存在")
+    new_student_no = payload.student_no if payload.student_no is not None else student.student_no
+    new_exam_name = payload.exam_name if payload.exam_name is not None else student.exam_name
+    if (new_student_no != student.student_no) or (new_exam_name != student.exam_name):
+        exists = (
+            db.query(models.Student)
+            .filter(
+                models.Student.student_no == new_student_no,
+                models.Student.exam_name == new_exam_name,
+                models.Student.id != student_id,
+            )
+            .first()
+        )
+        if exists:
+            raise HTTPException(status_code=400, detail="同一考试中该学号已存在")
+    if payload.student_no is not None:
         student.student_no = payload.student_no
     for field in ["name", "class_name", "grade_name", "exam_name", "gender", "notes"]:
         value = getattr(payload, field)
@@ -903,77 +923,106 @@ async def import_students(
 
     imported = 0
     updated = 0
-    for row in ws.iter_rows(min_row=2, values_only=True):
+    errors = []
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if row is None:
             continue
-        name = _get_cell_value(row, header_map, "姓名")
-        student_no = _get_cell_value(row, header_map, "学号")
-        if not name or not student_no:
-            continue
-        row_class = _get_cell_value(row, header_map, "班级") or class_name
-        row_grade = _get_cell_value(row, header_map, "年级") or grade_name
-        row_exam = _get_cell_value(row, header_map, "考试名称") or exam_name
-        row_exam_date_raw = _get_cell_value(row, header_map, "考试日期")
-        row_exam_date = None
-        if row_exam_date_raw:
-            try:
-                if isinstance(row_exam_date_raw, datetime):
-                    row_exam_date = row_exam_date_raw
-                elif isinstance(row_exam_date_raw, str):
-                    # 尝试解析日期字符串，支持常见格式
-                    for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日", "%Y.%m.%d"]:
-                        try:
-                            row_exam_date = datetime.strptime(row_exam_date_raw, fmt)
-                            break
-                        except ValueError:
-                            continue
-            except (ValueError, TypeError):
-                pass  # 如果解析失败，保持为 None
-        row_notes = _get_cell_value(row, header_map, "备注")
-        scores = []
-        for subject in DEFAULT_SUBJECTS:
-            value = _get_cell_value(row, header_map, subject)
-            if value is None or value == "":
-                continue
-            try:
-                score_value = float(value)
-            except (TypeError, ValueError):
-                continue
-            scores.append({"subject": subject, "score": score_value})
 
-        existing = (
-            db.query(models.Student)
-                .filter(
-                    models.Student.student_no == student_no,
-                    models.Student.exam_name == row_exam,
-                )
-                .first()
-        )
-        if existing:
-            existing.name = name
-            existing.class_name = row_class
-            existing.grade_name = row_grade
-            existing.exam_name = row_exam
-            existing.exam_date = row_exam_date
-            existing.notes = row_notes
-            existing.scores = scores
-            db.add(existing)
-            updated += 1
-        else:
-            student = models.Student(
-                name=name,
-                student_no=student_no,
-                class_name=row_class,
-                grade_name=row_grade,
-                exam_name=row_exam,
-                exam_date=row_exam_date,
-                notes=row_notes,
-                scores=scores,
+        try:
+            name = _get_cell_value(row, header_map, "姓名")
+            student_no = _get_cell_value(row, header_map, "学号")
+            if not name or not student_no:
+                continue
+            row_class = _get_cell_value(row, header_map, "班级") or class_name
+            row_grade = _get_cell_value(row, header_map, "年级") or grade_name
+            row_exam = _get_cell_value(row, header_map, "考试名称") or exam_name
+            row_exam_date_raw = _get_cell_value(row, header_map, "考试日期")
+            row_exam_date = None
+            if row_exam_date_raw:
+                try:
+                    if isinstance(row_exam_date_raw, datetime):
+                        row_exam_date = row_exam_date_raw
+                    elif isinstance(row_exam_date_raw, str):
+                        # 尝试解析日期字符串，支持常见格式
+                        for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日", "%Y.%m.%d"]:
+                            try:
+                                row_exam_date = datetime.strptime(row_exam_date_raw, fmt)
+                                break
+                            except ValueError:
+                                continue
+                except (ValueError, TypeError):
+                    pass  # 如果解析失败，保持为 None
+            row_notes = _get_cell_value(row, header_map, "备注")
+            scores = []
+            invalid_scores = []
+
+            for subject in DEFAULT_SUBJECTS:
+                value = _get_cell_value(row, header_map, subject)
+                if value is None or value == "":
+                    continue
+                try:
+                    score_value = float(value)
+                    # 验证分数范围(0-150，支持部分科目满分可能超过100)
+                    if score_value < 0 or score_value > 150:
+                        invalid_scores.append(f"{subject}={score_value}")
+                        continue
+                    scores.append({"subject": subject, "score": score_value})
+                except (TypeError, ValueError):
+                    invalid_scores.append(f"{subject}={value}")
+                    continue
+
+            # 如果有无效分数，记录错误但继续处理有效分数
+            if invalid_scores:
+                errors.append(f"第{row_num}行({name})存在无效分数: {', '.join(invalid_scores)}")
+
+            existing = (
+                db.query(models.Student)
+                    .filter(
+                        models.Student.student_no == student_no,
+                        models.Student.exam_name == row_exam,
+                    )
+                    .first()
             )
-            db.add(student)
-            imported += 1
-    db.commit()
-    return {"imported": imported, "updated": updated}
+            if existing:
+                existing.name = name
+                existing.class_name = row_class
+                existing.grade_name = row_grade
+                existing.exam_name = row_exam
+                existing.exam_date = row_exam_date
+                existing.notes = row_notes
+                existing.scores = scores
+                db.add(existing)
+                updated += 1
+            else:
+                student = models.Student(
+                    name=name,
+                    student_no=student_no,
+                    class_name=row_class,
+                    grade_name=row_grade,
+                    exam_name=row_exam,
+                    exam_date=row_exam_date,
+                    notes=row_notes,
+                    scores=scores,
+                )
+                db.add(student)
+                imported += 1
+        except Exception as e:
+            errors.append(f"第{row_num}行处理失败: {str(e)}")
+            continue
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"数据库保存失败: {str(e)}")
+
+    result = {"imported": imported, "updated": updated}
+    if errors:
+        result["errors"] = errors[:10]  # 只返回前10个错误
+        result["total_errors"] = len(errors)
+
+    return result
 
 
 @router.post("/import-ranks")
@@ -1166,32 +1215,42 @@ def calculate_ranks(db: Session = Depends(get_db)):
         if not exam_name or not grade_name:
             continue
 
-        # 获取该年级该考试的所有学生，按总分降序排列
+        # 获取该年级该考试的所有学生
         students = db.query(models.Student).filter(
             models.Student.exam_name == exam_name,
             models.Student.grade_name == grade_name
-        ).order_by(models.Student.total_score.desc().nullslast()).all()
+        ).all()
+
+        # 计算每个学生的总分并排序
+        student_scores = []
+        for student in students:
+            scores = student.scores or []
+            total_score = sum(item.get("score", 0) for item in scores) if scores else 0
+            student_scores.append((student, total_score))
+
+        # 按总分降序排列
+        student_scores.sort(key=lambda x: x[1], reverse=True)
 
         # 计算年级排名
-        for rank, student in enumerate(students, 1):
-            if student.total_score is not None:
+        for rank, (student, total_score) in enumerate(student_scores, 1):
+            if total_score > 0:  # 只为有成绩的学生设置排名
                 student.grade_rank = rank
                 updated += 1
 
         # 按班级分组计算班级排名
         class_students = {}
-        for student in students:
+        for student, total_score in student_scores:
             if student.class_name:
                 if student.class_name not in class_students:
                     class_students[student.class_name] = []
-                class_students[student.class_name].append(student)
+                class_students[student.class_name].append((student, total_score))
 
         # 为每个班级计算排名
         for class_name, class_student_list in class_students.items():
             # 按总分降序排列
-            class_student_list.sort(key=lambda s: s.total_score if s.total_score is not None else -1, reverse=True)
-            for rank, student in enumerate(class_student_list, 1):
-                if student.total_score is not None:
+            class_student_list.sort(key=lambda x: x[1], reverse=True)
+            for rank, (student, total_score) in enumerate(class_student_list, 1):
+                if total_score > 0:  # 只为有成绩的学生设置排名
                     student.class_rank = rank
 
     db.commit()

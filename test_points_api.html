@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>积分系统API测试</title>
+  <style>
+    body {
+      font-family: "PingFang SC", sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      border-left: 4px solid #2563eb;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .error {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+    .success {
+      border-left-color: #10b981;
+      background: #f0fdf4;
+      color: #065f46;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 积分系统API测试</h1>
+
+  <div class="section">
+    <h2>1. 测试班级列表（自动同步）</h2>
+    <button onclick="testGetClasses()">获取班级列表</button>
+    <div id="classes-result" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="section">
+    <h2>2. 测试学生同步</h2>
+    <p>先获取班级列表，然后选择一个班级同步学生</p>
+    <button onclick="testSyncStudents()">同步学生（需要先有班级）</button>
+    <div id="sync-result" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="section">
+    <h2>3. 测试获取学生列表</h2>
+    <button onclick="testGetStudents()">获取学生列表</button>
+    <div id="students-result" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="section">
+    <h2>4. 测试更新学生积分</h2>
+    <button onclick="testUpdatePoints()">更新积分（需要先有学生）</button>
+    <div id="points-result" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="section">
+    <h2>5. 测试排行榜</h2>
+    <button onclick="testRankings()">获取排行榜</button>
+    <div id="rankings-result" class="result" style="display:none;"></div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/points';
+    let testClassId = null;
+    let testStudentId = null;
+
+    function showResult(elementId, data, isError = false) {
+      const element = document.getElementById(elementId);
+      element.style.display = 'block';
+      element.className = 'result ' + (isError ? 'error' : 'success');
+      element.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+
+    async function testGetClasses() {
+      try {
+        const response = await fetch(`${API_BASE}/classes`);
+        const data = await response.json();
+
+        if (data.length > 0) {
+          testClassId = data[0].id;
+          showResult('classes-result', {
+            message: '✅ 成功获取班级列表',
+            count: data.length,
+            classes: data,
+            note: `已保存第一个班级ID: ${testClassId} 用于后续测试`
+          });
+        } else {
+          showResult('classes-result', {
+            message: '⚠️ 没有找到班级',
+            note: '请先在成绩管理系统中添加学生数据'
+          });
+        }
+      } catch (error) {
+        showResult('classes-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+
+    async function testSyncStudents() {
+      if (!testClassId) {
+        showResult('sync-result', '❌ 请先运行"获取班级列表"测试', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/classes/${testClassId}/sync-from-grades`, {
+          method: 'POST'
+        });
+        const data = await response.json();
+        showResult('sync-result', {
+          message: '✅ 同步成功',
+          result: data
+        });
+
+        // 同步后获取学生列表
+        setTimeout(() => testGetStudents(), 500);
+      } catch (error) {
+        showResult('sync-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+
+    async function testGetStudents() {
+      if (!testClassId) {
+        showResult('students-result', '❌ 请先运行"获取班级列表"测试', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/classes/${testClassId}/students`);
+        const data = await response.json();
+
+        if (data.length > 0) {
+          testStudentId = data[0].id;
+          showResult('students-result', {
+            message: '✅ 成功获取学生列表',
+            count: data.length,
+            students: data.slice(0, 5),
+            note: data.length > 5 ? `只显示前5个学生，共${data.length}个` : '',
+            savedStudentId: testStudentId
+          });
+        } else {
+          showResult('students-result', {
+            message: '⚠️ 该班级没有学生',
+            note: '请先运行"同步学生"测试'
+          });
+        }
+      } catch (error) {
+        showResult('students-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+
+    async function testUpdatePoints() {
+      if (!testStudentId) {
+        showResult('points-result', '❌ 请先运行"获取学生列表"测试', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/students/${testStudentId}/points`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            points: 10,
+            reason: 'API测试加分',
+            operator: '测试员'
+          })
+        });
+        const data = await response.json();
+        showResult('points-result', {
+          message: '✅ 成功更新积分',
+          result: data
+        });
+      } catch (error) {
+        showResult('points-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+
+    async function testRankings() {
+      if (!testClassId) {
+        showResult('rankings-result', '❌ 请先运行"获取班级列表"测试', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/classes/${testClassId}/rankings/students?limit=10`);
+        const data = await response.json();
+        showResult('rankings-result', {
+          message: '✅ 成功获取排行榜',
+          rankings: data
+        });
+      } catch (error) {
+        showResult('rankings-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+
+    // 页面加载时自动测试
+    window.addEventListener('load', () => {
+      console.log('积分系统API测试页面已加载');
+      console.log('API基础路径:', API_BASE);
+    });
+  </script>
+</body>
+</html>

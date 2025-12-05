@@ -142,7 +142,12 @@ def add_student(
     # 尝试关联成绩系统的学生
     student_id = None
     if student_no:
-        grade_student = db.query(Student).filter(Student.student_no == student_no).first()
+        grade_student = (
+            db.query(Student)
+            .filter(Student.student_no == student_no)
+            .order_by(Student.updated_at.desc())
+            .first()
+        )
         if grade_student:
             student_id = grade_student.id
 
@@ -191,7 +196,12 @@ def batch_add_students(
         # 尝试关联成绩系统学生
         student_id = None
         if student_no:
-            grade_student = db.query(Student).filter(Student.student_no == student_no).first()
+            grade_student = (
+                db.query(Student)
+                .filter(Student.student_no == student_no)
+                .order_by(Student.updated_at.desc())
+                .first()
+            )
             if grade_student:
                 student_id = grade_student.id
 
@@ -218,19 +228,36 @@ def sync_students_from_grades(class_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="班级不存在")
 
     # 从成绩系统获取该班级的学生
-    grade_students = db.query(Student).filter(
-        Student.class_name == points_class.class_name
-    ).all()
+    grade_students = (
+        db.query(Student)
+        .filter(Student.class_name == points_class.class_name)
+        .order_by(Student.updated_at.desc())
+        .all()
+    )
+
+    latest_students = {}
+    for record in grade_students:
+        if not record.student_no:
+            continue
+        if record.student_no not in latest_students:
+            latest_students[record.student_no] = record
 
     added_count = 0
-    for grade_student in grade_students:
-        # 检查是否已存在
-        existing = db.query(PointsStudent).filter(
-            PointsStudent.class_id == class_id,
-            PointsStudent.student_id == grade_student.id
-        ).first()
+    for grade_student in latest_students.values():
+        # 检查是否已存在（按学号去重，并更新关联的学生ID）
+        existing = (
+            db.query(PointsStudent)
+            .filter(
+                PointsStudent.class_id == class_id,
+                PointsStudent.student_no == grade_student.student_no,
+            )
+            .first()
+        )
 
         if existing:
+            if existing.student_id != grade_student.id:
+                existing.student_id = grade_student.id
+                db.add(existing)
             continue
 
         new_student = PointsStudent(

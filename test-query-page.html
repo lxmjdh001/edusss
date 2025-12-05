@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试成绩查询页面</title>
+</head>
+<body>
+  <h1>成绩查询页面功能测试</h1>
+
+  <h2>功能清单:</h2>
+  <ul>
+    <li>✅ Chart.js 库已集成 (通过CDN加载)</li>
+    <li>✅ 标签页导航: "当前成绩" 和 "成绩走势"</li>
+    <li>✅ 当前成绩标签页显示总分、平均分和各科成绩</li>
+    <li>✅ 成绩走势标签页包含3个图表:
+      <ul>
+        <li>总分与平均分走势图 (折线图)</li>
+        <li>各科目成绩走势图 (多条折线图)</li>
+        <li>各科目优良率走势图 (柱状图 - 优秀/良好/及格/不及格率)</li>
+      </ul>
+    </li>
+    <li>✅ API 集成: 调用 /api/students/student-trend/{student_no} 获取学生历史成绩数据</li>
+    <li>✅ 懒加载: 只有切换到"成绩走势"标签页时才加载趋势数据</li>
+    <li>✅ 响应式设计: 适配移动端和桌面端</li>
+  </ul>
+
+  <h2>使用说明:</h2>
+  <ol>
+    <li>访问: <a href="http://localhost:8010/static/query.html?code=S0YJHL4KE5" target="_blank">http://localhost:8010/static/query.html?code=S0YJHL4KE5</a></li>
+    <li>输入学生姓名或学号进行查询 (例如: 姓名111 或 123456781)</li>
+    <li>查询结果页面会显示两个标签页:
+      <ul>
+        <li><strong>当前成绩</strong>: 显示该次考试的详细成绩</li>
+        <li><strong>成绩走势</strong>: 显示该学生所有考试的历史趋势图表</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2>图表说明:</h2>
+  <h3>1. 总分与平均分走势</h3>
+  <p>显示学生在各次考试中的总分和平均分变化趋势，帮助了解整体成绩走向。</p>
+
+  <h3>2. 各科目成绩走势</h3>
+  <p>显示每个科目在各次考试中的成绩变化，不同科目用不同颜色的线条表示。</p>
+
+  <h3>3. 各科目优良率走势</h3>
+  <p>以柱状图展示学生在各次考试中各等级的占比:</p>
+  <ul>
+    <li><strong>优秀率</strong>: 成绩 ≥ 90分的科目占比</li>
+    <li><strong>良好率</strong>: 成绩 ≥ 80分的科目占比</li>
+    <li><strong>及格率</strong>: 成绩 ≥ 60分的科目占比</li>
+    <li><strong>不及格率</strong>: 成绩 < 60分的科目占比</li>
+  </ul>
+
+  <h2>技术实现:</h2>
+  <ul>
+    <li><strong>图表库</strong>: Chart.js 4.4.0</li>
+    <li><strong>图表类型</strong>:
+      <ul>
+        <li>折线图 (Line Chart) - 用于总分/平均分和各科目成绩走势</li>
+        <li>柱状图 (Bar Chart) - 用于优良率分布</li>
+      </ul>
+    </li>
+    <li><strong>数据源</strong>: FastAPI 后端 API</li>
+    <li><strong>响应式</strong>: 图表自适应容器大小</li>
+  </ul>
+
+  <hr>
+  <p><em>页面路径: /Users/chaoteng/Desktop/7c/edu/app/static/query.html</em></p>
+</body>
+</html>

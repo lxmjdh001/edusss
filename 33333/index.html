@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班级积分宠物成长系统</title>
+  <link rel="stylesheet" href="styles.css">
+<base target="_blank">
+</head>
+<body>
+  <div class="main-container">
+    <h1 id="mainTitle" contenteditable="true">班级积分宠物成长系统</h1>
+    
+    <!-- 控制按钮区域 -->
+    <div class="controls">
+      <!-- 第一行按钮 -->
+      <div class="controls-row controls-row-1">
+        <div class="tooltip">
+          <button class="btn btn-primary" id="classManagerBtn">🏫 班级管理</button>
+          <span class="tooltiptext">管理多个班级，切换不同班级的数据</span>
+        </div>
+        <select id="classSelector" class="class-selector" style="display: none;">
+          <!-- 班级选项将通过JS动态生成 -->
+        </select>
+        
+        <div class="tooltip">
+          <label for="fileInput" class="btn btn-primary">📁 上传学生信息</label>
+          <span class="tooltiptext">上传包含学生姓名和成绩的Excel文件</span>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
+        
+        <button class="btn btn-secondary" id="settingsBtn">⚙️ 系统配置</button>
+        <button class="btn btn-primary" id="exportBtn">💾 导出备份</button>
+        <label for="backupInput" class="btn btn-secondary">📂 导入备份</label>
+        <input type="file" id="backupInput" accept=".json" style="display:none;">
+        <button class="btn btn-info" id="statisticsBtn">📊 统计</button>
+        <button class="btn btn-primary" id="batchBtn">📦 批量操作</button>
+      </div>
+      
+		<!-- 第二行按钮 -->
+		<div class="controls-row controls-row-2">
+		  <!-- 1 个入口按钮 -->
+		  <div class="dropdown">
+			<button class="btn btn-primary">📦 班级工具箱</button>
+			<div class="dropdown-content">
+			  <a id="goToTaskBtn">📋 任务打卡</a>
+			  <a id="randomNameBtn">🎲 随机点名</a>
+			  <a href="zhuanpan.html" target="_self">🎰 抽奖转盘</a>
+			  <a id="timerBtn">⏱️ 计时器</a>
+			  <!-- 以后再增功能只加一行 <a> 即可 -->
+			</div>
+		  </div>
+		  
+		  <!-- 新增全屏按钮 -->
+		  <div class="tooltip">
+			<button class="btn btn-primary" id="fullscreenBtn">⛶ 全屏</button>
+			<span class="tooltiptext">切换全屏模式</span>
+		  </div>
+		  
+		  <button class="btn btn-danger" id="clearBtn">🗑️ 清空数据</button>
+		  <button class="btn btn-warning" id="lockBtn">🔓 锁定页面</button>
+		</div>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+      <!-- 左侧内容区域 -->
+      <div class="left-content">
+        <!-- 学生管理和小组管理标签页 -->
+        <div class="content-tabs">
+          <button class="content-tab active" data-tab="students">👨‍🎓 学生管理</button>
+          <button class="content-tab" data-tab="groups">👥 小组管理</button>
+        </div>
+        
+        <!-- 学生管理内容 -->
+        <div id="studentsTab" class="content-tab-content active">
+          <div id="studentsGrid" class="students-grid"></div>
+        </div>
+        
+        <!-- 小组管理内容 -->
+        <div id="groupsTab" class="content-tab-content">
+          <div id="groupsGrid" class="students-grid"></div>
+        </div>
+        
+        <!-- 历史记录区域 -->
+        <div class="history-section">
+          <div class="history-title">📜 积分历史</div>
+          <div id="historyList" class="history-list"></div>
+        </div>
+      </div>
+      
+      <!-- 右侧排行榜区域 -->
+<div class="right-content">
+  <div class="rankings-section">
+
+    <!-- 👇 新增：时间筛选器 -->
+    <div class="ranking-time-filter">
+      <div class="time-filter-main" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+        <button class="time-filter-btn active" data-period="all">总榜</button>
+        <button class="time-filter-btn" data-period="today">今天</button>
+        <button class="time-filter-btn" data-period="thisWeek">本周</button>
+        <button class="time-filter-btn" data-period="thisMonth">本月</button>
+        <button class="time-filter-btn" data-period="thisYear">今年</button>
+        <button id="toggleAdvancedPeriod" class="time-filter-btn" style="background:#f0f0f0;">⋯ 更多</button>
+      </div>
+
+      <div id="advancedPeriodOptions" style="display: none; padding-top: 8px; border-top: 1px dashed #ddd; margin-top: 8px;">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+          <button class="time-filter-btn" data-period="yesterday">昨天</button>
+          <button class="time-filter-btn" data-period="lastWeek">上周</button>
+          <button class="time-filter-btn" data-period="lastMonth">上月</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px;">
+          <span>自定义：</span>
+          <input type="date" id="customRankStart" class="date-input-sm">
+          <span>至</span>
+          <input type="date" id="customRankEnd" class="date-input-sm">
+          <button id="applyCustomPeriod" class="time-filter-btn" style="padding: 4px 10px;">应用</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 原有排行榜保留 -->
+    <div class="ranking-column">
+      <h3>🏆 个人排行榜</h3>
+      <div id="individualRanking" class="ranking-list"></div>
+    </div>
+    <div class="ranking-column">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3>👥 小组排行榜</h3>
+        <label style="font-size: 12px; color: #555;">
+          <input type="checkbox" id="includeMemberPointsCheckbox" style="margin-right: 4px;">
+          含成员积分
+        </label>
+      </div>
+      <div id="groupRanking" class="ranking-list"></div>
+    </div>
+
+  </div>
+</div>
+    </div>
+  </div>
+
+	<!-- 添加积分模态框 -->
+	<div id="pointsModal" class="modal">
+	  <div class="modal-content">
+		<h3>📝 积分操作</h3>
+		<p id="studentNameModal"></p>
+		
+		<!-- 规则选择区域 -->
+		<div id="ruleSelect" class="modal-select"></div>
+		
+		<!-- 新增：临时积分规则 -->
+		<div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+		  <h4>➕ 临时积分规则</h4>
+		  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+			<input type="text" id="tempRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
+			<input type="number" id="tempRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+		  </div>
+		  <button class="btn btn-info" id="addTempRuleBtn" style="width: 100%;">添加临时规则并应用</button>
+		</div>
+		
+		<div class="modal-buttons" style="margin-top: 20px;">
+		  <button class="btn btn-primary" id="confirmPointsBtn">确定</button>
+		  <button class="btn btn-secondary modal-close-btn" id="cancelPointsBtn">取消</button>
+		</div>
+	  </div>
+	</div>
+
+	<!-- 小组积分模态框 -->
+	<div id="groupPointsModal" class="modal">
+	  <div class="modal-content">
+		<h3>📝 小组积分操作</h3>
+		<p id="groupNameModal"></p>
+		
+		<!-- 规则选择区域 -->
+		<div id="groupRuleSelect" class="modal-select"></div>
+		
+		<!-- 新增：临时积分规则 -->
+		<div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+		  <h4>➕ 临时小组规则</h4>
+		  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+			<input type="text" id="tempGroupRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
+			<input type="number" id="tempGroupRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+		  </div>
+		  <button class="btn btn-info" id="addTempGroupRuleBtn" style="width: 100%;">添加临时规则并应用</button>
+		</div>
+		
+		<div class="modal-buttons" style="margin-top: 20px;">
+		  <button class="btn btn-primary" id="confirmGroupPointsBtn">确定</button>
+		  <button class="btn btn-secondary modal-close-btn" id="cancelGroupPointsBtn">取消</button>
+		</div>
+	  </div>
+	</div>
+
+	<!-- 系统配置模态框 -->
+	<div id="settingsModal" class="modal">
+	  <div class="modal-content">
+		<div class="modal-header">
+		  <h3 style="margin:0;">⚙️ 系统配置</h3>
+		  <button class="modal-close-btn" id="globalCloseSettingsBtn" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: white; cursor: pointer; padding: 5px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">×</button>
+		</div>
+		<div class="modal-tabs">
+      <button class="modal-tab active" data-tab="rules">个人规则</button>
+      <button class="modal-tab" data-tab="groupRules">小组规则</button>
+      <button class="modal-tab" data-tab="shop">积分商店</button>
+      <button class="modal-tab" data-tab="levelSettings">等级积分设置</button>
+      <button class="modal-tab" data-tab="petConfig">🐾 宠物配置</button>
+      <button class="modal-tab" data-tab="security">安全设置</button>
+    </div>
+		
+		<!-- 个人规则配置 -->
+		<div id="rulesTab" class="modal-tab-content active">
+		  <input id="newRuleName" type="text" class="modal-input" placeholder="规则名称">
+		  <input id="newRulePoints" type="number" class="modal-input" placeholder="积分值（正数奖励，负数惩罚）">
+		  <button class="btn btn-primary" id="addRuleBtn">添加规则</button>
+		  <div id="ruleList" style="margin-top:15px;text-align:left;"></div>
+		  <!-- 新增：个人规则 txt 导入/导出 -->
+			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+			  <label for="ruleTxtImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.txt)</label>
+			  <input type="file" id="ruleTxtImport" accept=".txt" style="display:none;">
+			  <button class="btn btn-info" id="ruleTxtExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.txt)</button>
+			  <button class="btn btn-warning" id="clearRulesBtn" style="padding:6px 12px;font-size:14px;">🗑️ 清空规则</button>
+			</div>
+		</div>
+		
+		<!-- 小组规则配置 -->
+		<div id="groupRulesTab" class="modal-tab-content">
+		  <input id="newGroupRuleName" type="text" class="modal-input" placeholder="小组规则名称">
+		  <input id="newGroupRulePoints" type="number" class="modal-input" placeholder="积分值（正数奖励，负数惩罚）">
+		  <button class="btn btn-primary" id="addGroupRuleBtn">添加小组规则</button>
+		  <div id="groupRuleList" style="margin-top:15px;text-align:left;"></div>
+		  <!-- 新增：小组规则 txt 导入/导出 -->
+			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+			  <label for="groupRuleTxtImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.txt)</label>
+			  <input type="file" id="groupRuleTxtImport" accept=".txt" style="display:none;">
+			  <button class="btn btn-info" id="groupRuleTxtExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.txt)</button>
+			  <button class="btn btn-warning" id="clearGroupRulesBtn" style="padding:6px 12px;font-size:14px;">🗑️ 清空规则</button>
+			</div>
+		</div>
+		
+		<!-- 积分商店配置 -->
+		<div id="shopTab" class="modal-tab-content">
+		  <input id="newItemName" type="text" class="modal-input" placeholder="商品名称">
+		  <input id="newItemCost" type="number" class="modal-input" placeholder="所需积分">
+		  <input id="newItemStock" type="number" class="modal-input" placeholder="库存数量（可选）">
+		  <button class="btn btn-primary" id="addItemBtn">添加商品</button>
+		  <div id="shopList" style="margin-top:15px;text-align:left;"></div>
+		  
+		  <!-- 积分商店规则导出导入功能 -->
+		  <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+			<h4>📦 商店规则管理</h4>
+			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+			  <label for="shopRuleImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.json)</label>
+			  <input type="file" id="shopRuleImport" accept=".json" style="display:none;">
+			  <button class="btn btn-info" id="shopRuleExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.json)</button>
+			  <button class="btn btn-warning" id="clearShopRulesBtn" style="padding:6px 12px;font-size:14px;">🗑️ 清空规则</button>
+			</div>
+			<div style="color: #718096; font-size: 0.9em;">
+			  <p>导出当前商店的所有商品规则为JSON文件，或从JSON文件导入商店商品规则</p>
+			</div>
+		  </div>
+		</div>
+		
+	<!-- 等级积分设置 -->
+	<div id="levelSettingsTab" class="modal-tab-content">
+	  <div class="level-settings-section">
+		<h4>🎯 个人宠物等级设置</h4>
+		<div class="settings-note" style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+		  <p style="margin: 0; color: #0369a1; font-size: 0.9em;">设置个人宠物每个等级所需的积分范围</p>
+		</div>
+		<div id="petLevelSettings" class="level-settings-list">
+		  <!-- 个人等级设置将通过JS动态生成 -->
+		</div>
+		<button class="btn btn-primary" id="savePetLevelsBtn" style="margin-top: 15px; width: 100%;">💾 保存个人等级设置</button>
+	  </div>
+	  
+	  <div class="level-settings-section" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+		<h4>🏆 小组等级设置</h4>
+		<div class="settings-note" style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+		  <p style="margin: 0; color: #0369a1; font-size: 0.9em;">设置小组每个等级所需的积分范围</p>
+		</div>
+		<div id="groupLevelSettings" class="level-settings-list">
+		  <!-- 小组等级设置将通过JS动态生成 -->
+		</div>
+	  </div>
+	  
+	  <div class="level-settings-section" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+		<h4>📊 成绩积分换算设置</h4>
+		<div class="score-settings">
+		  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+			<label style="min-width: 120px;">成绩换算比例:</label>
+			<input type="number" id="scoreToPointsRatio" class="modal-input" min="1" max="100" value="10" style="width: 80px;">
+			<span>分 = 1积分</span>
+		  </div>
+		  <div style="color: #718096; font-size: 0.9em;">
+			<p>例如：设置为10表示每10分成绩兑换1积分（97分 → 9积分）</p>
+		  </div>
+		  <button class="btn btn-primary" id="saveScoreRatioBtn" style="margin-top: 10px; width: 100%;">💾 保存比例设置</button>
+		</div>
+	  </div>
+	</div>
+		
+		
+		
+		
+		
+		<!-- 全局配置 -->
+		<div id="globalConfigTab" class="modal-tab-content">
+		  <!-- 内容将通过JS动态生成 -->
+		</div>
+		
+		<!-- 宠物配置 -->
+		<div id="petConfigTab" class="modal-tab-content">
+		  <h3>🐾 宠物形象配置</h3>
+		  <p style="color: #718096; margin-bottom: 20px;">为每种宠物类型配置6个成长阶段的形象图片，支持自定义上传或使用默认表情符号</p>
+		  
+
+		  <div id="petConfigContainer">
+		    <!-- 宠物配置将通过JS动态生成 -->
+		  </div>
+		  
+		  <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; gap: 12px;">
+			<button class="btn btn-primary" id="savePetConfig">保存宠物配置</button>
+			<button class="btn btn-secondary" id="resetPetConfig">恢复默认配置</button>
+		  </div>
+		  
+
+		</div>
+
+		<!-- 安全设置 -->
+		<div id="securityTab" class="modal-tab-content">
+		  <div class="security-section">
+			<h4>系统锁定</h4>
+			<div style="margin-bottom: 15px;">
+			  <label>设置锁定密码:</label>
+			  <input type="password" id="lockPassword" placeholder="输入锁定密码" value="" style="width: 200px; margin: 0 10px;">
+			  <button class="btn btn-primary" id="savePasswordBtn">保存密码</button>
+			</div>
+			<div style="color: #718096; font-size: 0.9em;">
+			  <p>设置密码后可以锁定系统，防止误操作</p>
+			</div>
+		  </div>
+		  
+		  <div class="security-section" style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+			<h4>紧急重置</h4>
+			<div style="margin-bottom: 15px;">
+			  <p style="color: #e53e3e; margin-bottom: 10px;">如果忘记密码导致系统无法使用，可以使用紧急重置功能</p>
+			  <button class="btn btn-danger" id="emergencyResetBtn">紧急重置系统</button>
+			</div>
+		  </div>
+		</div>
+		
+		<div class="modal-footer">
+		  <div class="modal-buttons">
+			<button class="btn btn-secondary" id="closeSettingsBtn">关闭</button>
+		  </div>
+		</div>
+	  </div>
+	</div>
+  <!-- 积分商店模态框 -->
+  <div id="shopModal" class="modal">
+    <div class="modal-content">
+      <h3>🛒 积分商店</h3>
+      <p id="shopStudentName"></p>
+      <div id="shopItems" class="shop-items">
+        <!-- 商品列表将通过JS动态生成 -->
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary modal-close-btn" id="closeShopBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+	<!-- 修改小组积分模态框 -->
+	<div id="groupPointsModal" class="modal">
+	  <div class="modal-content">
+		<h3>📝 小组积分操作</h3>
+		<p id="groupNameModal"></p>
+		<div id="groupRuleSelect" class="modal-select"></div>
+		<div class="modal-buttons">
+		  <button class="btn btn-primary" id="confirmGroupPointsBtn">确定</button>
+		  <button class="btn btn-secondary modal-close-btn" id="cancelGroupPointsBtn">取消</button>
+		</div>
+	  </div>
+	</div>
+
+  <!-- 创建小组模态框 -->
+  <div id="createGroupModal" class="modal">
+    <div class="modal-content">
+      <h3>👥 创建小组</h3>
+      <input id="newGroupName" type="text" class="modal-input" placeholder="小组名称">
+      <div class="available-students">
+        <h4>选择成员</h4>
+        <div id="availableStudents" class="students-checkbox">
+          <!-- 可选学生列表将通过JS动态生成 -->
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="createGroupBtn">创建小组</button>
+        <button class="btn btn-secondary modal-close-btn" id="closeCreateGroupBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑小组模态框 -->
+  <div id="editGroupModal" class="modal">
+    <div class="modal-content">
+      <h3>✏️ 编辑小组</h3>
+      
+      <!-- 小组基本信息 -->
+      
+      <input id="editGroupName" type="text" class="modal-input" placeholder="小组名称">
+      
+      <div class="available-students">
+        <h4>小组成员</h4>
+        <div id="editGroupStudents" class="students-checkbox">
+          <!-- 可选学生列表将通过JS动态生成 -->
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="saveGroupBtn">保存</button>
+        <button class="btn btn-secondary modal-close-btn" id="cancelEditGroupBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 学生历史记录模态框 -->
+  <div id="studentHistoryModal" class="modal student-history-modal">
+    <div class="modal-content">
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="studentHistory">📊 积分历史</button>
+        <button class="modal-tab" data-tab="studentPurchases">🎁 商品明细</button>
+        <button class="modal-tab" data-tab="petSelection">🐾 选择宠物</button>
+      </div>
+      
+      <div id="studentHistoryTab" class="modal-tab-content active">
+        <h3>📊 学生积分历史</h3>
+        <p id="historyStudentName"></p>
+        <div id="studentHistoryItems" class="history-items"></div>
+      </div>
+      
+      <div id="studentPurchasesTab" class="modal-tab-content">
+        <h3>🎁 商品明细</h3>
+        <p id="purchasesStudentName"></p>
+        <div id="studentPurchasedItems" class="purchased-items"></div>
+      </div>
+      
+      <div id="petSelectionTab" class="modal-tab-content">
+        <h3>🐾 选择你的宠物</h3>
+        <p id="petSelectionStudentName"></p>
+        
+        <!-- 当前选择的宠物显示 -->
+        <div id="currentPetDisplay" class="current-pet-display" style="margin: 20px 0; padding: 15px; background: #f0f9ff; border-radius: 10px; text-align: center;">
+          <h4>当前宠物</h4>
+          <div id="currentPetPreview"></div>
+        </div>
+        
+        <!-- 宠物类型选择 -->
+        <div class="pet-selection-section">
+          <h4>选择宠物类型</h4>
+          <div id="petTypeGrid" class="pet-type-grid">
+            <!-- 宠物类型将通过JS动态生成 -->
+          </div>
+        </div>
+        
+        <!-- 等级预览 -->
+        <div class="pet-levels-section" style="margin-top: 25px;">
+          <h4>成长等级预览</h4>
+          <div id="petLevelPreviews" class="pet-level-previews">
+            <!-- 等级预览将通过JS动态生成 -->
+          </div>
+        </div>
+        
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button class="btn btn-primary" id="confirmPetSelection">确认选择</button>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button class="btn btn-secondary modal-close-btn" id="closeHistoryBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 小组历史记录模态框 -->
+  <div id="groupHistoryModal" class="modal group-history-modal">
+    <div class="modal-content">
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="groupHistory">📊 积分历史</button>
+        <button class="modal-tab" data-tab="groupPetSelection">🐾 选择宠物</button>
+      </div>
+      
+      <div id="groupHistoryTab" class="modal-tab-content active">
+        <h3>📊 小组积分历史</h3>
+        <p id="historyGroupName"></p>
+        <div id="groupHistoryItems" class="history-items"></div>
+      </div>
+      
+      <div id="groupPetSelectionTab" class="modal-tab-content">
+        <h3>🐾 选择小组宠物</h3>
+        <p id="petSelectionGroupName"></p>
+        
+        <!-- 当前选择的小组宠物显示 -->
+        <div id="groupCurrentPetDisplay" class="current-pet-display" style="margin: 20px 0; padding: 15px; background: #f0f9ff; border-radius: 10px; text-align: center;">
+          <h4>当前宠物</h4>
+          <div id="groupCurrentPetPreview"></div>
+        </div>
+        
+        <!-- 宠物类型选择 -->
+        <div class="pet-selection-section">
+          <h4>选择宠物类型</h4>
+          <div id="groupPetTypeGrid" class="pet-type-grid">
+            <!-- 宠物类型将通过JS动态生成 -->
+          </div>
+        </div>
+        
+        <!-- 等级预览 -->
+        <div class="pet-levels-section" style="margin-top: 25px;">
+          <h4>成长等级预览</h4>
+          <div id="groupPetLevelPreviews" class="pet-level-previews">
+            <!-- 等级预览将通过JS动态生成 -->
+          </div>
+        </div>
+        
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button class="btn btn-primary" id="confirmGroupPetSelection">确认选择</button>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button class="btn btn-secondary modal-close-btn" id="closeGroupHistoryBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 统计模态框 -->
+  <div id="statisticsModal" class="modal statistics-modal">
+    <div class="modal-content">
+      <h3>📊 积分统计</h3>
+      
+      <div class="statistics-tabs">
+        <button class="statistics-tab active" data-tab="today">今天</button>
+        <button class="statistics-tab" data-tab="yesterday">昨天</button>
+        <button class="statistics-tab" data-tab="lastWeek">上一周</button>
+        <button class="statistics-tab" data-tab="lastMonth">上一月</button>
+        <button class="statistics-tab" data-tab="custom">自定义时间段</button>
+      </div>
+          <!-- 上移的按钮区 -->
+    <div class="modal-buttons" style="margin:10px 0 20px 0;">
+      <button class="btn btn-secondary" id="closeStatisticsBtn">关闭</button>
+      <button class="btn btn-primary" id="exportStatisticsBtn">导出Excel</button>
+    </div>
+	
+      <div id="todayTab" class="statistics-content active">
+        <div id="todayStats"></div>
+      </div>
+      
+      <div id="yesterdayTab" class="statistics-content">
+        <div id="yesterdayStats"></div>
+      </div>
+      
+      <div id="lastWeekTab" class="statistics-content">
+        <div id="lastWeekStats"></div>
+      </div>
+      
+      <div id="lastMonthTab" class="statistics-content">
+        <div id="lastMonthStats"></div>
+      </div>
+      
+      <div id="customTab" class="statistics-content">
+        <div class="date-range-selector">
+          <label>开始日期:</label>
+          <input type="date" id="startDate" class="date-input">
+          <label>结束日期:</label>
+          <input type="date" id="endDate" class="date-input">
+          <button class="btn btn-primary" id="generateCustomStats">生成统计</button>
+        </div>
+        <div id="customStats"></div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- 随机点名模态框 -->
+  <div id="randomNameModal" class="modal random-name-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin:0;">🎲 随机点名</h3>
+      </div>
+      <div id="randomNameContainer" style="min-height: 400px; position: relative;">
+        <!-- 点名界面将在这里动态生成 -->
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" id="closeRandomNameBtn">返回主页</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 计时器模态框 -->
+  <div id="timerModal" class="modal timer-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin:0;">⏱️ 计时器</h3>
+      </div>
+      
+      <!-- 计时器标签页 -->
+      <div class="timer-tabs">
+        <button class="timer-tab active" data-tab="stopwatch">秒表</button>
+        <button class="timer-tab" data-tab="countdown">倒计时</button>
+      </div>
+      
+      <div class="timer-container">
+        <!-- 秒表功能 -->
+        <div id="stopwatchTab" class="timer-tab-content active">
+          <div class="timer-display-large" id="stopwatchDisplay">00:00:00.00</div>
+          <div class="timer-buttons">
+            <button class="btn btn-primary" id="startStopwatch">开始</button>
+            <button class="btn btn-secondary" id="pauseStopwatch">暂停</button>
+            <button class="btn btn-warning" id="resetStopwatch">重置</button>
+            <button class="btn btn-info" id="lapStopwatch">计次</button>
+          </div>
+          <div id="stopwatchLaps" class="timer-laps"></div>
+        </div>
+        
+        <!-- 倒计时功能 -->
+        <div id="countdownTab" class="timer-tab-content">
+          <div class="time-inputs-large">
+            <div class="time-input-group">
+              <input type="number" id="hoursInput" min="0" max="23" placeholder="时" value="0">
+              <span>时</span>
+            </div>
+            <div class="time-input-group">
+              <input type="number" id="minutesInput" min="0" max="59" placeholder="分" value="5">
+              <span>分</span>
+            </div>
+            <div class="time-input-group">
+              <input type="number" id="secondsInput" min="0" max="59" placeholder="秒" value="0">
+              <span>秒</span>
+            </div>
+          </div>
+          <div class="timer-display-large" id="countdownDisplay">05:00</div>
+          <div class="timer-buttons">
+            <button class="btn btn-primary" id="startCountdown">开始</button>
+            <button class="btn btn-secondary" id="pauseCountdown">暂停</button>
+            <button class="btn btn-warning" id="resetCountdown">重置</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" id="closeTimerBtn">返回主页</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 解锁模态框 -->
+  <div id="unlockModal" class="modal">
+    <div class="modal-content">
+      <h3>🔒 系统已锁定</h3>
+      <p>请输入密码解锁系统</p>
+      <input id="unlockPassword" type="password" class="modal-input" placeholder="输入解锁密码">
+      <div class="modal-buttons">
+        <button class="btn btn-primary unlock-btn" id="confirmUnlockBtn">解锁</button>
+      </div>
+      <div style="text-align: center; margin-top: 15px;">
+        <button class="btn btn-link unlock-btn" id="emergencyResetInUnlockBtn" style="color: #667eea; text-decoration: underline; background: none; border: none; cursor: pointer;">
+          忘记密码？使用管理员重置
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 班级管理模态框 -->
+  <div id="classManagerModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin:0;">🏫 班级管理</h3>
+      </div>
+      
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="classList">班级列表</button>
+        <button class="modal-tab" data-tab="createClass">创建新班级</button>
+      </div>
+      
+      <!-- 班级列表 -->
+      <div id="classListTab" class="modal-tab-content active">
+        <div id="classList" style="margin-top:15px;text-align:left;"></div>
+      </div>
+      
+      <!-- 创建新班级 -->
+      <div id="createClassTab" class="modal-tab-content">
+        <input id="newClassName" type="text" class="modal-input" placeholder="新班级名称">
+        <input id="newClassGrade" type="text" class="modal-input" placeholder="年级（例如：一年级）">
+        <input id="newClassTeacher" type="text" class="modal-input" placeholder="班主任姓名">
+        <button class="btn btn-primary" id="createClassBtn">创建班级</button>
+      </div>
+      
+      <div class="modal-footer">
+        <div class="modal-buttons">
+          <button class="btn btn-secondary" id="closeClassManagerBtn">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- 批量操作模态框 -->
+<div id="batchModal" class="modal">
+  <div class="modal-content">
+    <h3>📦 批量操作</h3>
+    
+    <div class="modal-tabs">
+      <button class="modal-tab active" data-tab="batchStudents">学生批量操作</button>
+      <button class="modal-tab" data-tab="batchGroups">小组批量操作</button>
+    </div>
+    
+    <!-- 学生批量操作 -->
+    <div id="batchStudentsTab" class="modal-tab-content active">
+      <h4>选择学生</h4>
+      <div class="batch-list-container">
+        <div id="batchStudentsList" class="students-checkbox">
+          <!-- 学生列表将通过JS动态生成 -->
+        </div>
+      </div>
+      
+			<!-- 新增：临时积分规则 -->
+	  <div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+		<h4>➕ 临时积分规则</h4>
+		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+		  <input type="text" id="tempBatchRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
+		  <input type="number" id="tempBatchRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+		</div>
+		<button class="btn btn-info" id="addTempBatchRuleBtn" style="width: 100%;">添加临时规则并应用</button>
+	  </div>
+	  
+      <h4 style="margin-top: 15px;">选择操作</h4>
+      <div id="batchStudentRuleSelect" class="modal-select"></div>
+      
+      <div class="modal-buttons" style="margin-top: 20px;">
+        <button class="btn btn-primary" id="confirmBatchStudentsBtn">执行批量操作</button>
+        <button class="btn btn-secondary" id="cancelBatchBtn">取消</button>
+      </div>
+
+      <!-- 新增：清空学生积分区域 -->
+      <div class="danger-zone" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #fed7d7;">
+        <h4 style="color: #e53e3e;">⚠️ 危险操作区域</h4>
+        <div style="background: #fed7d7; padding: 15px; border-radius: 8px; margin: 10px 0;">
+          <p style="color: #c53030; margin: 0 0 10px 0; font-size: 0.9em;">
+            <strong>警告：</strong>此操作将永久清空所选学生的所有积分，包括积分历史和购买记录，此操作不可撤销！
+          </p>
+          <button class="btn btn-danger" id="clearStudentsPointsBtn" style="width: 100%;">
+            🗑️ 清空所选学生积分
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 小组批量操作 -->
+    <div id="batchGroupsTab" class="modal-tab-content">
+      <h4>选择小组</h4>
+      <div class="batch-list-container">
+        <div id="batchGroupsList" class="students-checkbox">
+          <!-- 小组列表将通过JS动态生成 -->
+        </div>
+      </div>
+      
+	   <div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+		<h4>➕ 临时小组规则</h4>
+		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+		  <input type="text" id="tempBatchGroupRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
+		  <input type="number" id="tempBatchGroupRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+		</div>
+		<button class="btn btn-info" id="addTempBatchGroupRuleBtn" style="width: 100%;">添加临时规则并应用</button>
+	  </div>
+	  
+      <h4 style="margin-top: 15px;">选择操作</h4>
+      <div id="batchGroupRuleSelect" class="modal-select"></div>
+      
+      <div class="modal-buttons" style="margin-top: 20px;">
+        <button class="btn btn-primary" id="confirmBatchGroupsBtn">执行批量操作</button>
+        <button class="btn btn-secondary" id="cancelBatchGroupBtn">取消</button>
+      </div>
+
+      <!-- 新增：清空小组积分区域 -->
+      <div class="danger-zone" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #fed7d7;">
+        <h4 style="color: #e53e3e;">⚠️ 危险操作区域</h4>
+        <div style="background: #fed7d7; padding: 15px; border-radius: 8px; margin: 10px 0;">
+          <p style="color: #c53030; margin: 0 0 10px 0; font-size: 0.9em;">
+            <strong>警告：</strong>此操作将永久清空所选小组的所有积分和积分历史，此操作不可撤销！
+          </p>
+          <button class="btn btn-danger" id="clearGroupsPointsBtn" style="width: 100%;">
+            🗑️ 清空所选小组积分
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- <script src="xlsx.full.min.js"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="script.js?t=" + new Date().getTime()></script>
+  <!-- 增强包：多选规则+批量清空 -->
+  
+  
+</body>
+</html>
