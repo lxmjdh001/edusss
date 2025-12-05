@@ -1,4 +1,4 @@
-﻿class ClassPointsSystem {
+class ClassPointsSystem {
 	
 // 增强的通用兜底方法
 getStageImage(stage, index, type) {
@@ -432,14 +432,14 @@ renderPetConfig() {
             <div class="pet-config-emoji" style="background: ${type.color}30; color: ${type.color}; padding: 8px; border-radius: 8px; font-size: 24px; margin-right: 15px;">
               ${type.emoji}
             </div>
-            <div class="pet-config-basic-info">
+            <div class="pet-config-basic-info" style="display: flex; align-items: center; gap: 8px;">
             <input 
               type="text" 
               class="pet-config-name-input" 
               value="${type.name}" 
               data-pet-type="${type.id}"
               placeholder="宠物名称"
-              style="width: 120px; margin-right: 10px;"
+              style="width: 100px; flex-shrink: 0;"
             >
             <input 
               type="text" 
@@ -447,7 +447,7 @@ renderPetConfig() {
               value="${type.emoji}" 
               data-pet-type="${type.id}"
               placeholder="表情符号"
-              style="width: 60px; margin-right: 10px; text-align: center;"
+              style="width: 60px; text-align: center;"
               maxlength="2"
             >
             <input 
@@ -473,7 +473,7 @@ renderPetConfig() {
     const levelsDiv = document.createElement('div');
     levelsDiv.className = 'pet-config-levels';
     levelsDiv.style.display = 'grid';
-    levelsDiv.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))';
+    levelsDiv.style.gridTemplateColumns = 'repeat(3, 1fr)';
     levelsDiv.style.gap = '15px';
     levelsDiv.style.marginTop = '15px';
     

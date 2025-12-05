@@ -69,14 +69,14 @@ body {
 .pet-type-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin: 20px 0;
+  gap: 10px;
+  margin: 15px 0;
 }
 
 .pet-type-option {
-  padding: 20px;
+  padding: 15px 10px;
   border: 2px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -291,7 +291,7 @@ body {
 
 .pet-config-levels {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 15px;
 }
 
@@ -414,7 +414,7 @@ body {
 /* 响应式调整 */
 @media (max-width: 768px) {
   .pet-type-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
   
   .pet-level-previews,
@@ -522,7 +522,7 @@ h1 {
 }
 
 .controls-row-1 {
-  /* 第一行按钮样式 */
+  /* 第一行按钮样式 - 保留默认样式 */
 }
 
 .controls-row-2 {
