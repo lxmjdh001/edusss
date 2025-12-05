@@ -428,36 +428,43 @@ renderPetConfig() {
       headerDiv.className = 'pet-config-header';
       headerDiv.innerHTML = `
         <div class="pet-config-type-info" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-          <div style="display: flex; align-items: center;">
-            <div class="pet-config-emoji" style="background: ${type.color}30; color: ${type.color}; padding: 8px; border-radius: 8px; font-size: 24px; margin-right: 15px;">
-              ${type.emoji}
-            </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <!-- 多选框 -->
+            <input 
+              type="checkbox" 
+              class="pet-type-checkbox" 
+              data-pet-type="${type.id}"
+              style="width: 16px; height: 16px; cursor: pointer;"
+            >
             <div class="pet-config-basic-info" style="display: flex; align-items: center; gap: 8px;">
-            <input 
-              type="text" 
-              class="pet-config-name-input" 
-              value="${type.name}" 
-              data-pet-type="${type.id}"
-              placeholder="宠物名称"
-              style="width: 100px; flex-shrink: 0;"
-            >
-            <input 
-              type="text" 
-              class="pet-config-emoji-input" 
-              value="${type.emoji}" 
-              data-pet-type="${type.id}"
-              placeholder="表情符号"
-              style="width: 60px; text-align: center;"
-              maxlength="2"
-            >
-            <input 
-              type="color" 
-              class="pet-config-color-input" 
-              value="${type.color}" 
-              data-pet-type="${type.id}"
-              style="width: 50px; height: 32px; cursor: pointer;"
-            >
-          </div>
+              <div class="pet-config-emoji" style="background: ${type.color}30; color: ${type.color}; padding: 8px; border-radius: 8px; font-size: 24px; margin-right: 15px;">
+                ${type.emoji}
+              </div>
+              <input 
+                type="text" 
+                class="pet-config-name-input" 
+                value="${type.name}" 
+                data-pet-type="${type.id}"
+                placeholder="宠物名称"
+                style="width: 100px; flex-shrink: 0;"
+              >
+              <input 
+                type="text" 
+                class="pet-config-emoji-input" 
+                value="${type.emoji}" 
+                data-pet-type="${type.id}"
+                placeholder="表情符号"
+                style="width: 60px; text-align: center;"
+                maxlength="2"
+              >
+              <input 
+                type="color" 
+                class="pet-config-color-input" 
+                value="${type.color}" 
+                data-pet-type="${type.id}"
+                style="width: 50px; height: 32px; cursor: pointer;"
+              >
+            </div>
           </div>
           <button 
             class="btn btn-danger btn-sm delete-pet-type-btn" 
@@ -585,15 +592,72 @@ renderPetConfig() {
   // 添加事件监听器
   this.addPetConfigEventListeners();
   
-  // 添加添加宠物类型按钮
+  // 创建顶部操作栏（在宠物标签上方）
+  const topActionsDiv = document.createElement('div');
+  topActionsDiv.className = 'top-actions';
+  topActionsDiv.style.display = 'flex';
+  topActionsDiv.style.alignItems = 'center';
+  topActionsDiv.style.justifyContent = 'space-between';
+  topActionsDiv.style.marginBottom = '20px';
+  topActionsDiv.style.padding = '15px';
+  topActionsDiv.style.background = '#f8fafc';
+  topActionsDiv.style.borderRadius = '8px';
+  topActionsDiv.style.border = '1px solid #e2e8f0';
+  
+  // 左侧：添加新宠物按钮
+  const leftActionsDiv = document.createElement('div');
+  leftActionsDiv.style.display = 'flex';
+  leftActionsDiv.style.alignItems = 'center';
+  leftActionsDiv.style.gap = '15px';
+  
   const addPetTypeBtn = document.createElement('button');
   addPetTypeBtn.className = 'btn btn-primary';
   addPetTypeBtn.textContent = '添加新宠物类型';
-  addPetTypeBtn.style.marginTop = '20px';
   addPetTypeBtn.addEventListener('click', () => {
     this.addNewPetType();
   });
-  container.appendChild(addPetTypeBtn);
+  
+  leftActionsDiv.appendChild(addPetTypeBtn);
+  
+  // 右侧：批量操作区域
+  const rightActionsDiv = document.createElement('div');
+  rightActionsDiv.style.display = 'flex';
+  rightActionsDiv.style.alignItems = 'center';
+  rightActionsDiv.style.gap = '15px';
+  
+  // 全选/取消全选按钮
+  const selectAllBtn = document.createElement('button');
+  selectAllBtn.className = 'btn btn-secondary btn-sm';
+  selectAllBtn.textContent = '全选';
+  selectAllBtn.id = 'selectAllPetTypes';
+  
+  // 批量删除按钮
+  const batchDeleteBtn = document.createElement('button');
+  batchDeleteBtn.className = 'btn btn-danger';
+  batchDeleteBtn.textContent = '批量删除 (0)';
+  batchDeleteBtn.id = 'batchDeletePetTypes';
+  batchDeleteBtn.disabled = true;
+  
+  // 选中数量显示
+  const selectedCountSpan = document.createElement('span');
+  selectedCountSpan.id = 'selectedPetTypesCount';
+  selectedCountSpan.textContent = '已选择 0 个宠物类型';
+  selectedCountSpan.style.color = '#667eea';
+  selectedCountSpan.style.fontWeight = 'bold';
+  
+  rightActionsDiv.appendChild(selectAllBtn);
+  rightActionsDiv.appendChild(batchDeleteBtn);
+  rightActionsDiv.appendChild(selectedCountSpan);
+  
+  // 组合左右两侧
+  topActionsDiv.appendChild(leftActionsDiv);
+  topActionsDiv.appendChild(rightActionsDiv);
+  
+  // 将顶部操作栏插入到宠物标签上方
+  container.insertBefore(topActionsDiv, tabsContainer);
+  
+  // 添加批量操作事件监听器
+  this.addBatchActionsEventListeners();
 }
 
 // 添加新宠物类型
@@ -663,6 +727,143 @@ deletePetType(petTypeId) {
   
   // 重新渲染宠物配置界面
   this.renderPetConfig();
+}
+
+// 添加批量操作事件监听器
+addBatchActionsEventListeners() {
+  // 多选框选择事件
+  document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('pet-type-checkbox')) {
+      this.updateBatchActionsState();
+    }
+  });
+  
+  // 全选/取消全选按钮
+  const selectAllBtn = document.getElementById('selectAllPetTypes');
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      this.toggleSelectAllPetTypes();
+    });
+  }
+  
+  // 批量删除按钮
+  const batchDeleteBtn = document.getElementById('batchDeletePetTypes');
+  if (batchDeleteBtn) {
+    batchDeleteBtn.addEventListener('click', () => {
+      this.batchDeletePetTypes();
+    });
+  }
+}
+
+// 更新批量操作状态
+updateBatchActionsState() {
+  const checkboxes = document.querySelectorAll('.pet-type-checkbox');
+  const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+  const totalCount = checkboxes.length;
+  
+  // 更新选中数量显示
+  const selectedCountSpan = document.getElementById('selectedPetTypesCount');
+  if (selectedCountSpan) {
+    selectedCountSpan.textContent = `已选择 ${selectedCount} 个宠物类型`;
+  }
+  
+  // 更新批量删除按钮
+  const batchDeleteBtn = document.getElementById('batchDeletePetTypes');
+  if (batchDeleteBtn) {
+    batchDeleteBtn.textContent = `批量删除 (${selectedCount})`;
+    batchDeleteBtn.disabled = selectedCount === 0;
+  }
+  
+  // 更新全选按钮状态
+  const selectAllBtn = document.getElementById('selectAllPetTypes');
+  if (selectAllBtn) {
+    if (selectedCount === totalCount && totalCount > 0) {
+      selectAllBtn.textContent = '取消全选';
+      selectAllBtn.classList.add('btn-warning');
+      selectAllBtn.classList.remove('btn-secondary');
+    } else {
+      selectAllBtn.textContent = '全选';
+      selectAllBtn.classList.remove('btn-warning');
+      selectAllBtn.classList.add('btn-secondary');
+    }
+  }
+}
+
+// 全选/取消全选宠物类型
+toggleSelectAllPetTypes() {
+  const checkboxes = document.querySelectorAll('.pet-type-checkbox');
+  const selectAllBtn = document.getElementById('selectAllPetTypes');
+  
+  if (!selectAllBtn) return;
+  
+  const isSelectingAll = selectAllBtn.textContent === '全选';
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = isSelectingAll;
+  });
+  
+  this.updateBatchActionsState();
+}
+
+// 批量删除宠物类型
+batchDeletePetTypes() {
+  const selectedCheckboxes = document.querySelectorAll('.pet-type-checkbox:checked');
+  const selectedCount = selectedCheckboxes.length;
+  
+  if (selectedCount === 0) {
+    alert('请先选择要删除的宠物类型');
+    return;
+  }
+  
+  // 确认删除对话框
+  const confirmed = confirm(`确定要删除选中的 ${selectedCount} 个宠物类型吗？此操作不可撤销`);
+  if (!confirmed) {
+    return;
+  }
+  
+  try {
+    // 收集要删除的宠物类型ID
+    const petTypeIdsToDelete = Array.from(selectedCheckboxes).map(cb => cb.dataset.petType);
+    
+    // 批量删除
+    petTypeIdsToDelete.forEach(petTypeId => {
+      this.deletePetTypeById(petTypeId);
+    });
+    
+    // 保存配置
+    this.saveAllPetConfig();
+    
+    // 重新渲染界面
+    this.renderPetConfig();
+    
+    // 显示成功提示
+    alert(`成功删除 ${selectedCount} 个宠物类型`);
+    
+  } catch (error) {
+    console.error('批量删除宠物类型失败:', error);
+    alert('删除过程中出现错误，请重试');
+  }
+}
+
+// 根据ID删除宠物类型（不显示确认对话框）
+deletePetTypeById(petTypeId) {
+  // 从宠物类型数组中删除
+  const index = this.petTypes.findIndex(type => type.id === petTypeId);
+  if (index === -1) {
+    return;
+  }
+  
+  this.petTypes.splice(index, 1);
+  
+  // 删除相关的等级名称配置
+  if (this.petStagesByType && this.petStagesByType[petTypeId]) {
+    delete this.petStagesByType[petTypeId];
+  }
+  
+  // 删除相关的图片配置
+  if (this.petImages && this.petImages[petTypeId]) {
+    delete this.petImages[petTypeId];
+  }
 }
 
 // 渲染小组宠物形象配置（新增）
