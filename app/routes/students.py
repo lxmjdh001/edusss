@@ -26,6 +26,54 @@ DEFAULT_RANGE_CONFIG = [
 ]
 
 
+@router.get("/{student_id}/point-records")
+def get_student_point_records(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Member = Depends(get_active_member),
+):
+    """获取学生的积分记录"""
+    # 获取成绩系统的学生
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="学生不存在")
+
+    # 通过学号查找积分系统的学生
+    points_student = db.query(models.PointsStudent).filter(
+        models.PointsStudent.student_no == student.student_no
+    ).first()
+
+    if not points_student:
+        return {
+            "has_points_account": False,
+            "total_points": 0,
+            "records": []
+        }
+
+    # 获取积分记录
+    records = db.query(models.PointRecord).filter(
+        models.PointRecord.student_id == points_student.id
+    ).order_by(models.PointRecord.created_at.desc()).limit(100).all()
+
+    return {
+        "has_points_account": True,
+        "total_points": points_student.points,
+        "pet_type": points_student.pet_type,
+        "pet_level": points_student.pet_level,
+        "class_name": points_student.points_class.class_name if points_student.points_class else None,
+        "records": [
+            {
+                "id": r.id,
+                "points": r.points,
+                "reason": r.reason,
+                "operator": r.operator,
+                "created_at": r.created_at.isoformat()
+            }
+            for r in records
+        ]
+    }
+
+
 
 def _serialize_student(student: models.Student) -> schemas.Student:
     scores = student.scores or []

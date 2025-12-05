@@ -845,7 +845,6 @@
           <li><button class="active" data-target="dashboard">仪表盘</button></li>
           <li><button data-target="grade">成绩管理</button></li>
           <li><button data-target="data">数据管理</button></li>
-          <li><a href="points.html" style="text-decoration: none;"><button>🎮 积分系统</button></a></li>
           <li id="systemMenuBtn" class="has-submenu" style="display: none;">
             <button>⚙️ 系统管理</button>
             <ul class="submenu">
@@ -853,6 +852,7 @@
               <li><a href="/static/users.html">👥 用户管理</a></li>
             </ul>
           </li>
+          <li><a href="points.html" style="text-decoration: none;"><button>🎮 积分系统</button></a></li>
         </ul>
       </nav>
     </header>
@@ -1450,6 +1450,7 @@
         <div class="tabs" style="margin-bottom: 20px;">
           <button class="tab-button active" data-detail-tab="overview">成绩概览</button>
           <button class="tab-button" data-detail-tab="trend">趋势分析</button>
+          <button class="tab-button" data-detail-tab="points">积分记录</button>
           <button class="tab-button" data-detail-tab="analysis">详细分析</button>
           <button class="tab-button" data-detail-tab="info">学生信息</button>
         </div>
@@ -1513,6 +1514,16 @@
           </div>
           <div style="height: 300px; position: relative;">
             <canvas id="trendSubjectChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 积分记录标签页 -->
+        <div class="tab-content" id="pointsTab" style="max-height: 60vh; overflow-y: auto;">
+          <div id="pointsAccountInfo" style="margin-bottom: 24px;">
+            <!-- 积分账户信息将在这里动态加载 -->
+          </div>
+          <div id="pointsRecordsList">
+            <!-- 积分记录列表将在这里动态加载 -->
           </div>
         </div>
 
@@ -2748,6 +2759,119 @@
         }
       }
 
+      // 渲染积分记录标签页
+      async function renderPointsTab(student) {
+        const accountInfo = document.getElementById('pointsAccountInfo');
+        const recordsList = document.getElementById('pointsRecordsList');
+
+        // 显示加载中
+        accountInfo.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">加载中...</p>';
+        recordsList.innerHTML = '';
+
+        try {
+          const res = await fetch(`${API_BASE}/${student.id}/point-records`);
+          if (!res.ok) throw new Error('无法加载积分记录');
+
+          const data = await res.json();
+
+          if (!data.has_points_account) {
+            // 没有积分账户
+            accountInfo.innerHTML = `
+              <div style="text-align: center; padding: 40px 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🎮</div>
+                <h3 style="margin: 0 0 8px; font-size: 18px; color: #111827;">该学生暂未加入积分系统</h3>
+                <p style="margin: 0; color: #6b7280; font-size: 14px;">请先在积分系统中为该学生创建账户</p>
+                <a href="/static/points.html" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">前往积分系统</a>
+              </div>
+            `;
+            recordsList.innerHTML = '';
+            return;
+          }
+
+          // 渲染积分账户信息
+          accountInfo.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">当前积分</div>
+                <div style="font-size: 36px; font-weight: 700;">${data.total_points}</div>
+              </div>
+              ${data.pet_type ? `
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);">
+                  <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">宠物类型</div>
+                  <div style="font-size: 24px; font-weight: 700;">${data.pet_type}</div>
+                  <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">等级 ${data.pet_level}</div>
+                </div>
+              ` : ''}
+              ${data.class_name ? `
+                <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
+                  <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">积分班级</div>
+                  <div style="font-size: 20px; font-weight: 700;">${data.class_name}</div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+
+          // 渲染积分记录列表
+          if (data.records.length === 0) {
+            recordsList.innerHTML = `
+              <div style="text-align: center; padding: 40px 20px; color: #9ca3af;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
+                <p style="margin: 0; font-size: 16px;">暂无积分记录</p>
+              </div>
+            `;
+            return;
+          }
+
+          recordsList.innerHTML = `
+            <h3 style="margin: 24px 0 16px; font-size: 16px; color: #111827;">积分记录 (最近100条)</h3>
+            <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
+              ${data.records.map((record, index) => {
+                const isPositive = record.points > 0;
+                const pointsColor = isPositive ? '#10b981' : '#ef4444';
+                const pointsSign = isPositive ? '+' : '';
+                const date = new Date(record.created_at);
+                const dateStr = date.toLocaleString('zh-CN', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+
+                return `
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f3f4f6; ${index === 0 ? 'border-top: none;' : ''}">
+                    <div style="flex: 1;">
+                      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                        <span style="font-size: 24px; font-weight: 700; color: ${pointsColor};">${pointsSign}${record.points}</span>
+                        <span style="font-size: 14px; font-weight: 500; color: #111827;">${record.reason}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 16px; font-size: 12px; color: #9ca3af;">
+                        <span>🕐 ${dateStr}</span>
+                        ${record.operator ? `<span>👤 ${record.operator}</span>` : ''}
+                      </div>
+                    </div>
+                    <div style="text-align: right;">
+                      <div style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: ${isPositive ? '#ecfdf5' : '#fef2f2'};">
+                        <span style="font-size: 20px;">${isPositive ? '📈' : '📉'}</span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+
+        } catch (error) {
+          console.error('加载积分记录失败:', error);
+          accountInfo.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: #dc2626;">
+              <p style="margin: 0;">加载失败: ${error.message}</p>
+            </div>
+          `;
+          recordsList.innerHTML = '';
+        }
+      }
+
       // 详情弹窗选项卡切换（使用事件委托）
       studentDetailModal?.addEventListener('click', async (e) => {
         const button = e.target.closest('[data-detail-tab]');
@@ -2771,6 +2895,8 @@
           await renderTrendTab(currentDetailStudent);
         } else if (targetTab === 'analysis' && currentDetailStudent) {
           renderAnalysisTab(currentDetailStudent);
+        } else if (targetTab === 'points' && currentDetailStudent) {
+          await renderPointsTab(currentDetailStudent);
         }
       });
 
