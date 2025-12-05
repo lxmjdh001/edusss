@@ -617,7 +617,16 @@ renderPetConfig() {
     this.addNewPetType();
   });
   
+  // 批量导入宠物按钮
+  const importPetsBtn = document.createElement('button');
+  importPetsBtn.className = 'btn btn-info';
+  importPetsBtn.textContent = '批量导入宠物';
+  importPetsBtn.addEventListener('click', () => {
+    this.batchImportPets();
+  });
+  
   leftActionsDiv.appendChild(addPetTypeBtn);
+  leftActionsDiv.appendChild(importPetsBtn);
   
   // 右侧：批量操作区域
   const rightActionsDiv = document.createElement('div');
@@ -864,6 +873,422 @@ deletePetTypeById(petTypeId) {
   if (this.petImages && this.petImages[petTypeId]) {
     delete this.petImages[petTypeId];
   }
+}
+
+// 批量导入宠物功能
+batchImportPets() {
+  this.showNotification('请选择包含宠物数据的"宠物"主文件夹', 'info');
+  
+  // 创建文件夹选择对话框
+  const folderInput = document.createElement('input');
+  folderInput.type = 'file';
+  folderInput.webkitdirectory = true;
+  folderInput.multiple = true;
+  folderInput.style.display = 'none';
+  
+  folderInput.addEventListener('change', (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) {
+      this.showNotification('未选择任何文件夹', 'warning');
+      return;
+    }
+    
+    // 验证是否选择了"宠物"文件夹
+    const petFolderFiles = files.filter(file => 
+      file.webkitRelativePath.includes('宠物/') || 
+      file.webkitRelativePath.startsWith('宠物/')
+    );
+    
+    if (petFolderFiles.length === 0) {
+      this.showNotification('请选择名为"宠物"的主文件夹', 'error');
+      return;
+    }
+    
+    this.selectFolderDialog(petFolderFiles);
+  });
+  
+  document.body.appendChild(folderInput);
+  folderInput.click();
+  document.body.removeChild(folderInput);
+}
+
+// 文件夹选择对话框处理
+selectFolderDialog(files) {
+  // 解析文件夹结构
+  const folderStructure = this.parseFolderStructure(files);
+  
+  // 验证宠物文件夹结构
+  const validationResult = this.validatePetFolders(folderStructure);
+  if (!validationResult.isValid) {
+    this.showNotification(`文件夹结构验证失败: ${validationResult.message}`, 'error');
+    return;
+  }
+  
+  // 显示导入确认对话框
+  this.showImportConfirmationDialog(folderStructure);
+}
+
+// 解析文件夹结构
+parseFolderStructure(files) {
+  const structure = {};
+  
+  files.forEach(file => {
+    const pathParts = file.webkitRelativePath.split('/');
+    
+    // 找到宠物文件夹下的子文件夹
+    const petFolderIndex = pathParts.indexOf('宠物');
+    if (petFolderIndex === -1) return;
+    
+    const petName = pathParts[petFolderIndex + 1];
+    if (!petName) return;
+    
+    if (!structure[petName]) {
+      structure[petName] = {
+        images: {},
+        levelNames: null
+      };
+    }
+    
+    const fileName = pathParts[pathParts.length - 1];
+    
+    // 处理图片文件
+    if (fileName.match(/^[1-6]\.jpg$/i)) {
+      const level = parseInt(fileName.split('.')[0]);
+      structure[petName].images[level] = file;
+    }
+    
+    // 处理等级名称文件
+    if (fileName.toLowerCase() === '等级名称.txt') {
+      structure[petName].levelNames = file;
+    }
+  });
+  
+  return structure;
+}
+
+// 验证宠物文件夹结构
+validatePetFolders(structure) {
+  const petNames = Object.keys(structure);
+  
+  if (petNames.length === 0) {
+    return { isValid: false, message: '未找到任何宠物子文件夹' };
+  }
+  
+  for (const petName of petNames) {
+    const petData = structure[petName];
+    
+    // 验证图片文件
+    for (let level = 1; level <= 6; level++) {
+      if (!petData.images[level]) {
+        return { 
+          isValid: false, 
+          message: `宠物"${petName}"缺少等级${level}的图片文件(${level}.jpg)` 
+        };
+      }
+    }
+    
+    // 验证等级名称文件
+    if (!petData.levelNames) {
+      return { 
+        isValid: false, 
+        message: `宠物"${petName}"缺少等级名称文件(等级名称.txt)` 
+      };
+    }
+  }
+  
+  return { isValid: true, message: '文件夹结构验证通过' };
+}
+
+// 显示导入确认对话框
+showImportConfirmationDialog(structure) {
+  const petNames = Object.keys(structure);
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.display = 'block';
+  modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.zIndex = '1000';
+  
+  modal.innerHTML = `
+    <div class="modal-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 20px; color: #333;">批量导入宠物确认</h3>
+      <div style="margin-bottom: 20px;">
+        <p>检测到以下宠物数据，确认导入吗？</p>
+        <ul style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
+          ${petNames.map(petName => `
+            <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
+              <strong>${petName}</strong> - 包含6张图片和等级名称文件
+            </li>
+          `).join('')}
+        </ul>
+        <p style="margin-top: 10px; color: #666;">总计: ${petNames.length} 个宠物</p>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button id="cancelImport" class="btn btn-secondary" style="padding: 8px 16px;">取消</button>
+        <button id="confirmImport" class="btn btn-primary" style="padding: 8px 16px;">确认导入</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // 绑定事件
+  document.getElementById('cancelImport').addEventListener('click', () => {
+    document.body.removeChild(modal);
+    this.showNotification('导入已取消', 'info');
+  });
+  
+  document.getElementById('confirmImport').addEventListener('click', () => {
+    document.body.removeChild(modal);
+    this.startImportProcess(structure);
+  });
+  
+  // 点击外部关闭
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+      this.showNotification('导入已取消', 'info');
+    }
+  });
+}
+
+// 开始导入过程
+async startImportProcess(structure) {
+  const petNames = Object.keys(structure);
+  let successCount = 0;
+  let failedCount = 0;
+  
+  // 显示进度对话框
+  const progressModal = this.showImportProgressDialog(petNames.length);
+  
+  try {
+    for (let i = 0; i < petNames.length; i++) {
+      const petName = petNames[i];
+      const petData = structure[petName];
+      
+      // 更新进度
+      this.updateImportProgress(progressModal, i + 1, petNames.length, petName);
+      
+      try {
+        await this.importSinglePet(petName, petData);
+        successCount++;
+      } catch (error) {
+        console.error(`导入宠物"${petName}"失败:`, error);
+        failedCount++;
+      }
+    }
+    
+    // 关闭进度对话框
+    document.body.removeChild(progressModal);
+    
+    // 显示导入结果
+    this.showImportResult(successCount, failedCount);
+    
+    // 刷新宠物列表
+    this.renderPetConfig();
+    
+  } catch (error) {
+    console.error('导入过程出现错误:', error);
+    document.body.removeChild(progressModal);
+    this.showNotification('导入过程出现错误，请检查控制台', 'error');
+  }
+}
+
+// 显示导入进度对话框
+showImportProgressDialog(totalCount) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.display = 'block';
+  modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.zIndex = '1000';
+  
+  modal.innerHTML = `
+    <div class="modal-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 400px; width: 90%;">
+      <h3 style="margin-bottom: 20px; color: #333;">正在导入宠物数据...</h3>
+      <div style="margin-bottom: 15px;">
+        <div id="importProgressText" style="margin-bottom: 10px; color: #666;">
+          准备开始导入 (0/${totalCount})
+        </div>
+        <div style="width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden;">
+          <div id="importProgressBar" style="height: 100%; background: #4CAF50; width: 0%; transition: width 0.3s;"></div>
+        </div>
+      </div>
+      <div id="currentPetName" style="text-align: center; color: #888; font-style: italic;"></div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  return modal;
+}
+
+// 更新导入进度
+updateImportProgress(modal, current, total, petName) {
+  const progressText = modal.querySelector('#importProgressText');
+  const progressBar = modal.querySelector('#importProgressBar');
+  const currentPetName = modal.querySelector('#currentPetName');
+  
+  if (progressText) {
+    progressText.textContent = `正在导入 ${current}/${total}`;
+  }
+  
+  if (progressBar) {
+    const percentage = (current / total) * 100;
+    progressBar.style.width = `${percentage}%`;
+  }
+  
+  if (currentPetName) {
+    currentPetName.textContent = `当前: ${petName}`;
+  }
+}
+
+// 导入单个宠物
+async importSinglePet(petName, petData) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // 读取等级名称文件
+      const levelNames = await this.readLevelNamesFile(petData.levelNames);
+      if (levelNames.length !== 6) {
+        throw new Error('等级名称文件必须包含6行文本');
+      }
+      
+      // 创建新的宠物类型
+      const newPetType = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        name: petName,
+        emoji: '🐾', // 默认表情符号
+        color: this.getRandomColor() // 随机颜色
+      };
+      
+      // 添加到宠物类型数组
+      this.petTypes.push(newPetType);
+      
+      // 初始化该宠物类型的图片数据结构
+      if (!this.petImages[newPetType.id]) {
+        this.petImages[newPetType.id] = {};
+      }
+      
+      // 初始化等级名称配置
+      if (!this.petStagesByType) {
+        this.petStagesByType = {};
+      }
+      if (!this.petStagesByType[newPetType.id]) {
+        this.petStagesByType[newPetType.id] = JSON.parse(JSON.stringify(this.petStages));
+      }
+      
+      // 更新等级名称
+      for (let i = 0; i < 6; i++) {
+        if (this.petStagesByType[newPetType.id][i]) {
+          this.petStagesByType[newPetType.id][i].name = levelNames[i];
+        }
+      }
+      
+      // 上传图片文件
+      for (let level = 1; level <= 6; level++) {
+        const imageFile = petData.images[level];
+        if (imageFile) {
+          await this.uploadPetImageForImport(imageFile, newPetType.id, level);
+        }
+      }
+      
+      resolve();
+      
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// 读取等级名称文件
+readLevelNamesFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+        resolve(lines);
+      } catch (error) {
+        reject(new Error('读取等级名称文件失败'));
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('读取等级名称文件失败'));
+    };
+    
+    reader.readAsText(file);
+  });
+}
+
+// 为导入功能上传宠物图片
+uploadPetImageForImport(file, petTypeId, level) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const imageData = e.target.result;
+        
+        // 验证图片格式
+        if (!imageData.startsWith('data:image/')) {
+          reject(new Error('文件不是有效的图片格式'));
+          return;
+        }
+        
+        // 保存图片数据
+        const levelKey = `level${level}`;
+        if (!this.petImages[petTypeId]) {
+          this.petImages[petTypeId] = {};
+        }
+        this.petImages[petTypeId][levelKey] = imageData;
+        
+        resolve();
+        
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('读取图片文件失败'));
+    };
+    
+    reader.readAsDataURL(file);
+  });
+}
+
+// 显示导入结果
+showImportResult(successCount, failedCount) {
+  let message = '';
+  let type = 'success';
+  
+  if (successCount > 0 && failedCount === 0) {
+    message = `成功导入 ${successCount} 个宠物`;
+  } else if (successCount > 0 && failedCount > 0) {
+    message = `成功导入 ${successCount} 个宠物，失败 ${failedCount} 个`;
+    type = 'warning';
+  } else {
+    message = `导入失败，所有 ${failedCount} 个宠物均未成功导入`;
+    type = 'error';
+  }
+  
+  this.showNotification(message, type);
+}
+
+// 生成随机颜色
+getRandomColor() {
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 // 渲染小组宠物形象配置（新增）
