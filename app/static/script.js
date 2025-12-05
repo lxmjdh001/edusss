@@ -466,13 +466,22 @@ renderPetConfig() {
               >
             </div>
           </div>
-          <button 
-            class="btn btn-danger btn-sm delete-pet-type-btn" 
-            data-pet-type="${type.id}"
-            style="margin-left: 10px; padding: 4px 12px; font-size: 0.8em;"
-          >
-            删除
-          </button>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button 
+              class="btn btn-info btn-sm batch-apply-pet-btn" 
+              data-pet-type="${type.id}"
+              style="padding: 4px 12px; font-size: 0.8em;"
+            >
+              批量应用
+            </button>
+            <button 
+              class="btn btn-danger btn-sm delete-pet-type-btn" 
+              data-pet-type="${type.id}"
+              style="padding: 4px 12px; font-size: 0.8em;"
+            >
+              删除
+            </button>
+          </div>
         </div>
       `;
     
@@ -1589,6 +1598,37 @@ addPetConfigEventListeners() {
       }
     });
   });
+  
+  // 批量应用宠物按钮事件
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('.batch-apply-pet-btn')) {
+      const petTypeId = e.target.dataset.petType;
+      this.showBatchApplyPetModal(petTypeId);
+    }
+  });
+  
+  // 批量应用宠物模态框确认按钮事件
+  const confirmBatchApplyBtn = document.getElementById('confirmBatchApplyPetBtn');
+  const cancelBatchApplyBtn = document.getElementById('cancelBatchApplyPetBtn');
+  const selectAllCheckbox = document.getElementById('selectAllStudents');
+  
+  if (confirmBatchApplyBtn) {
+    confirmBatchApplyBtn.addEventListener('click', () => {
+      this.confirmBatchApplyPet();
+    });
+  }
+  
+  if (cancelBatchApplyBtn) {
+    cancelBatchApplyBtn.addEventListener('click', () => {
+      this.hideBatchApplyPetModal();
+    });
+  }
+  
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', (e) => {
+      this.toggleSelectAllStudents(e.target.checked);
+    });
+  }
 }
 
 // 上传宠物图片
@@ -8831,6 +8871,20 @@ getStudentPetStage(student) {
   const totalPoints = this.getStudentTotalPoints(student);
   return this.getPetStage(totalPoints, student.name);
 }
+
+// 获取学生宠物名称
+getStudentPetName(student) {
+  // 检查学生是否已分配宠物
+  if (student.name && this.studentPets && this.studentPets[student.name] && this.studentPets[student.name].petType) {
+    const petTypeId = this.studentPets[student.name].petType;
+    // 在宠物类型配置中查找对应的宠物名称
+    const petConfig = this.petTypes.find(pet => pet.id === petTypeId);
+    if (petConfig) {
+      return petConfig.name; // 返回宠物名称，如"小猫"、"小狗"等
+    }
+  }
+  return '未分配'; // 如果没有分配宠物
+}
   
   getStageProgress(points, studentName = null){
     const stage=this.getPetStage(points, studentName);
@@ -9867,6 +9921,283 @@ deleteTaskRecord(recordIndex) {
   this.saveAll();
   this.renderTaskRecords();
   alert('记录已删除');
+}
+
+// 显示批量应用宠物模态框
+showBatchApplyPetModal(petTypeId) {
+  const modal = document.getElementById('batchApplyPetModal');
+  const petNameElement = document.getElementById('batchApplyPetName');
+  
+  if (!modal || !petNameElement) {
+    console.error('批量应用宠物模态框元素未找到');
+    return;
+  }
+  
+  // 获取宠物类型信息
+  const petType = this.petTypes.find(t => t.id === petTypeId);
+  if (!petType) {
+    console.error('未找到宠物类型:', petTypeId);
+    return;
+  }
+  
+  // 更新宠物名称显示
+  petNameElement.textContent = `选择要应用"${petType.name}"宠物形象的学生`;
+  
+  // 保存当前选择的宠物类型（修复变量名一致性问题）
+  this.currentBatchApplyPetTypeId = petTypeId;
+  
+  // 渲染学生卡片
+  this.renderBatchApplyStudentsList();
+  
+  // 显示模态框并确保居中显示
+  modal.style.display = 'flex';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  modal.style.zIndex = '1000';
+}
+
+// 隐藏批量应用宠物模态框
+hideBatchApplyPetModal() {
+  const modal = document.getElementById('batchApplyPetModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  
+  // 清除当前选择的宠物类型（修复变量名一致性问题）
+  this.currentBatchApplyPetTypeId = null;
+}
+
+// 渲染批量应用学生列表 - 优化版本
+renderBatchApplyStudentsList() {
+  const container = document.getElementById('batchApplyStudentsList');
+  if (!container) {
+    console.error('批量应用学生列表容器未找到');
+    return;
+  }
+  
+  // 检查是否有学生数据
+  if (!this.students || this.students.length === 0) {
+    container.innerHTML = '<div class="no-data-message">暂无学生数据</div>';
+    return;
+  }
+  
+  // 使用文档片段提高性能
+  const fragment = document.createDocumentFragment();
+  
+  // 渲染每个学生卡片
+  this.students.forEach((student, index) => {
+    const studentCard = this.createBatchApplyStudentCard(student, index);
+    fragment.appendChild(studentCard);
+  });
+  
+  // 一次性添加到容器
+  container.innerHTML = '';
+  container.appendChild(fragment);
+  
+  // 更新已选择学生数量显示
+  this.updateSelectedCount();
+}
+
+// 创建批量应用学生卡片 - 优化版本
+createBatchApplyStudentCard(student, index) {
+  const card = document.createElement('div');
+  card.className = 'student-card';
+  
+  // 获取学生宠物信息
+  const petName = this.getStudentPetName(student);
+  const hasPet = petName !== '未分配';
+  
+  // 创建卡片内容 - 所有元素在同一行水平排列
+  card.innerHTML = `
+    <div class="student-checkbox">
+      <input type="checkbox" class="batch-apply-student-checkbox" data-student-index="${index}" id="student-${index}">
+      <label for="student-${index}"></label>
+    </div>
+    
+    <div class="student-name">${student.name}</div>
+    <div class="student-points">积分: ${student.points || 0}</div>
+    <div class="pet-section ${hasPet ? 'has-pet' : 'no-pet'}">
+      <div class="pet-name">${petName}</div>
+    </div>
+  `;
+  
+  // 如果没有宠物，隐藏宠物信息区域
+  if (!hasPet) {
+    const petSection = card.querySelector('.pet-section');
+    petSection.style.display = 'none';
+  }
+  
+  // 添加点击事件（点击卡片切换复选框）
+  card.addEventListener('click', (e) => {
+    if (!e.target.matches('input[type="checkbox"], label')) {
+      const checkbox = card.querySelector('input[type="checkbox"]');
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  
+  // 添加复选框变化事件
+  const checkbox = card.querySelector('input[type="checkbox"]');
+  checkbox.addEventListener('change', () => {
+    this.updateBatchApplySelection();
+  });
+  
+  return card;
+}
+
+// 更新批量应用选择状态
+updateBatchApplySelection() {
+  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox');
+  const selectAllCheckbox = document.getElementById('selectAllStudents');
+  
+  if (!selectAllCheckbox) return;
+  
+  const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+  const totalCount = checkboxes.length;
+  
+  // 更新全选复选框状态
+  selectAllCheckbox.checked = checkedCount === totalCount;
+  selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+  
+  // 更新确认按钮状态
+  const confirmBtn = document.getElementById('confirmBatchApplyPetBtn');
+  if (confirmBtn) {
+    confirmBtn.disabled = checkedCount === 0;
+  }
+  
+  // 更新已选择学生数量显示
+  this.updateSelectedCount();
+}
+
+// 更新已选择学生数量显示
+updateSelectedCount() {
+  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox');
+  const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+  const totalCount = checkboxes.length;
+  
+  const selectedCountElement = document.getElementById('selectedCount');
+  if (selectedCountElement) {
+    selectedCountElement.textContent = `已选择 ${checkedCount}/${totalCount} 名学生`;
+  }
+}
+
+// 全选/取消全选学生
+toggleSelectAllStudents(selectAll) {
+  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox');
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = selectAll;
+    // 触发change事件以更新UI状态
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  
+  // 更新确认按钮状态
+  const confirmBtn = document.getElementById('confirmBatchApplyPetBtn');
+  if (confirmBtn) {
+    confirmBtn.disabled = !selectAll && checkboxes.length > 0;
+  }
+  
+  // 更新已选择学生数量显示
+  this.updateSelectedCount();
+}
+
+// 获取宠物配置数据
+getPetConfigs() {
+  // 确保宠物类型数据存在
+  if (!this.petTypes || this.petTypes.length === 0) {
+    // 如果没有宠物类型，返回默认配置
+    return [
+      {
+        id: 'default',
+        name: '默认宠物',
+        emoji: '🐱',
+        color: '#3b82f6'
+      }
+    ];
+  }
+  
+  return this.petTypes;
+}
+
+// 应用宠物到单个学生
+applyPetToStudent(studentName, petConfig) {
+  // 确保学生宠物数据结构存在
+  if (!this.studentPets) {
+    this.studentPets = {};
+  }
+  
+  // 如果学生还没有宠物数据，创建一个
+  if (!this.studentPets[studentName]) {
+    this.studentPets[studentName] = {};
+  }
+  
+  // 更新宠物类型
+  this.studentPets[studentName].petType = petConfig.id;
+  
+  // 记录应用时间
+  this.studentPets[studentName].appliedAt = new Date().toISOString();
+  
+  console.log(`应用宠物到学生: ${studentName}, 宠物类型: ${petConfig.name}`);
+}
+
+// 确认批量应用宠物
+confirmBatchApplyPet() {
+  const selectedStudents = this.getSelectedBatchApplyStudents();
+  const petTypeId = this.currentBatchApplyPetTypeId;
+  
+  if (selectedStudents.length === 0) {
+    this.showNotification('请至少选择一个学生！', 'error');
+    return;
+  }
+  
+  if (!petTypeId) {
+    this.showNotification('请先选择要应用的宠物类型！', 'error');
+    return;
+  }
+  
+  // 获取宠物配置数据
+  const petConfigs = this.getPetConfigs();
+  const petConfig = petConfigs.find(pet => pet.id === petTypeId);
+  
+  if (!petConfig) {
+    this.showNotification('未找到对应的宠物配置！', 'error');
+    return;
+  }
+  
+  if (confirm(`确定要将"${petConfig.name}"宠物形象应用到 ${selectedStudents.length} 个学生吗？`)) {
+    // 批量应用宠物形象
+    selectedStudents.forEach(studentName => {
+      // 应用宠物到学生
+      this.applyPetToStudent(studentName, petConfig);
+    });
+    
+    // 保存数据
+    this.saveAll();
+    
+    // 更新界面
+    this.renderStudents();
+    this.renderRankings();
+    
+    // 隐藏模态框
+    this.hideBatchApplyPetModal();
+    
+    this.showNotification(`成功为 ${selectedStudents.length} 个学生应用宠物形象！`, 'success');
+  }
+}
+
+// 获取选中的批量应用学生
+getSelectedBatchApplyStudents() {
+  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox:checked');
+  const selectedStudents = [];
+  
+  checkboxes.forEach(checkbox => {
+    const studentIndex = parseInt(checkbox.dataset.studentIndex);
+    if (this.students[studentIndex]) {
+      selectedStudents.push(this.students[studentIndex].name);
+    }
+  });
+  
+  return selectedStudents;
 }
 }
 
