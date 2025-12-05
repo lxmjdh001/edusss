@@ -417,11 +417,32 @@
       const backBtn = document.getElementById("backBtn");
       const keywordInput = document.getElementById("keyword");
 
-      // 从URL获取查询码
+      // 全局变量
+      let currentStudentNo = null;
+      let trendData = null;
+
+      // 从URL获取查询码或统一查询标识
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get("code");
+      const isUnified = urlParams.get("unified") === "true";
 
-      if (!code) {
+      // 如果是统一查询入口，直接从 sessionStorage 获取数据并显示
+      if (isUnified) {
+        const unifiedResult = sessionStorage.getItem('unifiedQueryResult');
+        if (unifiedResult) {
+          try {
+            const student = JSON.parse(unifiedResult);
+            queryCard.style.display = "none";
+            displayResult(student);
+            sessionStorage.removeItem('unifiedQueryResult'); // 清除数据
+          } catch (error) {
+            console.error('解析统一查询结果失败:', error);
+            showError("数据加载失败，请返回重新查询");
+          }
+        } else {
+          showError("未找到查询结果，请返回重新查询");
+        }
+      } else if (!code) {
         showError("无效的查询链接，请联系老师获取正确的查询链接");
         submitBtn.disabled = true;
       }
@@ -439,10 +460,15 @@
       });
 
       backBtn.addEventListener("click", () => {
-        resultCard.classList.remove("show");
-        queryCard.style.display = "block";
-        keywordInput.value = "";
-        errorMessage.classList.remove("show");
+        // 如果是统一查询模式，返回到统一查询入口
+        if (isUnified) {
+          window.location.href = "/static/unified-query.html";
+        } else {
+          resultCard.classList.remove("show");
+          queryCard.style.display = "block";
+          keywordInput.value = "";
+          errorMessage.classList.remove("show");
+        }
       });
 
       async function queryStudentScore(keyword) {

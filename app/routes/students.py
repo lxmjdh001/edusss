@@ -123,6 +123,42 @@ def list_students(
     return [_serialize_student(s) for s in students]
 
 
+@router.get("/exams")
+def get_exams(db: Session = Depends(get_db)):
+    """获取所有考试场次列表（公开接口，无需认证）"""
+    exams = db.query(models.Student.exam_name).filter(
+        models.Student.exam_name.isnot(None)
+    ).distinct().order_by(models.Student.exam_name.desc()).all()
+
+    return [exam[0] for exam in exams if exam[0]]
+
+
+@router.get("/public-query")
+def public_query_student(
+    keyword: str = Query(..., description="姓名或学号"),
+    exam_name: str = Query(..., description="考试场次"),
+    db: Session = Depends(get_db)
+):
+    """公开查询接口：通过姓名/学号和考试场次查询成绩（无需认证）"""
+    like = f"%{keyword}%"
+    query = db.query(models.Student).filter(
+        or_(
+            models.Student.name.ilike(like),
+            models.Student.student_no.ilike(like),
+        ),
+        models.Student.exam_name == exam_name
+    )
+
+    students = query.order_by(models.Student.updated_at.desc()).all()
+
+    if not students:
+        raise HTTPException(status_code=404, detail="未找到匹配的学生成绩")
+
+    # 返回第一个匹配的学生
+    student = students[0]
+    return _serialize_student(student)
+
+
 @router.get("/summary", response_model=schemas.StudentSummary)
 def summary(
     keyword: Optional[str] = Query(None, description="按姓名/学号模糊搜索"),
