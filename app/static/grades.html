@@ -1142,6 +1142,10 @@
             <p>查看和管理学生成绩</p>
           </div>
           <div class="actions">
+            <button class="btn secondary" id="unifiedQueryBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+              <span>🔍</span>
+              <span>统一查询入口</span>
+            </button>
             <button class="btn" id="addStudentBtn">+ 添加学生</button>
           </div>
         </div>
@@ -4500,6 +4504,13 @@
       backupDataBtn?.addEventListener("click", handleBackupData);
       restoreForm?.addEventListener("submit", handleRestoreData);
       clearDataBtn?.addEventListener("click", handleClearData);
+
+      // 统一查询入口按钮
+      const unifiedQueryBtn = document.getElementById("unifiedQueryBtn");
+      unifiedQueryBtn?.addEventListener("click", () => {
+        window.open("/static/unified-query.html", "_blank");
+      });
+
       addStudentBtn?.addEventListener("click", () => openModal());
       cancelModal.addEventListener("click", closeModal);
       modalBackdrop.addEventListener("click", (event) => {
