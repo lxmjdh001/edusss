@@ -271,10 +271,14 @@
           examNameSelect.innerHTML = '<option value="">请选择考试场次</option>';
 
           // 添加考试选项
-          exams.forEach(exam => {
+          exams.forEach((exam, index) => {
             const option = document.createElement('option');
             option.value = exam;
             option.textContent = exam;
+            // 默认选中第一个（最新的）考试
+            if (index === 0) {
+              option.selected = true;
+            }
             examNameSelect.appendChild(option);
           });
 
