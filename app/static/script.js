@@ -8936,12 +8936,21 @@ getStudentPetName(student) {
 }
   
   getStageProgress(points, studentName = null){
-    const stage=this.getPetStage(points, studentName);
-    if(stage.maxPoints===Infinity) return 100;
+    const stage = this.getPetStage(points, studentName);
     
-    const current=points-stage.minPoints;
-    const total=stage.maxPoints-stage.minPoints;
-    return Math.min(100,(current/total)*100);
+    // 处理特殊情况：最高等级（无限大）直接返回100%
+    if (stage.maxPoints === Infinity) return 100;
+    
+    // 处理负分情况：当分数小于当前阶段的最小分数时，进度条显示为0%
+    if (points < stage.minPoints) return 0;
+    
+    // 计算当前等级内的进度百分比
+    const current = points - stage.minPoints;
+    const total = stage.maxPoints - stage.minPoints;
+    
+    // 确保百分比在0-100范围内
+    const progress = (current / total) * 100;
+    return Math.max(0, Math.min(100, progress));
   }
   
   getLevel(points, studentName = null){
@@ -9034,11 +9043,20 @@ getStudentPetName(student) {
   
   getGroupStageProgress(points, groupName = null){
     const stage = this.getGroupStage(points, groupName);
-    if(stage.maxPoints===Infinity) return 100;
     
-    const current=points-stage.minPoints;
-    const total=stage.maxPoints-stage.minPoints;
-    return Math.min(100,(current/total)*100);
+    // 处理特殊情况：最高等级（无限大）直接返回100%
+    if (stage.maxPoints === Infinity) return 100;
+    
+    // 处理负分情况：当分数小于当前阶段的最小分数时，进度条显示为0%
+    if (points < stage.minPoints) return 0;
+    
+    // 计算当前等级内的进度百分比
+    const current = points - stage.minPoints;
+    const total = stage.maxPoints - stage.minPoints;
+    
+    // 确保百分比在0-100范围内
+    const progress = (current / total) * 100;
+    return Math.max(0, Math.min(100, progress));
   }
   
   getGroupLevel(points, groupName = null){
