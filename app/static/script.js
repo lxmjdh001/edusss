@@ -242,6 +242,8 @@ toggleDisplayMode() {
             this.closeRandomNameModal();
           } else if (modalId === 'timerModal') {
             this.closeTimerModal();
+          } else if (modalId === 'techSupportModal') {
+            this.closeTechSupportModal();
           }
         }
       });
@@ -890,7 +892,7 @@ deletePetTypeById(petTypeId) {
 
 // 批量导入宠物功能
 batchImportPets() {
-  this.showNotification('请选择包含宠物数据的"宠物"主文件夹', 'info');
+  this.showNotification('请选择包含宠物数据的文件夹（支持单个宠物文件夹或"宠物"主文件夹）', 'info');
   
   // 创建文件夹选择对话框
   const folderInput = document.createElement('input');
@@ -906,18 +908,26 @@ batchImportPets() {
       return;
     }
     
-    // 验证是否选择了"宠物"文件夹
-    const petFolderFiles = files.filter(file => 
-      file.webkitRelativePath.includes('宠物/') || 
-      file.webkitRelativePath.startsWith('宠物/')
-    );
+    // 检测是否为单个宠物文件夹
+    const isSinglePetFolder = this.isSinglePetFolder(files);
     
-    if (petFolderFiles.length === 0) {
-      this.showNotification('请选择名为"宠物"的主文件夹', 'error');
-      return;
+    if (isSinglePetFolder) {
+      // 单个宠物文件夹模式：直接处理所有文件
+      this.selectFolderDialog(files);
+    } else {
+      // 批量导入模式：验证是否选择了"宠物"文件夹
+      const petFolderFiles = files.filter(file => 
+        file.webkitRelativePath.includes('宠物/') || 
+        file.webkitRelativePath.startsWith('宠物/')
+      );
+      
+      if (petFolderFiles.length === 0) {
+        this.showNotification('请选择名为"宠物"的主文件夹或包含1-6.jpg和等级名称.txt的单个宠物文件夹', 'error');
+        return;
+      }
+      
+      this.selectFolderDialog(petFolderFiles);
     }
-    
-    this.selectFolderDialog(petFolderFiles);
   });
   
   document.body.appendChild(folderInput);
@@ -947,13 +957,36 @@ parseFolderStructure(files) {
   
   files.forEach(file => {
     const pathParts = file.webkitRelativePath.split('/');
+    const fileName = pathParts[pathParts.length - 1];
     
-    // 找到宠物文件夹下的子文件夹
-    const petFolderIndex = pathParts.indexOf('宠物');
-    if (petFolderIndex === -1) return;
+    // 检测是否选择了单个宠物文件夹（直接包含1-6.jpg和等级名称.txt）
+    const isSinglePetFolder = this.isSinglePetFolder(files);
     
-    const petName = pathParts[petFolderIndex + 1];
-    if (!petName) return;
+    let petName;
+    
+    if (isSinglePetFolder) {
+      // 单个宠物文件夹模式：使用文件夹名作为宠物名
+      // 对于单个文件夹，路径结构应该是 [文件夹名]/文件名
+      petName = pathParts[0]; // 获取第一个路径部分（文件夹名）
+      if (!petName || petName === '宠物') {
+        // 如果文件夹名为"宠物"，则使用默认名称
+        petName = '导入的宠物';
+      }
+    } else {
+      // 批量导入模式：查找宠物文件夹下的子文件夹
+      // 路径结构应该是 宠物/[宠物名]/文件名
+      const petFolderIndex = pathParts.indexOf('宠物');
+      if (petFolderIndex === -1) {
+        // 如果没有找到"宠物"文件夹，跳过此文件
+        return;
+      }
+      
+      petName = pathParts[petFolderIndex + 1];
+      if (!petName) {
+        // 如果宠物名为空，跳过此文件
+        return;
+      }
+    }
     
     if (!structure[petName]) {
       structure[petName] = {
@@ -962,15 +995,19 @@ parseFolderStructure(files) {
       };
     }
     
-    const fileName = pathParts[pathParts.length - 1];
-    
-    // 处理图片文件
+    // 处理图片文件（严格验证命名格式）
     if (fileName.match(/^[1-6]\.jpg$/i)) {
       const level = parseInt(fileName.split('.')[0]);
+      
+      // 验证图片文件命名规范
+      if (level < 1 || level > 6) {
+        throw new Error(`图片文件名格式错误：${fileName}，应为1.jpg到6.jpg`);
+      }
+      
       structure[petName].images[level] = file;
     }
     
-    // 处理等级名称文件
+    // 处理等级名称文件（支持大小写）
     if (fileName.toLowerCase() === '等级名称.txt') {
       structure[petName].levelNames = file;
     }
@@ -979,25 +1016,61 @@ parseFolderStructure(files) {
   return structure;
 }
 
+// 检测是否为单个宠物文件夹
+isSinglePetFolder(files) {
+  if (!files || files.length === 0) return false;
+  
+  // 检查是否包含宠物文件夹的必需文件：至少包含等级名称.txt和部分图片文件
+  const hasLevelNamesFile = files.some(file => 
+    file.name.toLowerCase() === '等级名称.txt'
+  );
+  
+  const hasImageFiles = files.some(file => 
+    /^[1-6]\.jpg$/i.test(file.name)
+  );
+  
+  if (!hasLevelNamesFile || !hasImageFiles) return false;
+  
+  // 检查路径结构：单个宠物文件夹的路径应该只有一层（文件夹名/文件名）
+  const hasSingleLevelPath = files.every(file => {
+    const pathParts = file.webkitRelativePath.split('/');
+    return pathParts.length === 2; // 只有文件夹名和文件名
+  });
+  
+  if (!hasSingleLevelPath) return false;
+  
+  // 检查是否没有"宠物"文件夹路径
+  const hasPetFolderPath = files.some(file => 
+    file.webkitRelativePath.includes('宠物/')
+  );
+  
+  return !hasPetFolderPath;
+}
+
 // 验证宠物文件夹结构
 validatePetFolders(structure) {
   const petNames = Object.keys(structure);
   
   if (petNames.length === 0) {
-    return { isValid: false, message: '未找到任何宠物子文件夹' };
+    return { isValid: false, message: '未找到任何宠物数据' };
   }
   
   for (const petName of petNames) {
     const petData = structure[petName];
     
-    // 验证图片文件
+    // 验证图片文件完整性（1-6.jpg必须齐全）
+    const missingImages = [];
     for (let level = 1; level <= 6; level++) {
       if (!petData.images[level]) {
-        return { 
-          isValid: false, 
-          message: `宠物"${petName}"缺少等级${level}的图片文件(${level}.jpg)` 
-        };
+        missingImages.push(`${level}.jpg`);
       }
+    }
+    
+    if (missingImages.length > 0) {
+      return { 
+        isValid: false, 
+        message: `宠物"${petName}"缺少以下图片文件: ${missingImages.join(', ')}` 
+      };
     }
     
     // 验证等级名称文件
@@ -1006,6 +1079,17 @@ validatePetFolders(structure) {
         isValid: false, 
         message: `宠物"${petName}"缺少等级名称文件(等级名称.txt)` 
       };
+    }
+    
+    // 验证图片文件命名规范
+    for (let level = 1; level <= 6; level++) {
+      const imageFile = petData.images[level];
+      if (imageFile && !imageFile.name.match(/^[1-6]\.jpg$/i)) {
+        return { 
+          isValid: false, 
+          message: `宠物"${petName}"的图片文件命名不规范: ${imageFile.name}，应为${level}.jpg` 
+        };
+      }
     }
   }
   
@@ -1074,6 +1158,7 @@ async startImportProcess(structure) {
   const petNames = Object.keys(structure);
   let successCount = 0;
   let failedCount = 0;
+  const failedPets = []; // 记录失败的宠物和错误信息
   
   // 显示进度对话框
   const progressModal = this.showImportProgressDialog(petNames.length);
@@ -1089,28 +1174,42 @@ async startImportProcess(structure) {
       try {
         await this.importSinglePet(petName, petData);
         successCount++;
+        
+        // 添加短暂延迟，避免过快导入导致界面卡顿
+        if (i < petNames.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
       } catch (error) {
         console.error(`导入宠物"${petName}"失败:`, error);
         failedCount++;
+        failedPets.push({
+          name: petName,
+          error: error.message
+        });
+        
+        // 显示当前宠物导入失败的通知
+        this.showNotification(`宠物"${petName}"导入失败: ${error.message}`, 'error', 3000);
       }
     }
     
     // 关闭进度对话框
     document.body.removeChild(progressModal);
     
-    // 显示导入结果
-    this.showImportResult(successCount, failedCount);
+    // 显示导入结果（包含详细错误信息）
+    this.showImportResult(successCount, failedCount, failedPets);
     
     // 🆕 新增：保存所有宠物配置数据（包括等级名称）
-    this.saveAllPetConfig();
-    
-    // 刷新宠物列表
-    this.renderPetConfig();
+    if (successCount > 0) {
+      this.saveAllPetConfig();
+      // 刷新宠物列表
+      this.renderPetConfig();
+    }
     
   } catch (error) {
     console.error('导入过程出现错误:', error);
     document.body.removeChild(progressModal);
-    this.showNotification('导入过程出现错误，请检查控制台', 'error');
+    this.showNotification(`导入过程出现错误：${error.message}`, 'error');
   }
 }
 
@@ -1231,10 +1330,42 @@ readLevelNamesFile(file) {
     reader.onload = (e) => {
       try {
         const content = e.target.result;
-        const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+        
+        // 验证文件内容不为空
+        if (!content || content.trim().length === 0) {
+          reject(new Error('等级名称文件内容为空'));
+          return;
+        }
+        
+        // 按行分割并处理
+        const lines = content.split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0); // 过滤空行
+        
+        // 验证行数
+        if (lines.length !== 6) {
+          reject(new Error(`等级名称文件必须包含6行文本，当前有${lines.length}行`));
+          return;
+        }
+        
+        // 验证每行内容不为空
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].length === 0) {
+            reject(new Error(`等级名称文件第${i + 1}行为空`));
+            return;
+          }
+          
+          // 验证名称长度（防止过长名称）
+          if (lines[i].length > 20) {
+            reject(new Error(`等级名称文件第${i + 1}行名称过长（超过20个字符）`));
+            return;
+          }
+        }
+        
         resolve(lines);
+        
       } catch (error) {
-        reject(new Error('读取等级名称文件失败'));
+        reject(new Error('读取等级名称文件失败：' + error.message));
       }
     };
     
@@ -1242,13 +1373,28 @@ readLevelNamesFile(file) {
       reject(new Error('读取等级名称文件失败'));
     };
     
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8'); // 指定UTF-8编码
   });
 }
 
 // 为导入功能上传宠物图片
 uploadPetImageForImport(file, petTypeId, level) {
   return new Promise((resolve, reject) => {
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      reject(new Error(`文件"${file.name}"不是图片格式`));
+      return;
+    }
+    
+    // 验证文件大小（最大5MB）
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      reject(new Error(`图片"${file.name}"过大（${(file.size / 1024 / 1024).toFixed(2)}MB），最大支持5MB`));
+      return;
+    }
+    
+    // 验证图片尺寸（可选，通过Image对象）
+    const img = new Image();
     const reader = new FileReader();
     
     reader.onload = (e) => {
@@ -1261,22 +1407,43 @@ uploadPetImageForImport(file, petTypeId, level) {
           return;
         }
         
-        // 保存图片数据
-        const levelKey = `level${level}`;
-        if (!this.petImages[petTypeId]) {
-          this.petImages[petTypeId] = {};
-        }
-        this.petImages[petTypeId][levelKey] = imageData;
+        // 加载图片验证尺寸
+        img.onload = () => {
+          // 验证图片尺寸（建议最小100x100）
+          if (img.width < 100 || img.height < 100) {
+            reject(new Error(`图片"${file.name}"尺寸过小（${img.width}x${img.height}），建议至少100x100像素`));
+            return;
+          }
+          
+          // 验证图片比例（可选，防止变形）
+          const aspectRatio = img.width / img.height;
+          if (aspectRatio < 0.5 || aspectRatio > 2) {
+            console.warn(`图片"${file.name}"比例异常（${aspectRatio.toFixed(2)}），可能影响显示效果`);
+          }
+          
+          // 保存图片数据
+          const levelKey = `level${level}`;
+          if (!this.petImages[petTypeId]) {
+            this.petImages[petTypeId] = {};
+          }
+          this.petImages[petTypeId][levelKey] = imageData;
+          
+          resolve();
+        };
         
-        resolve();
+        img.onerror = () => {
+          reject(new Error(`无法加载图片"${file.name}"，可能已损坏`));
+        };
+        
+        img.src = imageData;
         
       } catch (error) {
-        reject(error);
+        reject(new Error('处理图片文件失败：' + error.message));
       }
     };
     
     reader.onerror = () => {
-      reject(new Error('读取图片文件失败'));
+      reject(new Error(`读取图片文件"${file.name}"失败`));
     };
     
     reader.readAsDataURL(file);
@@ -1284,7 +1451,7 @@ uploadPetImageForImport(file, petTypeId, level) {
 }
 
 // 显示导入结果
-showImportResult(successCount, failedCount) {
+showImportResult(successCount, failedCount, failedPets = []) {
   let message = '';
   let type = 'success';
   
@@ -1293,9 +1460,27 @@ showImportResult(successCount, failedCount) {
   } else if (successCount > 0 && failedCount > 0) {
     message = `成功导入 ${successCount} 个宠物，失败 ${failedCount} 个`;
     type = 'warning';
+    
+    // 显示详细失败信息（如果失败数量较少）
+    if (failedCount <= 5) {
+      message += '\n失败详情：';
+      failedPets.forEach(pet => {
+        message += `\n• ${pet.name}: ${pet.error}`;
+      });
+    } else {
+      message += `\n（失败数量较多，请检查控制台获取详细错误信息）`;
+    }
   } else {
     message = `导入失败，所有 ${failedCount} 个宠物均未成功导入`;
     type = 'error';
+    
+    // 显示详细失败信息
+    if (failedCount > 0) {
+      message += '\n失败详情：';
+      failedPets.forEach(pet => {
+        message += `\n• ${pet.name}: ${pet.error}`;
+      });
+    }
   }
   
   this.showNotification(message, type);
@@ -2912,7 +3097,10 @@ init(){
 localStorage.setItem('currentClassId', this.currentClassId);
 
 // 全屏功能
-document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+}
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -2943,14 +3131,16 @@ document.addEventListener('msfullscreenchange', updateFullscreenButton);
 
 function updateFullscreenButton() {
   const fullscreenBtn = document.getElementById('fullscreenBtn');
-  if (document.fullscreenElement || 
-      document.webkitFullscreenElement || 
-      document.msFullscreenElement) {
-    fullscreenBtn.innerHTML = '⛶ 退出全屏';
-    fullscreenBtn.classList.add('fullscreen-active');
-  } else {
-    fullscreenBtn.innerHTML = '⛶ 全屏';
-    fullscreenBtn.classList.remove('fullscreen-active');
+  if (fullscreenBtn) {
+    if (document.fullscreenElement || 
+        document.webkitFullscreenElement || 
+        document.msFullscreenElement) {
+      fullscreenBtn.innerHTML = '⛶ 退出全屏';
+      fullscreenBtn.classList.add('fullscreen-active');
+    } else {
+      fullscreenBtn.innerHTML = '⛶ 全屏';
+      fullscreenBtn.classList.remove('fullscreen-active');
+    }
   }
 }
 }
@@ -4311,6 +4501,10 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       if(this.isLocked) return;
       this.openBatchModal();
     });
+    document.getElementById('techSupportBtn').addEventListener('click',()=>{
+      if(this.isLocked) return;
+      this.openTechSupportModal();
+    });
     
     // 积分操作模态框
     document.getElementById('confirmPointsBtn').addEventListener('click',()=>{
@@ -4400,6 +4594,9 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       this.executeBatchGroups();
     });
     document.getElementById('cancelBatchGroupBtn').addEventListener('click',()=>this.closeBatchModal());
+    
+    // 技术支持模态框按钮事件
+    document.getElementById('closeTechSupportBtn').addEventListener('click',()=>this.closeTechSupportModal());
     
     // 内容标签页切换
     document.querySelectorAll('.content-tab').forEach(tab => {
@@ -10525,6 +10722,33 @@ setupSortListeners() {
     });
   }
 }
+  
+  // 打开技术支持模态框
+  openTechSupportModal() {
+    const modal = document.getElementById('techSupportModal');
+    if (modal) {
+      // 确保页面滚动被锁定
+      document.body.style.overflow = 'hidden';
+      // 添加动画效果
+      setTimeout(() => {
+        modal.classList.add('show');
+      }, 10);
+    }
+  }
+  
+  // 关闭技术支持模态框
+  closeTechSupportModal() {
+    const modal = document.getElementById('techSupportModal');
+    if (modal) {
+      modal.classList.remove('show');
+      // 恢复页面滚动
+      document.body.style.overflow = '';
+      // 延迟隐藏以确保动画完成
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, 300);
+    }
+  }
 }
 
 

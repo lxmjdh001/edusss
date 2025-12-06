@@ -3135,3 +3135,275 @@ body:fullscreen {
     font-size: 1.3em;
   }
 }
+
+/* 姓氏排序控制组件样式 */
+.sort-control-container {
+  margin-bottom: 15px;
+  padding: 10px 16px;
+  background: #fcfdfe;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f5f9;
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.sort-label {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.sort-btn {
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  min-width: 140px;
+  justify-content: space-between;
+}
+
+.sort-btn:hover {
+  transform: translateY(-0.5px);
+  box-shadow: 0 1px 4px rgba(148, 163, 184, 0.1);
+  background: linear-gradient(135deg, #f1f5f9 0%, #f8fafc 100%);
+  border-color: #cbd5e1;
+}
+
+.sort-btn.active {
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border-color: #93c5fd;
+  color: #475569;
+}
+
+.sort-text {
+  flex: 1;
+  text-align: left;
+}
+
+.sort-arrow {
+  font-size: 0.75em;
+  transition: transform 0.2s ease;
+  color: #94a3b8;
+}
+
+.sort-btn:hover .sort-arrow {
+  transform: rotate(180deg);
+}
+
+.sort-status-text {
+  margin-left: 8px;
+  color: #94a3b8;
+  font-size: 0.8em;
+  font-style: italic;
+  white-space: nowrap;
+  padding: 2px 6px;
+  background: #f8fafc;
+  border-radius: 4px;
+  border: 1px solid #f1f5f9;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .sort-control-container {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+  }
+  
+  .sort-control {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .sort-label {
+    text-align: center;
+    font-size: 0.85em;
+  }
+  
+  .sort-btn {
+    min-width: 120px;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 0.8em;
+  }
+  
+  .sort-status-text {
+    margin-left: 0;
+    text-align: center;
+    font-size: 0.75em;
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sort-control-container {
+    padding: 6px 10px;
+  }
+  
+  .sort-control {
+    gap: 6px;
+  }
+  
+  .sort-btn {
+    padding: 5px 8px;
+    font-size: 0.75em;
+    min-width: 100px;
+  }
+  
+  .sort-label {
+    font-size: 0.8em;
+  }
+  
+  .sort-status-text {
+    font-size: 0.7em;
+  }
+}
+
+/* 技术支持模态框特殊样式 */
+#techSupportModal {
+  display: none !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  z-index: 9999 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+#techSupportModal.show {
+  display: flex !important;
+  animation: techSupportSlideIn 0.3s ease-out forwards !important;
+}
+
+#techSupportModal .modal-content {
+  width: 320px !important;
+  height: 400px !important;
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  padding: 0 !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5) !important;
+  background: transparent !important;
+  border: none !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+#techSupportModal .modal-body {
+  padding: 0 !important;
+  text-align: center !important;
+  background: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+#techSupportModal .modal-body img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  border-radius: 20px !important;
+  background: #f8f9fa !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#techSupportModal .modal-close-btn {
+  position: absolute !important;
+  top: 15px !important;
+  right: 15px !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  color: white !important;
+  width: 35px !important;
+  height: 35px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.4em !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  z-index: 10 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+#techSupportModal .modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+  transform: scale(1.15) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 技术支持模态框动画效果 */
+@keyframes techSupportSlideIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) translateY(-30px);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  #techSupportModal .modal-content {
+    width: 300px !important;
+    height: 375px !important;
+    max-width: 95vw !important;
+    max-height: 80vh !important;
+  }
+  
+  #techSupportModal .modal-close-btn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 1.3em !important;
+    top: 12px !important;
+    right: 12px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  #techSupportModal .modal-content {
+    width: 280px !important;
+    height: 350px !important;
+  }
+}
