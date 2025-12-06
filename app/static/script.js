@@ -170,6 +170,10 @@ toggleDisplayMode() {
     this.editingGroupIndex=null;
     this.editingStudentIndex=null;
     
+    // 排序相关属性
+    this.currentSortMode = 'none'; // 当前排序模式：'none', 'name_asc', 'name_desc', 'points_asc', 'points_desc'
+    this.sortDirection = 'asc'; // 当前排序方向：'asc' 或 'desc'
+    
     // 计时器变量
     this.stopwatchRunning = false;
     this.stopwatchElapsed = 0;
@@ -1097,6 +1101,9 @@ async startImportProcess(structure) {
     // 显示导入结果
     this.showImportResult(successCount, failedCount);
     
+    // 🆕 新增：保存所有宠物配置数据（包括等级名称）
+    this.saveAllPetConfig();
+    
     // 刷新宠物列表
     this.renderPetConfig();
     
@@ -2005,6 +2012,11 @@ saveAllPetConfig() {
     localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
     localStorage.setItem(`groupPets_${this.currentClassId}`, JSON.stringify(this.groupPets)); // 保存小组宠物选择
     
+    // 🆕 新增：保存按宠物类型存储的等级名称数据
+    if (this.petStagesByType && typeof this.petStagesByType === 'object') {
+      localStorage.setItem(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
+    }
+    
     this.showNotification('宠物配置保存成功！', 'success');
     return true;
   } catch (error) {
@@ -2629,20 +2641,14 @@ getStudentPetImage(student) {
       }
       return imageData;
     } else {
-      // 如果没有自定义图片，显示默认emoji
-      const emojiMap = {  
-        0: '🥚', 1: '🐣', 2: '🐤', 3: '🐦', 4: '🕊️', 5: '🦅'
-      };
-      const validLevel = Math.max(0, Math.min(5, studentLevel));
-      return emojiMap[validLevel] || '❓';
+      // 如果没有自定义图片，显示对应宠物类型的emoji
+      const petStage = this.getPetStage(totalPoints, student.name);
+      return petStage.emoji || '❓';
     }
   } else {
     // emoji模式下直接返回对应的宠物等级emoji
-    const emojiMap = {  
-      0: '🥚', 1: '🐣', 2: '🐤', 3: '🐦', 4: '🕊️', 5: '🦅'
-    };
-    const validLevel = Math.max(0, Math.min(5, studentLevel));
-    return emojiMap[validLevel] || '❓';
+    const petStage = this.getPetStage(totalPoints, student.name);
+    return petStage.emoji || '❓';
   }
 }
 
@@ -2875,16 +2881,16 @@ init(){
   // 创建切换按钮
   this.toggleModeBtn = document.createElement('button');
   
-  // 运行配置系统测试（仅在开发模式）
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    setTimeout(() => {
-      if (this.testPetConfigSystem()) {
-        this.showNotification('宠物配置系统测试通过', 'success');
-      } else {
-        this.showNotification('宠物配置系统测试失败', 'warning');
-      }
-    }, 1000);
-  }
+  // 禁用开发环境下的自动测试功能，防止测试数据覆盖真实数据
+  // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  //   setTimeout(() => {
+  //     if (this.testPetConfigSystem()) {
+  //       this.showNotification('宠物配置系统测试通过', 'success');
+  //     } else {
+  //       this.showNotification('宠物配置系统测试失败', 'warning');
+  //     }
+  //   }, 1000);
+  // }
   this.toggleModeBtn.className = 'btn btn-info';
   this.toggleModeBtn.textContent = this.displayMode === 'emoji' ? '🖼️ 自定义宠物' : '🎭 恢复默认宠物';
   this.toggleModeBtn.style.margin = '0 8px';
@@ -3350,6 +3356,11 @@ saveAll(){
     localStorage.setItem(`groupStages_${this.currentClassId}`, JSON.stringify(groupStagesData));
   }
   
+  // 保存学生宠物选择数据（关键修复：确保批量应用宠物数据持久化）
+  if (this.studentPets && Object.keys(this.studentPets).length > 0) {
+    localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
+  }
+  
   this.updateClassStudentCount();
 }
   
@@ -3363,9 +3374,30 @@ saveAll(){
   }
   
   // 加载所有宠物相关配置
-loadAllPetConfig() {
+loadAllPetConfig(preventPetStagesByTypeOverride = true) {
   try {
     if (!this.currentClassId) return false;
+    
+    // 加载按宠物类型存储的等级数据（关键修复）
+    // 总是优先从localStorage加载petStagesByType数据，确保数据一致性
+    const savedPetStagesByType = localStorage.getItem(`petStagesByType_${this.currentClassId}`);
+    if (savedPetStagesByType) {
+      try {
+        const parsedPetStagesByType = JSON.parse(savedPetStagesByType);
+        if (parsedPetStagesByType && typeof parsedPetStagesByType === 'object') {
+          // 如果从按类型存储加载成功，使用按类型存储的数据
+          this.petStagesByType = {};
+          for (const petType in parsedPetStagesByType) {
+            this.petStagesByType[petType] = this.migrateStages(parsedPetStagesByType[petType], 'pet');
+          }
+          // 使用第一个宠物类型的等级作为默认显示（兼容性）
+          const firstPetType = Object.keys(this.petStagesByType)[0];
+          this.petStages = this.petStagesByType[firstPetType] || this.migrateStages(this.getDefaultPetStages(), 'pet');
+        }
+      } catch (error) {
+        console.error('加载按类型存储的个人等级配置失败:', error);
+      }
+    }
     
     // 加载宠物类型配置
     const savedPetTypes = localStorage.getItem(`petTypes_${this.currentClassId}`);
@@ -3385,17 +3417,20 @@ loadAllPetConfig() {
       }
     }
     
-    // 加载个人宠物阶段配置
-    const savedPetStages = localStorage.getItem(`petStages_${this.currentClassId}`);
-    if (savedPetStages) {
-      try {
-        const parsedStages = JSON.parse(savedPetStages);
-        if (Array.isArray(parsedStages)) {
-          this.petStages = this.migrateStages(parsedStages, 'pet');
+    // 加载个人宠物阶段配置（仅在需要时覆盖）
+    // 只有当明确允许覆盖且petStagesByType为空时才加载旧的个人宠物阶段配置
+    if (preventPetStagesByTypeOverride === false && (!this.petStagesByType || Object.keys(this.petStagesByType).length === 0)) {
+      const savedPetStages = localStorage.getItem(`petStages_${this.currentClassId}`);
+      if (savedPetStages) {
+        try {
+          const parsedStages = JSON.parse(savedPetStages);
+          if (Array.isArray(parsedStages)) {
+            this.petStages = this.migrateStages(parsedStages, 'pet');
+          }
+        } catch (error) {
+          console.error('加载个人宠物阶段配置失败:', error);
+          this.showNotification('个人宠物阶段配置加载失败', 'warning');
         }
-      } catch (error) {
-        console.error('加载个人宠物阶段配置失败:', error);
-        this.showNotification('个人宠物阶段配置加载失败', 'warning');
       }
     }
     
@@ -3673,8 +3708,23 @@ loadFromLocalStorage(){
     this.initializeClassData();
   }
   
-  // 无论是否找到班级数据，都加载宠物配置
-  this.loadAllPetConfig();
+  // 加载学生宠物分配数据（无论是否有班级数据）
+  const savedStudentPets = localStorage.getItem(`studentPets_${this.currentClassId}`);
+  if (savedStudentPets) {
+    try {
+      const parsedStudentPets = JSON.parse(savedStudentPets);
+      if (typeof parsedStudentPets === 'object') {
+        this.studentPets = parsedStudentPets;
+      }
+    } catch (error) {
+      console.error('加载学生宠物选择失败:', error);
+      this.studentPets = {};
+    }
+  }
+  
+  // 无论是否找到班级数据，都加载宠物配置（但避免覆盖已加载的petStagesByType数据）
+  // 使用true参数，防止覆盖已加载的按宠物类型存储的等级数据
+  this.loadAllPetConfig(true);
   
   const title = localStorage.getItem(`mainTitle_${this.currentClassId}`) || 
                 localStorage.getItem('mainTitle') || 
@@ -3780,6 +3830,8 @@ getDefaultGroupStages() {
     this.history = [];
     this.undoStack = [];
     this.randomNameRecords = [];
+    // 初始化学生宠物分配数据
+    this.studentPets = {};
     // 使用全局配置
     this.rules = this.globalRules;
     this.shopItems = this.globalShopItems;
@@ -5062,12 +5114,11 @@ renderIndividualRanking() {
 
   // 计算每个学生在时间段内的总积分
   const studentsWithTotalPoints = this.students.map(student => {
-    // 直接使用学生的总积分（包括所有历史积分和兑换记录）
-    let totalPoints = this.getStudentTotalPoints(student);
+    let totalPoints;
     
-    // 如果指定了时间段，需要筛选该时间段内的积分
+    // 如果指定了时间段（如"今天"），需要筛选该时间段内的积分
     if (start && end) {
-      // 筛选时间段内的历史积分
+      // 时间段内的总积分 = 时间段内获得的历史积分（不扣除兑换积分）
       const periodHistoryPoints = (student.history || [])
         .filter(isInPeriod)
         .reduce((sum, h) => {
@@ -5075,16 +5126,10 @@ renderIndividualRanking() {
           return sum + pointsValue;
         }, 0);
       
-      // 筛选时间段内的兑换积分
-      const periodPurchaseDeductions = (student.purchases || [])
-        .filter(isInPeriod)
-        .reduce((sum, p) => {
-          const costValue = parseInt(p.cost) || 0;
-          return sum + costValue;
-        }, 0);
-      
-      // 时间段内的总积分 = 时间段内历史积分 - 时间段内兑换积分
-      totalPoints = periodHistoryPoints - periodPurchaseDeductions;
+      totalPoints = periodHistoryPoints;
+    } else {
+      // 总榜使用学生的总积分（包括所有历史积分和兑换记录）
+      totalPoints = this.getStudentTotalPoints(student);
     }
 
     // 确保totalPoints是有效数字
@@ -5189,8 +5234,8 @@ renderGroupRanking() {
               return sum + costValue;
             }, 0);
           
-          // 净积分 = 获得的积分 - 兑换花费
-          points += memberEarnedPoints - memberSpentPoints;
+          // 积分 = 获得的积分（不扣除兑换花费）
+          points += memberEarnedPoints;
         }
       });
     }
@@ -8816,17 +8861,19 @@ deleteGroup(index){
     
     for(let i = stagesToUse.length - 1; i >= 0; i--){
       if(points >= stagesToUse[i].minPoints){
-        // 根据显示模式返回不同的等级名称
+        // 根据显示模式返回不同的等级名称和emoji
         const stage = {...stagesToUse[i]};
         if (this.displayMode === 'emoji') {
-          // emoji模式下使用默认等级名称
+          // emoji模式下使用默认等级名称和emoji
           const defaultStages = this.getDefaultPetStages();
           if (defaultStages[i]) {
             stage.name = defaultStages[i].name;
+            stage.emoji = defaultStages[i].emoji;
           }
         } else {
-          // 自定义模式下使用自定义等级名称
+          // 自定义模式下使用自定义等级名称，保持原有emoji
           stage.name = stagesToUse[i].name;
+          stage.emoji = stagesToUse[i].emoji;
         }
         return stage;
       }
@@ -8837,10 +8884,12 @@ deleteGroup(index){
       const defaultStages = this.getDefaultPetStages();
       if (defaultStages[0]) {
         stage.name = defaultStages[0].name;
+        stage.emoji = defaultStages[0].emoji;
       }
     } else {
-      // 自定义模式下使用自定义等级名称
+      // 自定义模式下使用自定义等级名称，保持原有emoji
       stage.name = stagesToUse[0].name;
+      stage.emoji = stagesToUse[0].emoji;
     }
     return stage;
   }
@@ -10199,8 +10248,266 @@ getSelectedBatchApplyStudents() {
   
   return selectedStudents;
 }
+
+// 获取姓氏拼音首字母
+getSurnamePinyin(name) {
+  if (!name || typeof name !== 'string') return '';
+  
+  // 提取姓氏（第一个字符）
+  const surname = name.charAt(0);
+  
+  // 常见姓氏拼音映射（包含多音字处理）
+  const surnamePinyinMap = {
+    '赵': 'Z', '钱': 'Q', '孙': 'S', '李': 'L', '周': 'Z', '吴': 'W', '郑': 'Z', '王': 'W',
+    '冯': 'F', '陈': 'C', '褚': 'C', '卫': 'W', '蒋': 'J', '沈': 'S', '韩': 'H', '杨': 'Y',
+    '朱': 'Z', '秦': 'Q', '尤': 'Y', '许': 'X', '何': 'H', '吕': 'L', '施': 'S', '张': 'Z',
+    '孔': 'K', '曹': 'C', '严': 'Y', '华': 'H', '金': 'J', '魏': 'W', '陶': 'T', '姜': 'J',
+    '戚': 'Q', '谢': 'X', '邹': 'Z', '喻': 'Y', '柏': 'B', '水': 'S', '窦': 'D', '章': 'Z',
+    '云': 'Y', '苏': 'S', '潘': 'P', '葛': 'G', '奚': 'X', '范': 'F', '彭': 'P', '郎': 'L',
+    '鲁': 'L', '韦': 'W', '昌': 'C', '马': 'M', '苗': 'M', '凤': 'F', '花': 'H', '方': 'F',
+    '俞': 'Y', '任': 'R', '袁': 'Y', '柳': 'L', '酆': 'F', '鲍': 'B', '史': 'S', '唐': 'T',
+    '费': 'F', '廉': 'L', '岑': 'C', '薛': 'X', '雷': 'L', '贺': 'H', '倪': 'N', '汤': 'T',
+    '滕': 'T', '殷': 'Y', '罗': 'L', '毕': 'B', '郝': 'H', '邬': 'W', '安': 'A', '常': 'C',
+    '乐': 'L', '于': 'Y', '时': 'S', '傅': 'F', '皮': 'P', '卞': 'B', '齐': 'Q', '康': 'K',
+    '伍': 'W', '余': 'Y', '元': 'Y', '卜': 'B', '顾': 'G', '孟': 'M', '平': 'P', '黄': 'H',
+    '和': 'H', '穆': 'M', '萧': 'X', '尹': 'Y', '姚': 'Y', '邵': 'S', '湛': 'Z', '汪': 'W',
+    '祁': 'Q', '毛': 'M', '禹': 'Y', '狄': 'D', '米': 'M', '贝': 'B', '明': 'M', '臧': 'Z',
+    '计': 'J', '伏': 'F', '成': 'C', '戴': 'D', '谈': 'T', '宋': 'S', '茅': 'M', '庞': 'P',
+    '熊': 'X', '纪': 'J', '舒': 'S', '屈': 'Q', '项': 'X', '祝': 'Z', '董': 'D', '梁': 'L',
+    '杜': 'D', '阮': 'R', '蓝': 'L', '闵': 'M', '席': 'X', '季': 'J', '麻': 'M', '强': 'Q',
+    '贾': 'J', '路': 'L', '娄': 'L', '危': 'W', '江': 'J', '童': 'T', '颜': 'Y', '郭': 'G',
+    '梅': 'M', '盛': 'S', '林': 'L', '刁': 'D', '钟': 'Z', '徐': 'X', '邱': 'Q', '骆': 'L',
+    '高': 'G', '夏': 'X', '蔡': 'C', '田': 'T', '樊': 'F', '胡': 'H', '凌': 'L', '霍': 'H',
+    '虞': 'Y', '万': 'W', '支': 'Z', '柯': 'K', '昝': 'Z', '管': 'G', '卢': 'L', '莫': 'M',
+    '经': 'J', '房': 'F', '裘': 'Q', '缪': 'M', '干': 'G', '解': 'X', '应': 'Y', '宗': 'Z',
+    '丁': 'D', '宣': 'X', '贲': 'B', '邓': 'D', '郁': 'Y', '单': 'S', '杭': 'H', '洪': 'H',
+    '包': 'B', '诸': 'Z', '左': 'Z', '石': 'S', '崔': 'C', '吉': 'J', '钮': 'N', '龚': 'G',
+    '程': 'C', '嵇': 'J', '邢': 'X', '滑': 'H', '裴': 'P', '陆': 'L', '荣': 'R', '翁': 'W',
+    '荀': 'X', '羊': 'Y', '於': 'Y', '惠': 'H', '甄': 'Z', '曲': 'Q', '家': 'J', '封': 'F',
+    '芮': 'R', '羿': 'Y', '储': 'C', '靳': 'J', '汲': 'J', '邴': 'B', '糜': 'M', '松': 'S',
+    '井': 'J', '段': 'D', '富': 'F', '巫': 'W', '乌': 'W', '焦': 'J', '巴': 'B', '弓': 'G',
+    '牧': 'M', '隗': 'W', '山': 'S', '谷': 'G', '车': 'C', '侯': 'H', '宓': 'M', '蓬': 'P',
+    '全': 'Q', '郗': 'X', '班': 'B', '仰': 'Y', '秋': 'Q', '仲': 'Z', '伊': 'Y', '宫': 'G',
+    '宁': 'N', '仇': 'Q', '栾': 'L', '暴': 'B', '甘': 'G', '钭': 'T', '厉': 'L', '戎': 'R',
+    '祖': 'Z', '武': 'W', '符': 'F', '刘': 'L', '景': 'J', '詹': 'Z', '束': 'S', '龙': 'L',
+    '叶': 'Y', '幸': 'X', '司': 'S', '韶': 'S', '郜': 'G', '黎': 'L', '蓟': 'J', '薄': 'B',
+    '印': 'Y', '宿': 'S', '白': 'B', '怀': 'H', '蒲': 'P', '邰': 'T', '从': 'C', '鄂': 'E',
+    '索': 'S', '咸': 'X', '籍': 'J', '赖': 'L', '卓': 'Z', '蔺': 'L', '屠': 'T', '蒙': 'M',
+    '池': 'C', '乔': 'Q', '阴': 'Y', '鬱': 'Y', '胥': 'X', '能': 'N', '苍': 'C', '双': 'S',
+    '闻': 'W', '莘': 'S', '党': 'D', '翟': 'Z', '谭': 'T', '贡': 'G', '劳': 'L', '逢': 'F',
+    '姬': 'J', '申': 'S', '扶': 'F', '堵': 'D', '冉': 'R', '宰': 'Z', '郦': 'L', '雍': 'Y',
+    '卻': 'Q', '璩': 'Q', '桑': 'S', '桂': 'G', '濮': 'P', '牛': 'N', '寿': 'S', '通': 'T',
+    '边': 'B', '扈': 'H', '燕': 'Y', '冀': 'J', '郏': 'J', '浦': 'P', '尚': 'S', '农': 'N',
+    '温': 'W', '别': 'B', '庄': 'Z', '晏': 'Y', '柴': 'C', '瞿': 'Q', '阎': 'Y', '充': 'C',
+    '慕': 'M', '连': 'L', '茹': 'R', '习': 'X', '宦': 'H', '艾': 'A', '鱼': 'Y', '容': 'R',
+    '向': 'X', '古': 'G', '易': 'Y', '慎': 'S', '戈': 'G', '廖': 'L', '庾': 'Y', '终': 'Z',
+    '暨': 'J', '居': 'J', '衡': 'H', '步': 'B', '都': 'D', '耿': 'G', '满': 'M', '弘': 'H',
+    '匡': 'K', '国': 'G', '文': 'W', '寇': 'K', '广': 'G', '禄': 'L', '阙': 'Q', '东': 'D',
+    '欧': 'O', '殳': 'S', '沃': 'W', '利': 'L', '蔚': 'W', '越': 'Y', '夔': 'K', '隆': 'L',
+    '师': 'S', '巩': 'G', '厍': 'S', '聂': 'N', '晁': 'C', '勾': 'G', '敖': 'A', '融': 'R',
+    '冷': 'L', '訾': 'Z', '辛': 'X', '阚': 'K', '那': 'N', '简': 'J', '饶': 'R', '空': 'K',
+    '曾': 'Z', '毋': 'W', '沙': 'S', '乜': 'N', '养': 'Y', '鞠': 'J', '须': 'X', '丰': 'F',
+    '巢': 'C', '关': 'G', '蒯': 'K', '相': 'X', '查': 'Z', '后': 'H', '荆': 'J', '红': 'H',
+    '游': 'Y', '竺': 'Z', '权': 'Q', '逯': 'L', '盖': 'G', '益': 'Y', '桓': 'H', '公': 'G',
+    // 扩展更多常见姓氏
+    '阿': 'A', '阿': 'A', '艾': 'A', '安': 'A', '敖': 'A', '巴': 'B', '白': 'B', '柏': 'B',
+    '班': 'B', '包': 'B', '鲍': 'B', '贝': 'B', '毕': 'B', '边': 'B', '卞': 'B', '卜': 'B',
+    '步': 'B', '蔡': 'C', '曹': 'C', '岑': 'C', '柴': 'C', '常': 'C', '车': 'C', '陈': 'C',
+    '成': 'C', '程': 'C', '池': 'C', '迟': 'C', '褚': 'C', '丛': 'C', '崔': 'C', '戴': 'D',
+    '党': 'D', '邓': 'D', '狄': 'D', '邸': 'D', '刁': 'D', '丁': 'D', '董': 'D', '窦': 'D',
+    '杜': 'D', '段': 'D', '多': 'D', '鄂': 'E', '樊': 'F', '范': 'F', '方': 'F', '房': 'F',
+    '费': 'F', '冯': 'F', '凤': 'F', '符': 'F', '傅': 'F', '甘': 'G', '高': 'G', '郜': 'G',
+    '戈': 'G', '葛': 'G', '耿': 'G', '宫': 'G', '龚': 'G', '巩': 'G', '古': 'G', '谷': 'G',
+    '顾': 'G', '关': 'G', '管': 'G', '桂': 'G', '郭': 'G', '国': 'G', '海': 'H', '韩': 'H',
+    '杭': 'H', '郝': 'H', '何': 'H', '和': 'H', '贺': 'H', '赫': 'H', '黑': 'H', '洪': 'H',
+    '侯': 'H', '后': 'H', '胡': 'H', '花': 'H', '华': 'H', '怀': 'H', '宦': 'H', '黄': 'H',
+    '惠': 'H', '霍': 'H', '姬': 'J', '嵇': 'J', '吉': 'J', '纪': 'J', '季': 'J', '计': 'J',
+    '冀': 'J', '暨': 'J', '贾': 'J', '简': 'J', '江': 'J', '姜': 'J', '蒋': 'J', '焦': 'J',
+    '金': 'J', '靳': 'J', '荆': 'J', '景': 'J', '鞠': 'J', '康': 'K', '柯': 'K', '孔': 'K',
+    '寇': 'K', '蒯': 'K', '匡': 'K', '邝': 'K', '赖': 'L', '蓝': 'L', '郎': 'L', '劳': 'L',
+    '乐': 'L', '雷': 'L', '冷': 'L', '黎': 'L', '李': 'L', '厉': 'L', '连': 'L', '廉': 'L',
+    '梁': 'L', '廖': 'L', '林': 'L', '蔺': 'L', '凌': 'L', '刘': 'L', '柳': 'L', '龙': 'L',
+    '娄': 'L', '卢': 'L', '鲁': 'L', '陆': 'L', '逯': 'L', '路': 'L', '吕': 'L', '栾': 'L',
+    '罗': 'L', '骆': 'L', '麻': 'M', '马': 'M', '麦': 'M', '满': 'M', '毛': 'M', '茅': 'M',
+    '梅': 'M', '蒙': 'M', '孟': 'M', '糜': 'M', '米': 'M', '宓': 'M', '苗': 'M', '闵': 'M',
+    '明': 'M', '莫': 'M', '墨': 'M', '牟': 'M', '慕': 'M', '穆': 'M', '那': 'N', '倪': 'N',
+    '聂': 'N', '宁': 'N', '牛': 'N', '农': 'N', '欧': 'O', '欧阳': 'O', '潘': 'P', '庞': 'P',
+    '裴': 'P', '彭': 'P', '皮': 'P', '平': 'P', '蒲': 'P', '濮': 'P', '浦': 'P', '戚': 'Q',
+    '齐': 'Q', '祁': 'Q', '钱': 'Q', '强': 'Q', '乔': 'Q', '秦': 'Q', '邱': 'Q', '裘': 'Q',
+    '仇': 'Q', '曲': 'Q', '屈': 'Q', '麴': 'Q', '全': 'Q', '权': 'Q', '冉': 'R', '饶': 'R',
+    '任': 'R', '荣': 'R', '容': 'R', '茹': 'R', '阮': 'R', '芮': 'R', '桑': 'S', '沙': 'S',
+    '山': 'S', '单': 'S', '商': 'S', '尚': 'S', '邵': 'S', '申': 'S', '沈': 'S', '盛': 'S',
+    '施': 'S', '石': 'S', '时': 'S', '史': 'S', '寿': 'S', '舒': 'S', '束': 'S', '双': 'S',
+    '水': 'S', '司': 'S', '司马': 'S', '司徒': 'S', '司空': 'S', '宋': 'S', '苏': 'S', '宿': 'S',
+    '粟': 'S', '孙': 'S', '索': 'S', '台': 'T', '邰': 'T', '谈': 'T', '谭': 'T', '汤': 'T',
+    '唐': 'T', '陶': 'T', '滕': 'T', '田': 'T', '童': 'T', '涂': 'T', '屠': 'T', '万': 'W',
+    '万俟': 'M', '汪': 'W', '王': 'W', '危': 'W', '韦': 'W', '卫': 'W', '魏': 'W', '温': 'W',
+    '文': 'W', '闻': 'W', '闻人': 'W', '翁': 'W', '乌': 'W', '邬': 'W', '巫': 'W', '吴': 'W',
+    '伍': 'W', '武': 'W', '奚': 'X', '郤': 'X', '席': 'X', '习': 'X', '夏': 'X', '夏侯': 'X',
+    '鲜': 'X', '鲜于': 'X', '咸': 'X', '冼': 'X', '向': 'X', '项': 'X', '萧': 'X', '谢': 'X',
+    '辛': 'X', '邢': 'X', '熊': 'X', '胥': 'X', '徐': 'X', '许': 'X', '续': 'X', '轩辕': 'X',
+    '薛': 'X', '荀': 'X', '鄢': 'Y', '严': 'Y', '阎': 'Y', '颜': 'Y', '晏': 'Y', '燕': 'Y',
+    '羊': 'Y', '阳': 'Y', '杨': 'Y', '仰': 'Y', '姚': 'Y', '叶': 'Y', '伊': 'Y', '衣': 'Y',
+    '易': 'Y', '殷': 'Y', '尹': 'Y', '应': 'Y', '雍': 'Y', '尤': 'Y', '游': 'Y', '于': 'Y',
+    '余': 'Y', '於': 'Y', '鱼': 'Y', '俞': 'Y', '虞': 'Y', '庾': 'Y', '郁': 'Y', '喻': 'Y',
+    '元': 'Y', '袁': 'Y', '苑': 'Y', '岳': 'Y', '云': 'Y', '恽': 'Y', '郓': 'Y', '宰': 'Z',
+    '臧': 'Z', '曾': 'Z', '查': 'Z', '翟': 'Z', '詹': 'Z', '湛': 'Z', '张': 'Z', '章': 'Z',
+    '长孙': 'Z', '仉': 'Z', '赵': 'Z', '甄': 'Z', '郑': 'Z', '支': 'Z', '钟': 'Z', '钟离': 'Z',
+    '仲': 'Z', '仲孙': 'Z', '周': 'Z', '朱': 'Z', '诸葛': 'Z', '竺': 'Z', '祝': 'Z', '庄': 'Z',
+    '卓': 'Z', '宗': 'Z', '宗政': 'Z', '邹': 'Z', '祖': 'Z', '左': 'Z', '佐': 'Z', '上官': 'S',
+    '东方': 'D', '赫连': 'H', '皇甫': 'H', '尉迟': 'Y', '公羊': 'G', '澹台': 'T', '公冶': 'G',
+    '濮阳': 'P', '淳于': 'C', '单于': 'S', '太叔': 'T', '申屠': 'S', '公孙': 'G', '令狐': 'L',
+    '宇文': 'Y', '慕容': 'M'
+  };
+  
+  // 检查复合姓氏（双字姓）
+  if (name.length >= 2) {
+    const doubleSurname = name.substring(0, 2);
+    if (surnamePinyinMap[doubleSurname]) {
+      return surnamePinyinMap[doubleSurname];
+    }
+  }
+  
+  // 单字姓氏处理
+  return surnamePinyinMap[surname] || surname.toUpperCase();
 }
 
+// 按姓氏拼音排序学生
+sortStudentsBySurname() {
+  if (!this.students || this.students.length === 0) return;
+  
+  // 复制学生数组以避免修改原数组
+  const studentsCopy = [...this.students];
+  
+  // 按姓氏拼音排序
+  studentsCopy.sort((a, b) => {
+    const surnameA = this.getSurnamePinyin(a.name);
+    const surnameB = this.getSurnamePinyin(b.name);
+    
+    // 比较拼音首字母
+    if (surnameA < surnameB) return this.sortDirection === 'asc' ? -1 : 1;
+    if (surnameA > surnameB) return this.sortDirection === 'asc' ? 1 : -1;
+    
+    // 如果拼音首字母相同，按姓名全拼比较
+    const nameA = a.name.toLowerCase();
+    const nameB = b.name.toLowerCase();
+    if (nameA < nameB) return this.sortDirection === 'asc' ? -1 : 1;
+    if (nameA > nameB) return this.sortDirection === 'asc' ? 1 : -1;
+    
+    return 0;
+  });
+  
+  // 更新学生数组
+  this.students = studentsCopy;
+  
+  // 更新排序状态
+  this.currentSortMode = 'surname';
+  
+  // 重新渲染学生列表
+  this.renderStudents();
+  
+  // 更新排序状态显示
+  this.updateSortStatus();
+}
+
+
+
+// 应用排序
+applySort() {
+  const sortSelect = document.getElementById('sortMode');
+  if (!sortSelect) return;
+  
+  const sortMode = sortSelect.value;
+  
+  switch (sortMode) {
+    case 'surname-asc':
+      this.sortDirection = 'asc';
+      this.sortStudentsBySurname();
+      break;
+    case 'surname-desc':
+      this.sortDirection = 'desc';
+      this.sortStudentsBySurname();
+      break;
+    default:
+      // 重置为原始顺序
+      this.loadFromLocalStorage();
+      this.currentSortMode = 'none';
+      this.renderStudents();
+      this.updateSortStatus();
+      break;
+  }
+}
+
+// 根据排序类型应用排序
+applySortByType(sortType) {
+  switch (sortType) {
+    case 'name-asc':
+      this.sortDirection = 'asc';
+      this.sortStudentsBySurname();
+      break;
+    case 'name-desc':
+      this.sortDirection = 'desc';
+      this.sortStudentsBySurname();
+      break;
+    default:
+      // 重置为原始顺序
+      this.loadFromLocalStorage();
+      this.currentSortMode = 'none';
+      this.renderStudents();
+      this.updateSortStatus();
+      break;
+  }
+}
+
+// 更新排序状态显示
+updateSortStatus() {
+  const sortStatusElement = document.getElementById('currentSortStatus');
+  if (!sortStatusElement) return;
+  
+  let statusText = '';
+  
+  switch (this.currentSortMode) {
+    case 'surname':
+      statusText = this.sortDirection === 'asc' ? '当前：按姓氏拼音 A-Z' : '当前：按姓氏拼音 Z-A';
+      break;
+    default:
+      statusText = '当前：默认排序';
+      break;
+  }
+  
+  sortStatusElement.textContent = statusText;
+}
+
+// 切换排序方向
+toggleSortDirection() {
+  this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+  
+  // 如果当前有排序模式，重新应用排序
+  if (this.currentSortMode === 'surname') {
+    this.sortStudentsBySurname();
+  }
+}
+
+// 初始化排序事件监听器
+setupSortListeners() {
+  // 主排序按钮事件 - 改为直接切换排序方向
+  const sortByNameBtn = document.getElementById('sortByNameBtn');
+  if (sortByNameBtn) {
+    sortByNameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      
+      // 如果当前没有按姓氏排序，则设置为升序
+      if (this.currentSortMode !== 'surname') {
+        this.sortDirection = 'asc';
+        this.sortStudentsBySurname();
+      } else {
+        // 如果已经在按姓氏排序，则切换方向
+        this.toggleSortDirection();
+      }
+    });
+  }
+}
+}
 
 
 // 初始化系统
@@ -10208,6 +10515,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const system = new ClassPointsSystem();
   system.loadFromLocalStorage();          // 加载数据
   system.setupTimeFilterListeners();      // 👈 关键！绑定时间按钮事件
+  system.setupSortListeners();            // 👈 绑定排序事件监听器
   system.renderRankings();                // 初始渲染排行榜
 
   // 挂到全局方便调试（可选）
