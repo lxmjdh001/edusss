@@ -111,27 +111,27 @@
 
     <!-- 👇 新增：时间筛选器 -->
     <div class="ranking-time-filter">
-      <div class="time-filter-main" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+      <div class="time-filter-main" style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
         <button class="time-filter-btn active" data-period="all">总榜</button>
         <button class="time-filter-btn" data-period="today">今天</button>
         <button class="time-filter-btn" data-period="thisWeek">本周</button>
         <button class="time-filter-btn" data-period="thisMonth">本月</button>
         <button class="time-filter-btn" data-period="thisYear">今年</button>
-        <button id="toggleAdvancedPeriod" class="time-filter-btn" style="background:#f0f0f0;">⋯ 更多</button>
+        <button id="toggleAdvancedPeriod" class="time-filter-btn" style="background:#f0f0f0;">更多</button>
       </div>
 
-      <div id="advancedPeriodOptions" style="display: none; padding-top: 8px; border-top: 1px dashed #ddd; margin-top: 8px;">
-        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+      <div id="advancedPeriodOptions" style="display: none; padding-top: 6px; border-top: 1px dashed #ddd; margin-top: 6px;">
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
           <button class="time-filter-btn" data-period="yesterday">昨天</button>
           <button class="time-filter-btn" data-period="lastWeek">上周</button>
           <button class="time-filter-btn" data-period="lastMonth">上月</button>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px;">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px;">
           <span>自定义：</span>
           <input type="date" id="customRankStart" class="date-input-sm">
           <span>至</span>
           <input type="date" id="customRankEnd" class="date-input-sm">
-          <button id="applyCustomPeriod" class="time-filter-btn" style="padding: 4px 10px;">应用</button>
+          <button id="applyCustomPeriod" class="time-filter-btn" style="padding: 4px 8px;">应用</button>
         </div>
       </div>
     </div>

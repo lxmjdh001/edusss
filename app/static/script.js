@@ -238,6 +238,8 @@ toggleDisplayMode() {
             this.closeEditGroupModal();
           } else if (modalId === 'statisticsModal') {
             this.closeStatistics();
+          } else if (modalId === 'statisticsDetailModal') {
+            this.closeStatisticsDetail();
           } else if (modalId === 'randomNameModal') {
             this.closeRandomNameModal();
           } else if (modalId === 'timerModal') {
@@ -3436,7 +3438,7 @@ setupTimeFilterListeners() {
     toggleBtn.addEventListener('click', () => {
       const isHidden = advancedPanel.style.display === 'none';
       advancedPanel.style.display = isHidden ? 'block' : 'none';
-      toggleBtn.textContent = isHidden ? '↑ 收起' : '⋯ 更多';
+      toggleBtn.textContent = isHidden ? '↑ 收起' : '更多';
     });
   }
 
@@ -7250,67 +7252,920 @@ if (historyTabBtn && petTabBtn) {
   
   renderStatistics(history, containerId, title){
     const container = document.getElementById(containerId);
+    container.innerHTML = '<div class="loading-spinner">加载统计数据中...</div>';
     
-    // 按学生/小组统计
-    const studentStats = {};
-    const groupStats = {};
-    let totalPoints = 0;
+    // 使用requestAnimationFrame优化渲染性能
+    requestAnimationFrame(() => {
+      // 使用Map优化性能，按学生/小组统计
+      const studentStats = new Map();
+      const groupStats = new Map();
+      let totalPoints = 0;
+      let totalRecords = history.length;
+      
+      history.forEach(record => {
+        if(record.type === 'student') {
+          if(!studentStats.has(record.name)) {
+            studentStats.set(record.name, { points: 0, records: [] });
+          }
+          const stats = studentStats.get(record.name);
+          stats.points += record.points;
+          stats.records.push(record);
+          totalPoints += record.points;
+        } else if(record.type === 'group') {
+          if(!groupStats.has(record.group)) {
+            groupStats.set(record.group, { points: 0, records: [] });
+          }
+          const stats = groupStats.get(record.group);
+          stats.points += record.points;
+          stats.records.push(record);
+          totalPoints += record.points;
+        } else if(record.type === 'purchase') {
+          // 购买记录不计入总积分变化
+          if(!studentStats.has(record.name)) {
+            studentStats.set(record.name, { points: 0, records: [] });
+          }
+          const stats = studentStats.get(record.name);
+          stats.points -= record.cost;
+          stats.records.push(record);
+          totalPoints -= record.cost;
+        }
+      });
+      
+      // 统计概览卡片数据
+      const studentCount = studentStats.size;
+      const groupCount = groupStats.size;
+      const avgPointsPerStudent = studentCount > 0 ? Math.round(totalPoints / studentCount) : 0;
+      const avgRecordsPerStudent = studentCount > 0 ? Math.round(totalRecords / studentCount) : 0;
+      
+      let html = `
+        <div class="statistics-overview">
+          <div class="statistics-card">
+            <div class="card-value">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
+            <div class="card-label">总积分变化</div>
+          </div>
+          <div class="statistics-card">
+            <div class="card-value">${totalRecords}</div>
+            <div class="card-label">记录总数</div>
+          </div>
+          <div class="statistics-card">
+            <div class="card-value">${studentCount}</div>
+            <div class="card-label">涉及学生</div>
+          </div>
+          <div class="statistics-card">
+            <div class="card-value">${groupCount}</div>
+            <div class="card-label">涉及小组</div>
+          </div>
+        </div>
+        <div class="statistics-summary">
+          <h4>${title}</h4>
+          <p>平均每人积分: ${avgPointsPerStudent > 0 ? '+' : ''}${avgPointsPerStudent}</p>
+          <p>平均每人记录: ${avgRecordsPerStudent}</p>
+        </div>
+      `;
+      
+      // 存储统计信息用于后续排序和详情展示
+      this.currentStatistics = {
+        studentStats: Array.from(studentStats.entries()).map(([name, stats]) => ({ name, ...stats })),
+        groupStats: Array.from(groupStats.entries()).map(([group, stats]) => ({ group, ...stats })),
+        containerId: containerId
+      };
+      
+      // 渲染个人积分统计表格（带排序功能）
+      if(studentStats.size > 0) {
+        html += `
+          <h4>个人积分统计</h4>
+          <div class="statistics-table-container">
+            <table class="statistics-table" data-type="student" data-sort="points" data-sort-direction="desc">
+              <thead>
+                <tr>
+                  <th data-sort="name">姓名 <span class="sort-indicator">↕</span></th>
+                  <th data-sort="points">积分变化 <span class="sort-indicator">↓</span></th>
+                  <th data-sort="records">记录数 <span class="sort-indicator">↕</span></th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.currentStatistics.studentStats.sort((a, b) => b.points - a.points).map(stat => `
+                  <tr data-name="${stat.name}">
+                    <td>${stat.name}</td>
+                    <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
+                    <td>${stat.records.length}</td>
+                    <td><button class="btn btn-sm btn-info view-detail-btn" data-type="student" data-target="${stat.name}">查看详情</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+      
+      // 渲染小组积分统计表格（带排序功能）
+      if(groupStats.size > 0) {
+        html += `
+          <h4>小组积分统计</h4>
+          <div class="statistics-table-container">
+            <table class="statistics-table" data-type="group" data-sort="points" data-sort-direction="desc">
+              <thead>
+                <tr>
+                  <th data-sort="group">小组 <span class="sort-indicator">↕</span></th>
+                  <th data-sort="points">积分变化 <span class="sort-indicator">↓</span></th>
+                  <th data-sort="records">记录数 <span class="sort-indicator">↕</span></th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.currentStatistics.groupStats.sort((a, b) => b.points - a.points).map(stat => `
+                  <tr data-group="${stat.group}">
+                    <td>${stat.group}</td>
+                    <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
+                    <td>${stat.records.length}</td>
+                    <td><button class="btn btn-sm btn-info view-detail-btn" data-type="group" data-target="${stat.group}">查看详情</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+      
+      if(studentStats.size === 0 && groupStats.size === 0) {
+        html += '<p style="text-align: center; padding: 40px; color: #718096;">该时间段内无积分记录</p>';
+      }
+      
+      container.innerHTML = html;
+      
+      // 初始化表格交互功能
+      this.initStatisticsTableInteraction(container);
+    });
+  }
+  
+  initStatisticsTableInteraction(container) {
+    // 表格排序功能
+    const tables = container.querySelectorAll('.statistics-table');
+    tables.forEach(table => {
+      const headers = table.querySelectorAll('th[data-sort]');
+      headers.forEach(header => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', () => {
+          const sortBy = header.getAttribute('data-sort');
+          const type = table.getAttribute('data-type');
+          this.handleTableSort(sortBy, type, table);
+        });
+      });
+    });
     
-    history.forEach(record => {
-      if(record.type === 'student') {
-        if(!studentStats[record.name]) {
-          studentStats[record.name] = { points: 0, records: [] };
+    // 详情查看功能
+    const detailBtns = container.querySelectorAll('.view-detail-btn');
+    detailBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const type = btn.getAttribute('data-type');
+        const target = btn.getAttribute('data-target');
+        this.showStatisticsDetail(type, target);
+      });
+    });
+    
+    // 行点击事件（查看详情）
+    const rows = container.querySelectorAll('.statistics-table tbody tr');
+    rows.forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (!e.target.closest('.view-detail-btn')) {
+          const type = row.closest('table').getAttribute('data-type');
+          const target = type === 'student' ? row.getAttribute('data-name') : row.getAttribute('data-group');
+          this.showStatisticsDetail(type, target);
         }
-        studentStats[record.name].points += record.points;
-        studentStats[record.name].records.push(record);
-        totalPoints += record.points;
-      } else if(record.type === 'group') {
-        if(!groupStats[record.group]) {
-          groupStats[record.group] = { points: 0, records: [] };
-        }
-        groupStats[record.group].points += record.points;
-        groupStats[record.group].records.push(record);
-        totalPoints += record.points;
-      } else if(record.type === 'purchase') {
-        // 购买记录不计入总积分变化
-        if(!studentStats[record.name]) {
-          studentStats[record.name] = { points: 0, records: [] };
-        }
-        studentStats[record.name].points -= record.cost;
-        studentStats[record.name].records.push(record);
-        totalPoints -= record.cost;
+      });
+    });
+  }
+  
+  handleTableSort(sortBy, type, table) {
+    const stats = type === 'student' ? this.currentStatistics.studentStats : this.currentStatistics.groupStats;
+    const tbody = table.querySelector('tbody');
+    
+    // 切换排序方向
+    const currentSort = table.getAttribute('data-sort');
+    const currentDirection = table.getAttribute('data-sort-direction') || 'asc';
+    const newDirection = currentSort === sortBy && currentDirection === 'asc' ? 'desc' : 'asc';
+    
+    // 更新排序状态
+    table.setAttribute('data-sort', sortBy);
+    table.setAttribute('data-sort-direction', newDirection);
+    
+    // 更新表头指示器
+    const headers = table.querySelectorAll('th[data-sort]');
+    headers.forEach(header => {
+      const indicator = header.querySelector('.sort-indicator');
+      // 移除所有样式类
+      indicator.classList.remove('asc', 'desc');
+      
+      if (header.getAttribute('data-sort') === sortBy) {
+        // 当前排序列添加对应样式类
+        indicator.classList.add(newDirection === 'asc' ? 'asc' : 'desc');
+        indicator.textContent = newDirection === 'asc' ? '↑' : '↓';
+      } else {
+        // 非当前排序列显示默认指示器
+        indicator.textContent = '↕';
       }
     });
     
-    let html = `
-      <div class="statistics-summary">
-        <h4>${title}</h4>
-        <p>总积分变化: ${totalPoints > 0 ? '+' : ''}${totalPoints}</p>
-        <p>记录总数: ${history.length}</p>
+    // 排序数据
+    const sortedStats = [...stats].sort((a, b) => {
+      let aValue = a[sortBy];
+      let bValue = b[sortBy];
+      
+      if (sortBy === 'name') {
+        // 按姓氏首字母排序（支持中文拼音排序）
+        const getSurnamePinyin = (name) => {
+          // 处理中文姓名：取第一个字符作为姓氏，并转换为拼音
+          if (/[\u4e00-\u9fff]/.test(name)) {
+            const surname = name.charAt(0);
+            // 简单的拼音映射表（常用姓氏）
+            const pinyinMap = {
+              '赵': 'zhao', '钱': 'qian', '孙': 'sun', '李': 'li', '周': 'zhou',
+              '吴': 'wu', '郑': 'zheng', '王': 'wang', '冯': 'feng', '陈': 'chen',
+              '褚': 'chu', '卫': 'wei', '蒋': 'jiang', '沈': 'shen', '韩': 'han',
+              '杨': 'yang', '朱': 'zhu', '秦': 'qin', '尤': 'you', '许': 'xu',
+              '何': 'he', '吕': 'lv', '施': 'shi', '张': 'zhang', '孔': 'kong',
+              '曹': 'cao', '严': 'yan', '华': 'hua', '金': 'jin', '魏': 'wei',
+              '陶': 'tao', '姜': 'jiang', '戚': 'qi', '谢': 'xie', '邹': 'zou',
+              '喻': 'yu', '柏': 'bai', '水': 'shui', '窦': 'dou', '章': 'zhang',
+              '云': 'yun', '苏': 'su', '潘': 'pan', '葛': 'ge', '奚': 'xi',
+              '范': 'fan', '彭': 'peng', '郎': 'lang', '鲁': 'lu', '韦': 'wei',
+              '昌': 'chang', '马': 'ma', '苗': 'miao', '凤': 'feng', '花': 'hua',
+              '方': 'fang', '俞': 'yu', '任': 'ren', '袁': 'yuan', '柳': 'liu',
+              '唐': 'tang', '罗': 'luo', '薛': 'xue', '贺': 'he', '常': 'chang',
+              '黄': 'huang', '萧': 'xiao', '姚': 'yao', '邵': 'shao', '汪': 'wang',
+              '毛': 'mao', '狄': 'di', '米': 'mi', '贝': 'bei', '明': 'ming',
+              '计': 'ji', '伏': 'fu', '成': 'cheng', '戴': 'dai', '谈': 'tan',
+              '宋': 'song', '茅': 'mao', '庞': 'pang', '熊': 'xiong', '纪': 'ji',
+              '舒': 'shu', '屈': 'qu', '项': 'xiang', '祝': 'zhu', '董': 'dong',
+              '梁': 'liang', '杜': 'du', '阮': 'ruan', '蓝': 'lan', '闵': 'min',
+              '席': 'xi', '季': 'ji', '麻': 'ma', '强': 'qiang', '贾': 'jia',
+              '路': 'lu', '娄': 'lou', '危': 'wei', '江': 'jiang', '童': 'tong',
+              '颜': 'yan', '郭': 'guo', '梅': 'mei', '盛': 'sheng', '林': 'lin',
+              '刁': 'diao', '钟': 'zhong', '徐': 'xu', '邱': 'qiu', '骆': 'luo',
+              '高': 'gao', '夏': 'xia', '蔡': 'cai', '田': 'tian', '樊': 'fan',
+              '胡': 'hu', '凌': 'ling', '霍': 'huo', '虞': 'yu', '万': 'wan',
+              '支': 'zhi', '柯': 'ke', '昝': 'zan', '管': 'guan', '卢': 'lu',
+              '莫': 'mo', '经': 'jing', '房': 'fang', '裘': 'qiu', '缪': 'miao',
+              '干': 'gan', '解': 'xie', '应': 'ying', '宗': 'zong', '丁': 'ding',
+              '宣': 'xuan', '贲': 'ben', '邓': 'deng', '郁': 'yu', '单': 'shan',
+              '杭': 'hang', '洪': 'hong', '包': 'bao', '诸': 'zhu', '左': 'zuo',
+              '石': 'shi', '崔': 'cui', '吉': 'ji', '钮': 'niu', '龚': 'gong',
+              '程': 'cheng', '嵇': 'ji', '邢': 'xing', '滑': 'hua', '裴': 'pei',
+              '陆': 'lu', '荣': 'rong', '翁': 'weng', '荀': 'xun', '羊': 'yang',
+              '於': 'yu', '惠': 'hui', '甄': 'zhen', '曲': 'qu', '家': 'jia',
+              '封': 'feng', '芮': 'rui', '羿': 'yi', '储': 'chu', '靳': 'jin',
+              '汲': 'ji', '邴': 'bing', '糜': 'mi', '松': 'song', '井': 'jing',
+              '段': 'duan', '富': 'fu', '巫': 'wu', '乌': 'wu', '焦': 'jiao',
+              '巴': 'ba', '弓': 'gong', '牧': 'mu', '隗': 'wei', '山': 'shan',
+              '谷': 'gu', '车': 'che', '侯': 'hou', '宓': 'mi', '蓬': 'peng',
+              '全': 'quan', '郗': 'xi', '班': 'ban', '仰': 'yang', '秋': 'qiu',
+              '仲': 'zhong', '伊': 'yi', '宫': 'gong', '宁': 'ning', '仇': 'qiu',
+              '栾': 'luan', '暴': 'bao', '甘': 'gan', '钭': 'tou', '厉': 'li',
+              '戎': 'rong', '祖': 'zu', '武': 'wu', '符': 'fu', '刘': 'liu',
+              '景': 'jing', '詹': 'zhan', '束': 'shu', '龙': 'long', '叶': 'ye',
+              '幸': 'xing', '司': 'si', '韶': 'shao', '郜': 'gao', '黎': 'li',
+              '蓟': 'ji', '薄': 'bo', '印': 'yin', '宿': 'su', '白': 'bai',
+              '怀': 'huai', '蒲': 'pu', '邰': 'tai', '从': 'cong', '鄂': 'e',
+              '索': 'suo', '咸': 'xian', '籍': 'ji', '赖': 'lai', '卓': 'zhuo',
+              '蔺': 'lin', '屠': 'tu', '蒙': 'meng', '池': 'chi', '乔': 'qiao',
+              '阴': 'yin', '鬱': 'yu', '胥': 'xu', '能': 'neng', '苍': 'cang',
+              '双': 'shuang', '闻': 'wen', '莘': 'shen', '党': 'dang', '翟': 'zhai',
+              '谭': 'tan', '贡': 'gong', '劳': 'lao', '逄': 'pang', '姬': 'ji',
+              '申': 'shen', '扶': 'fu', '堵': 'du', '冉': 'ran', '宰': 'zai',
+              '郦': 'li', '雍': 'yong', '郤': 'xi', '璩': 'qu', '桑': 'sang',
+              '桂': 'gui', '濮': 'pu', '牛': 'niu', '寿': 'shou', '通': 'tong',
+              '边': 'bian', '扈': 'hu', '燕': 'yan', '冀': 'ji', '郏': 'jia',
+              '浦': 'pu', '尚': 'shang', '农': 'nong', '温': 'wen', '别': 'bie',
+              '庄': 'zhuang', '晏': 'yan', '柴': 'chai', '瞿': 'qu', '阎': 'yan',
+              '充': 'chong', '慕': 'mu', '连': 'lian', '茹': 'ru', '习': 'xi',
+              '宦': 'huan', '艾': 'ai', '鱼': 'yu', '容': 'rong', '向': 'xiang',
+              '古': 'gu', '易': 'yi', '慎': 'shen', '戈': 'ge', '廖': 'liao',
+              '庾': 'yu', '终': 'zhong', '暨': 'ji', '居': 'ju', '衡': 'heng',
+              '步': 'bu', '都': 'du', '耿': 'geng', '满': 'man', '弘': 'hong',
+              '匡': 'kuang', '国': 'guo', '文': 'wen', '寇': 'kou', '广': 'guang',
+              '禄': 'lu', '阙': 'que', '东': 'dong', '欧': 'ou', '殳': 'shu',
+              '沃': 'wo', '利': 'li', '蔚': 'wei', '越': 'yue', '夔': 'kui',
+              '隆': 'long', '师': 'shi', '巩': 'gong', '厍': 'she', '聂': 'nie',
+              '晁': 'chao', '勾': 'gou', '敖': 'ao', '融': 'rong', '冷': 'leng',
+              '訾': 'zi', '辛': 'xin', '阚': 'kan', '那': 'na', '简': 'jian',
+              '饶': 'rao', '空': 'kong', '曾': 'zeng', '毋': 'wu', '沙': 'sha',
+              '乜': 'nie', '养': 'yang', '鞠': 'ju', '须': 'xu', '丰': 'feng',
+              '关': 'guan', '蒯': 'kuai', '相': 'xiang', '查': 'zha', '后': 'hou',
+              '荆': 'jing', '红': 'hong', '游': 'you', '竺': 'zhu', '权': 'quan',
+              '逯': 'lu', '盖': 'ge', '益': 'yi', '桓': 'huan', '公': 'gong',
+              '万俟': 'moqi', '司马': 'sima', '上官': 'shangguan', '欧阳': 'ouyang',
+              '夏侯': 'xiahou', '诸葛': 'zhuge', '闻人': 'wenren', '东方': 'dongfang',
+              '赫连': 'helian', '皇甫': 'huangfu', '尉迟': 'yuchi', '公羊': 'gongyang',
+              '澹台': 'tantai', '公冶': 'gongye', '宗政': 'zongzheng', '濮阳': 'puyang',
+              '淳于': 'chunyu', '单于': 'chanyu', '太叔': 'taishu', '申屠': 'shentu',
+              '公孙': 'gongsun', '仲孙': 'zhongsun', '轩辕': 'xuanyuan', '令狐': 'linghu',
+              '钟离': 'zhongli', '宇文': 'yuwen', '长孙': 'zhangsun', '慕容': 'murong',
+              '司徒': 'situ', '司空': 'sikong', '亓官': 'qiguan', '司寇': 'sikou',
+              '仉': 'zhang', '督': 'du', '子车': 'ziju', '颛孙': 'zhuansun',
+              '端木': 'duanmu', '巫马': 'wuma', '公西': 'gongxi', '漆雕': 'qidiao',
+              '乐正': 'yuezheng', '壤驷': 'rangsi', '公良': 'gongliang', '拓跋': 'tuoba',
+              '夹谷': 'jiagu', '宰父': 'zaifu', '谷梁': 'guliang', '晋': 'jin',
+              '楚': 'chu', '闫': 'yan', '法': 'fa', '汝': 'ru', '鄢': 'yan',
+              '涂': 'tu', '钦': 'qin', '段干': 'duangan', '百里': 'baili',
+              '东郭': 'dongguo', '南门': 'nanmen', '呼延': 'huyan', '归': 'gui',
+              '海': 'hai', '羊舌': 'yangshe', '微生': 'weisheng', '岳': 'yue',
+              '帅': 'shuai', '缑': 'gou', '亢': 'kang', '况': 'kuang', '后': 'hou',
+              '有': 'you', '琴': 'qin', '梁丘': 'liangqiu', '左丘': 'zuoqiu',
+              '东门': 'dongmen', '西门': 'ximen', '商': 'shang', '牟': 'mou',
+              '佘': 'she', '佴': 'nai', '伯': 'bo', '赏': 'shang', '南宫': 'nangong',
+              '墨': 'mo', '哈': 'ha', '谯': 'qiao', '笪': 'da', '年': 'nian',
+              '爱': 'ai', '阳': 'yang', '佟': 'tong', '第五': 'diwu', '言': 'yan',
+              '福': 'fu'
+            };
+            return pinyinMap[surname] || surname;
+          }
+          // 处理英文姓名：取第一个单词作为姓氏
+          return name.split(' ')[0].toLowerCase();
+        };
+        
+        const aSurnamePinyin = getSurnamePinyin(aValue);
+        const bSurnamePinyin = getSurnamePinyin(bValue);
+        
+        // 按姓氏拼音排序
+        if (aSurnamePinyin < bSurnamePinyin) return newDirection === 'asc' ? -1 : 1;
+        if (aSurnamePinyin > bSurnamePinyin) return newDirection === 'asc' ? 1 : -1;
+        
+        // 如果姓氏相同，按完整姓名排序
+        if (aValue < bValue) return newDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return newDirection === 'asc' ? 1 : -1;
+        return 0;
+      } else if (sortBy === 'group') {
+        // 小组名称排序
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+        
+        if (aValue < bValue) return newDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return newDirection === 'asc' ? 1 : -1;
+        return 0;
+      } else {
+        // 数字字段排序（积分、记录数）
+        if (aValue < bValue) return newDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return newDirection === 'asc' ? 1 : -1;
+        return 0;
+      }
+    });
+    
+    // 重新渲染表格
+    const rowsHtml = sortedStats.map(stat => {
+      if (type === 'student') {
+        return `
+          <tr data-name="${stat.name}">
+            <td>${stat.name}</td>
+            <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
+            <td>${stat.records.length}</td>
+            <td><button class="btn btn-sm btn-info view-detail-btn" data-type="student" data-target="${stat.name}">查看详情</button></td>
+          </tr>
+        `;
+      } else {
+        return `
+          <tr data-group="${stat.group}">
+            <td>${stat.group}</td>
+            <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
+            <td>${stat.records.length}</td>
+            <td><button class="btn btn-sm btn-info view-detail-btn" data-type="group" data-target="${stat.group}">查看详情</button></td>
+          </tr>
+        `;
+      }
+    }).join('');
+    
+    tbody.innerHTML = rowsHtml;
+    
+    // 重新绑定事件
+    this.initStatisticsTableInteraction(document.getElementById(this.currentStatistics.containerId));
+  }
+  
+  showStatisticsDetail(type, target) {
+    // 独立获取学生/小组的完整积分记录，不受统计页面时间筛选条件影响
+    
+    // 根据类型调用不同的API获取完整数据
+    if (type === 'student') {
+      // 先获取班级列表，找到当前班级对应的数字ID
+      fetch('/api/points/classes')
+        .then(response => response.json())
+        .then(classes => {
+          // 查找当前班级对应的数字ID
+          const currentClass = classes.find(c => c.class_name === this.currentClassName);
+          if (!currentClass) {
+            console.error('Current class not found in backend:', this.currentClassName);
+            this.showStatisticsDetailFallback(type, target);
+            return;
+          }
+          
+          const numericClassId = currentClass.id;
+          
+          // 获取学生列表，找到对应学生的ID
+          fetch(`/api/points/classes/${numericClassId}/students`)
+            .then(response => response.json())
+            .then(students => {
+              // 查找目标学生
+              const targetStudent = students.find(s => s.name === target);
+              if (!targetStudent) {
+                console.error('Student not found:', target);
+                this.showStatisticsDetailFallback(type, target);
+                return;
+              }
+              
+              // 存储当前详情信息，用于时间筛选
+              this.currentDetail = {
+                type: type,
+                target: target,
+                studentId: targetStudent.id,
+                className: this.currentClassName,
+                classId: numericClassId
+              };
+              
+              // 获取学生完整积分记录（不受统计页面筛选影响）
+              this.loadDetailRecords('all');
+            })
+            .catch(error => {
+              console.error('Error loading students list:', error);
+              this.showStatisticsDetailFallback(type, target);
+            });
+        })
+        .catch(error => {
+          console.error('Error loading classes list:', error);
+          this.showStatisticsDetailFallback(type, target);
+        });
+    } else {
+      // 获取小组完整积分记录（暂时使用回退方法，因为小组历史记录API可能不存在）
+      console.log('Group history API not available, using fallback');
+      this.showStatisticsDetailFallback(type, target);
+    }
+  }
+  
+  // 加载详情页面的记录数据
+  loadDetailRecords(timePeriod, customStartDate = null, customEndDate = null) {
+    if (!this.currentDetail) return;
+    
+    const { studentId } = this.currentDetail;
+    
+    // 构建查询参数
+    let url = `/api/points/students/${studentId}/records`;
+    
+    // 如果是自定义日期范围，添加查询参数
+    if (timePeriod === 'custom' && customStartDate && customEndDate) {
+      url += `?start_date=${customStartDate}&end_date=${customEndDate}`;
+    }
+    
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch student records');
+        }
+        return response.json();
+      })
+      .then(records => {
+        // 根据时间筛选条件过滤记录
+        let filteredRecords = records;
+        
+        if (timePeriod !== 'all' && timePeriod !== 'custom') {
+          filteredRecords = this.filterRecordsByPeriod(records, timePeriod);
+        }
+        
+        // 转换后端数据格式为前端期望的格式
+        const formattedRecords = filteredRecords.map(record => ({
+          ...record,
+          date: record.created_at ? record.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+          rule: record.reason || record.rule || '-',
+          item: record.item || '-'
+        }));
+        
+        // 构建完整的统计信息
+        const targetStat = {
+          name: this.currentDetail.target,
+          points: formattedRecords.reduce((sum, record) => sum + (record.points || 0), 0),
+          records: formattedRecords
+        };
+        
+        // 创建或更新详情模态框
+        if (!document.getElementById('statisticsDetailModal')) {
+          this.createStatisticsDetailModal(targetStat, this.currentDetail.type);
+        } else {
+          this.updateDetailModal(targetStat);
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching student records:', error);
+        this.showStatisticsDetailFallback(this.currentDetail.type, this.currentDetail.target);
+      });
+  }
+  
+  // 根据时间段筛选记录
+  filterRecordsByPeriod(records, period) {
+    const today = new Date();
+    
+    switch(period) {
+      case 'today':
+        const todayStr = today.toISOString().split('T')[0];
+        return records.filter(record => {
+          const recordDate = record.created_at ? record.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
+          return recordDate === todayStr;
+        });
+        
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        return records.filter(record => {
+          const recordDate = record.created_at ? record.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
+          return recordDate === yesterdayStr;
+        });
+        
+      case 'thisWeek':
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        return records.filter(record => {
+          const recordDate = new Date(record.created_at || new Date());
+          return recordDate >= startOfWeek && recordDate <= endOfWeek;
+        });
+        
+      case 'lastWeek':
+        const startOfLastWeek = new Date(today);
+        startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
+        const endOfLastWeek = new Date(startOfLastWeek);
+        endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+        return records.filter(record => {
+          const recordDate = new Date(record.created_at || new Date());
+          return recordDate >= startOfLastWeek && recordDate <= endOfLastWeek;
+        });
+        
+      case 'thisMonth':
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        return records.filter(record => {
+          const recordDate = new Date(record.created_at || new Date());
+          return recordDate >= startOfMonth && recordDate <= endOfMonth;
+        });
+        
+      case 'lastMonth':
+        const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        return records.filter(record => {
+          const recordDate = new Date(record.created_at || new Date());
+          return recordDate >= startOfLastMonth && recordDate <= endOfLastMonth;
+        });
+        
+      default:
+        return records;
+    }
+  }
+  
+  // 回退方法：使用当前统计数据（保持原有逻辑作为备选）
+  showStatisticsDetailFallback(type, target) {
+    console.log('Using fallback method for statistics detail');
+    
+    // 查找包含统计数据的容器（todayStats, yesterdayStats等）
+    const container = document.getElementById(this.currentStatistics.containerId);
+    if (!container) {
+      console.error('Statistics container not found');
+      return;
+    }
+    
+    // 获取统计数据
+    const stats = type === 'student' ? this.currentStatistics.studentStats : this.currentStatistics.groupStats;
+    const targetStat = stats.find(stat => (type === 'student' ? stat.name === target : stat.group === target));
+    
+    if (!targetStat) {
+      console.error('Statistics data not found for:', target);
+      return;
+    }
+    
+    this.createStatisticsDetailModal(targetStat, type);
+  }
+  
+  createStatisticsDetailModal(stat, type) {
+    // 计算统计信息
+    const totalPoints = stat.points;
+    const totalRecords = stat.records.length;
+    const positiveRecords = stat.records.filter(r => r.points > 0).length;
+    const negativeRecords = stat.records.filter(r => r.points < 0 || r.type === 'purchase').length;
+    const avgPointsPerRecord = totalRecords > 0 ? Math.round(totalPoints / totalRecords) : 0;
+    
+    // 创建详情模态框HTML
+    const modalHtml = `
+      <div id="statisticsDetailModal" class="modal" style="display: flex;">
+        <div class="modal-content statistics-detail-modal" style="max-width: 900px;">
+          <div class="modal-header">
+            <h3>📊 ${type === 'student' ? '学生' : '小组'}积分详情 - ${type === 'student' ? stat.name : stat.group}</h3>
+            <button class="close-btn" onclick="app.closeStatisticsDetail()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <!-- 统计概览卡片 -->
+            <div class="statistics-overview">
+              <div class="statistics-card">
+                <div class="card-value">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
+                <div class="card-label">总积分变化</div>
+              </div>
+              <div class="statistics-card">
+                <div class="card-value">${totalRecords}</div>
+                <div class="card-label">记录总数</div>
+              </div>
+              <div class="statistics-card">
+                <div class="card-value">${positiveRecords}</div>
+                <div class="card-label">加分记录</div>
+              </div>
+              <div class="statistics-card">
+                <div class="card-value">${negativeRecords}</div>
+                <div class="card-label">减分记录</div>
+              </div>
+            </div>
+            
+            <!-- 积分记录详情区域 -->
+            <div class="detail-records">
+              <div class="records-header">
+                <h4>📋 积分记录详情</h4>
+                <div class="records-filter">
+                  <button class="filter-btn active" data-filter="all">全部</button>
+                  <button class="filter-btn" data-filter="positive">加分</button>
+                  <button class="filter-btn" data-filter="negative">扣分</button>
+                </div>
+              </div>
+              
+              <div class="records-table-container">
+                <table class="detail-table">
+                  <thead>
+                    <tr>
+                      <th>📅 日期</th>
+                      <th>📝 类型</th>
+                      <th>🏷️ 规则/商品</th>
+                      <th>💰 积分变化</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detailRecordsBody">
+                    ${stat.records.map(record => {
+                      // 确定操作类型：加分、扣分、兑换
+                      let operationType = 'exchange';
+                      if (record.type === 'purchase') {
+                        operationType = 'exchange';
+                      } else if (record.points > 0) {
+                        operationType = 'add';
+                      } else if (record.points < 0) {
+                        operationType = 'deduct';
+                      }
+                      
+                      return `
+                        <tr class="record-${record.type} operation-${operationType}" data-type="${record.type}" data-operation="${operationType}" data-date="${record.date}">
+                          <td>${record.date}</td>
+                          <td>${operationType === 'add' ? '加分' : operationType === 'deduct' ? '扣分' : '兑换'}</td>
+                          <td>${record.rule || record.item || '-'}</td>
+                          <td class="${operationType === 'add' ? 'positive' : operationType === 'deduct' ? 'negative' : 'exchange'}">
+                            ${record.type === 'purchase' ? '-' : ''}${record.points > 0 ? '+' : ''}${record.points || record.cost}
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
     `;
     
-    if(Object.keys(studentStats).length > 0) {
-      html += '<h4>个人积分统计</h4><table class="statistics-table"><tr><th>姓名</th><th>积分变化</th><th>记录数</th></tr>';
-      Object.entries(studentStats).forEach(([name, stats]) => {
-        html += `<tr><td>${name}</td><td>${stats.points > 0 ? '+' : ''}${stats.points}</td><td>${stats.records.length}</td></tr>`;
+    // 移除已存在的详情模态框
+    const existingModal = document.getElementById('statisticsDetailModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // 添加新的详情模态框到页面
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // 显示模态框
+    const modal = document.getElementById('statisticsDetailModal');
+    modal.style.display = 'flex';
+    
+    // 绑定关闭事件
+    modal.querySelector('.close-btn').onclick = () => this.closeStatisticsDetail();
+    
+    // 初始化筛选功能
+    this.initStatisticsDetailFilter();
+  }
+  
+  initStatisticsDetailFilter() {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    if (!filterBtns.length) return;
+    
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        // 移除所有按钮的active类
+        filterBtns.forEach(b => b.classList.remove('active'));
+        // 为当前按钮添加active类
+        this.classList.add('active');
+        
+        const filter = this.dataset.filter;
+        const rows = document.querySelectorAll('#detailRecordsBody tr');
+        
+        // 性能优化：直接操作CSS类，避免DOM重排
+        rows.forEach(row => {
+          const operationType = row.dataset.operation;
+          
+          let show = false;
+          
+          switch(filter) {
+            case 'all':
+              show = true;
+              break;
+            case 'positive':
+              // 显示所有加分类型的记录
+              show = operationType === 'add';
+              break;
+            case 'negative':
+              // 显示所有扣分类型的记录
+              show = operationType === 'deduct';
+              break;
+          }
+          
+          // 使用CSS类控制显示/隐藏，避免重排
+          if (show) {
+            row.classList.remove('hidden');
+          } else {
+            row.classList.add('hidden');
+          }
+        });
       });
-      html += '</table>';
+    });
+  }
+  
+  // 更新详情模态框内容
+  updateDetailModal(stat) {
+    const modal = document.getElementById('statisticsDetailModal');
+    if (!modal) return;
+    
+    // 更新统计概览卡片
+    const totalPoints = stat.points;
+    const totalRecords = stat.records.length;
+    const positiveRecords = stat.records.filter(r => r.points > 0).length;
+    const negativeRecords = stat.records.filter(r => r.points < 0 || r.type === 'purchase').length;
+    
+    const statisticsCards = modal.querySelectorAll('.statistics-card');
+    if (statisticsCards.length >= 4) {
+      statisticsCards[0].querySelector('.card-value').textContent = totalPoints > 0 ? '+' + totalPoints : totalPoints;
+      statisticsCards[1].querySelector('.card-value').textContent = totalRecords;
+      statisticsCards[2].querySelector('.card-value').textContent = positiveRecords;
+      statisticsCards[3].querySelector('.card-value').textContent = negativeRecords;
     }
     
-    if(Object.keys(groupStats).length > 0) {
-      html += '<h4>小组积分统计</h4><table class="statistics-table"><tr><th>小组</th><th>积分变化</th><th>记录数</th></tr>';
-      Object.entries(groupStats).forEach(([group, stats]) => {
-        html += `<tr><td>${group}</td><td>${stats.points > 0 ? '+' : ''}${stats.points}</td><td>${stats.records.length}</td></tr>`;
-      });
-      html += '</table>';
+    // 更新积分记录表格
+    const tbody = modal.querySelector('#detailRecordsBody');
+    if (tbody) {
+      const rowsHtml = stat.records.map(record => {
+        // 确定操作类型：加分、扣分、兑换
+        let operationType = 'exchange';
+        if (record.type === 'purchase') {
+          operationType = 'exchange';
+        } else if (record.points > 0) {
+          operationType = 'add';
+        } else if (record.points < 0) {
+          operationType = 'deduct';
+        }
+        
+        return `
+          <tr class="record-${record.type} operation-${operationType}" data-type="${record.type}" data-operation="${operationType}" data-date="${record.date}">
+            <td>${record.date}</td>
+            <td>${operationType === 'add' ? '加分' : operationType === 'deduct' ? '扣分' : '兑换'}</td>
+            <td>${record.rule || record.item || '-'}</td>
+            <td class="${operationType === 'add' ? 'positive' : operationType === 'deduct' ? 'negative' : 'exchange'}">
+              ${record.type === 'purchase' ? '-' : ''}${record.points > 0 ? '+' : ''}${record.points || record.cost}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      tbody.innerHTML = rowsHtml;
+    }
+  }
+  
+  // 更新统计概览卡片
+  updateStatisticsOverview() {
+    const visibleRows = document.querySelectorAll('#detailRecordsBody tr:not(.hidden)');
+    
+    let totalPoints = 0;
+    let totalRecords = visibleRows.length;
+    let positiveRecords = 0;
+    let negativeRecords = 0;
+    
+    visibleRows.forEach(row => {
+      const pointsText = row.querySelector('td:nth-child(4)').textContent;
+      const points = parseInt(pointsText.replace(/[+-]/g, '')) || 0;
+      
+      if (pointsText.includes('+')) {
+        totalPoints += points;
+        positiveRecords++;
+      } else if (pointsText.includes('-')) {
+        totalPoints -= points;
+        negativeRecords++;
+      }
+    });
+    
+    // 更新统计概览卡片
+    const overviewCards = document.querySelectorAll('.statistics-card');
+    if (overviewCards.length >= 4) {
+      overviewCards[0].querySelector('.card-value').textContent = 
+        totalPoints > 0 ? '+' + totalPoints : totalPoints;
+      overviewCards[1].querySelector('.card-value').textContent = totalRecords;
+      overviewCards[2].querySelector('.card-value').textContent = positiveRecords;
+      overviewCards[3].querySelector('.card-value').textContent = negativeRecords;
+    }
+  }
+
+  // 测试用例：验证筛选逻辑正确性
+  testFilterLogic(filter, rows) {
+    console.log(`=== 筛选测试: ${filter} ===`);
+    let addCount = 0;
+    let deductCount = 0;
+    let exchangeCount = 0;
+    let totalCount = 0;
+    
+    rows.forEach(row => {
+      const operationType = row.dataset.operation;
+      
+      if (operationType === 'add') addCount++;
+      if (operationType === 'deduct') deductCount++;
+      if (operationType === 'exchange') exchangeCount++;
+      totalCount++;
+    });
+    
+    console.log(`总记录数: ${totalCount}`);
+    console.log(`加分记录: ${addCount}`);
+    console.log(`扣分记录: ${deductCount}`);
+    console.log(`兑换记录: ${exchangeCount}`);
+    
+    // 验证筛选逻辑
+    let expectedCount = 0;
+    switch(filter) {
+      case 'all':
+        expectedCount = totalCount;
+        break;
+      case 'positive':
+        expectedCount = addCount;
+        break;
+      case 'negative':
+        expectedCount = deductCount;
+        break;
     }
     
-    if(Object.keys(studentStats).length === 0 && Object.keys(groupStats).length === 0) {
-      html += '<p>该时间段内无积分记录</p>';
+    console.log(`预期显示记录数: ${expectedCount}`);
+    console.log('=== 测试完成 ===');
+  }
+  
+  closeStatisticsDetail() {
+    const modal = document.getElementById('statisticsDetailModal');
+    if (modal) {
+      modal.style.display = 'none';
+      setTimeout(() => {
+        if (modal && modal.parentNode) {
+          modal.remove();
+        }
+      }, 300);
+    }
+  }
+  
+  exportDetailStatistics(type, target) {
+    const stats = type === 'student' ? this.currentStatistics.studentStats : this.currentStatistics.groupStats;
+    const targetStat = stats.find(stat => (type === 'student' ? stat.name === target : stat.group === target));
+    
+    if (!targetStat) {
+      alert('统计数据不存在！');
+      return;
     }
     
-    container.innerHTML = html;
+    const excelData = [
+      ['日期', '类型', '规则/商品', '积分变化', '备注']
+    ];
+    
+    targetStat.records.forEach(record => {
+      // 确定操作类型：加分、扣分、兑换
+      const operationType = record.type === 'purchase' ? 'exchange' : 
+                           (record.points > 0 ? 'add' : 'deduct');
+      
+      excelData.push([
+        record.date,
+        operationType === 'add' ? '加分' : operationType === 'deduct' ? '扣分' : '兑换',
+        record.rule || record.item || '-',
+        record.type === 'purchase' ? `-${record.cost}` : (record.points > 0 ? `+${record.points}` : record.points),
+        record.note || '-'
+      ]);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '积分详情');
+    
+    const filename = `${type === 'student' ? '学生' : '小组'}积分详情_${target}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    alert('详情导出成功！');
   }
   
   exportStatistics(){
@@ -9538,7 +10393,17 @@ exportBackup(){
     
     // 🔧 修复：添加等级积分设置
     scoreToPointsRatio: this.scoreToPointsRatio,
+    
+    // 🐾 新增：完整的宠物配置信息
+    petTypes: this.petTypes || [],
     petStages: this.petStages,
+    petStagesByType: this.petStagesByType || {},
+    petImages: this.petImages || {},
+    groupPetImages: this.groupPetImages || {},
+    studentPets: this.studentPets || {},
+    groupPets: this.groupPets || {},
+    displayMode: this.displayMode || 'local',
+    
     // 导出小组等级时只包含积分范围，不包含自定义名称
     groupStages: this.groupStages.map(stage => ({
       minPoints: stage.minPoints,
@@ -9600,6 +10465,14 @@ exportBackup(){
   exportMessage += `\n- 小组等级配置（${this.groupStages.length}个等级）`;
   exportMessage += `\n- 成绩积分比例：${this.scoreToPointsRatio}:1`;
   exportMessage += `\n- 使用${this.currentConfigScope}配置`;
+  
+  // 🐾 新增：宠物配置信息统计
+  exportMessage += `\n- 宠物类型配置（${this.petTypes.length}种宠物）`;
+  exportMessage += `\n- 个人宠物图片配置（${Object.keys(this.petImages).length}种类型）`;
+  exportMessage += `\n- 小组宠物图片配置（${Object.keys(this.groupPetImages).length}种类型）`;
+  exportMessage += `\n- 学生宠物选择记录（${Object.keys(this.studentPets).length}名学生）`;
+  exportMessage += `\n- 小组宠物选择记录（${Object.keys(this.groupPets).length}个小组）`;
+  exportMessage += `\n- 显示模式：${this.displayMode}`;
   
   alert(exportMessage);
 }
