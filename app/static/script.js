@@ -4611,21 +4611,30 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
 		return;
 	  }
 
-	  const studentData = this.students.map(stu => {
-		const totalPoints = stu.points + (stu.purchases || []).reduce((sum, p) => sum + p.cost, 0);
-		const stage = this.getStudentPetStage(stu);
-		return {
-		  name: stu.name,
-		  avatar: stage.emoji
-		};
-	  });
+	  // 添加加载提示，提升用户体验
+	  const originalButtonText = document.getElementById('goToTaskBtn').textContent;
+	  document.getElementById('goToTaskBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 准备中...';
+	  document.getElementById('goToTaskBtn').disabled = true;
 
-	  const query = new URLSearchParams({
-		students: JSON.stringify(studentData),
-		className: this.currentClassName
-	  });
+	  // 延迟执行跳转，让用户看到加载状态
+	  setTimeout(() => {
+		const studentData = this.students.map(stu => {
+		  const totalPoints = stu.points + (stu.purchases || []).reduce((sum, p) => sum + p.cost, 0);
+		  const stage = this.getStudentPetStage(stu);
+		  return {
+			name: stu.name,
+			avatar: stage.emoji
+		  };
+		});
 
-	  window.location.href = `/static/renwu.html?${query.toString()}`;
+		const query = new URLSearchParams({
+		  students: encodeURIComponent(JSON.stringify(studentData)),
+		  className: encodeURIComponent(this.currentClassName || ''),
+		  timestamp: Date.now() // 添加时间戳避免缓存问题
+		});
+
+		window.location.href = `/static/renwu.html?${query.toString()}`;
+	  }, 500);
 	});
 	
 	// 模态框标签页切换

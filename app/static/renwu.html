@@ -71,11 +71,13 @@
 
         .controls-container {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
             flex: 1;
             justify-content: flex-end;
+            overflow-x: auto;
+            white-space: nowrap;
         }
 
         .control-group {
@@ -96,8 +98,11 @@
 
         .start-timer-btn,
         .save-btn,
-        .home-btn {
-            background: linear-gradient(45deg, #ff9eb5, #ff6b9e);
+        .home-btn,
+        .data-btn,
+        .sync-points-btn,
+        .support-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
             border: none;
             padding: 12px 24px;
@@ -114,29 +119,38 @@
             white-space: nowrap;
         }
 
-        .home-btn {
-            background: linear-gradient(45deg, #4a90e2, #73a6ff);
+        .support-btn {
+            background: linear-gradient(45deg, #48bb78, #38a169) !important;
         }
 
-        .home-btn:hover {
-            background: linear-gradient(45deg, #73a6ff, #4a90e2);
+        .home-btn:hover,
+        .start-timer-btn:hover,
+        .save-btn:hover,
+        .data-btn:hover,
+        .sync-points-btn:hover,
+        .support-btn:hover {
+            background: linear-gradient(45deg, #764ba2, #667eea);
+            transform: scale(1.05);
+        }
+
+        .support-btn:hover {
+            background: linear-gradient(45deg, #38a169, #48bb78) !important;
         }
 
         .start-timer-btn i,
         .save-btn i,
-        .home-btn i {
+        .home-btn i,
+        .data-btn i,
+        .sync-points-btn i {
             margin-right: 8px;
-        }
-
-        .start-timer-btn:hover,
-        .save-btn:hover {
-            background: linear-gradient(45deg, #ff6b9e, #ff4d88);
-            transform: scale(1.05);
         }
 
         .start-timer-btn:active,
         .save-btn:active,
-        .home-btn:active {
+        .home-btn:active,
+        .data-btn:active,
+        .sync-points-btn:active,
+        .support-btn:active {
             transform: scale(0.95);
         }
 
@@ -501,7 +515,7 @@
 
         /* 新增样式 */
         .task-record-item {
-            background: #f7fafc;
+            background: white;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             padding: 12px;
@@ -509,11 +523,45 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .task-record-item:hover {
-            background: #edf2f7;
-            transform: translateX(5px);
+            background: #f7fafc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-color: #4299e1;
+        }
+
+        .record-recent {
+            border-left: 4px solid #4299e1;
+        }
+
+        .recent-badge {
+            background: #4299e1;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+
+        .empty-records {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 2px dashed #cbd5e0;
+        }
+
+        .records-header {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
         }
 
         .record-header {
@@ -878,6 +926,10 @@
                     <i class="fas fa-sync"></i>
                     同步积分
                 </button>
+                <button class="support-btn" id="supportBtn" title="技术支持">
+                    <i class="fas fa-life-ring"></i>
+                    技术支持
+                </button>
                 <button class="home-btn" id="homeBtn" title="返回主页">
 				<script>
 				  document.getElementById('homeBtn').addEventListener('click', () => {
@@ -1078,6 +1130,11 @@
 
         // 初始化学生数据
         function initializeStudents() {
+            // 确保taskRecords数组被正确初始化
+            if (!taskRecords) {
+                taskRecords = [];
+            }
+            
             if (!getStudentsFromURL()) {
                 // 如果没有URL参数，使用示例数据
                 const sampleData = `张三|班长\n李四|副班长\n王五|学习委员\n赵六|体育委员\n钱七|文艺委员\n孙八|生活委员\n周九|纪律委员\n吴十|组长`;
@@ -1545,15 +1602,15 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
         }
 
         // 从本地存储加载数据
-        function loadDataFromLocalStorage() {
+        function loadDataFromLocalStorage(restoreStudents = true) {
             const savedData = localStorage.getItem('taskCheckinData');
             
             if (savedData) {
                 try {
                     const data = JSON.parse(savedData);
                     
-                    // 恢复学生数据
-                    if (data.students && data.students.length > 0) {
+                    // 恢复学生数据（仅在需要时）
+                    if (restoreStudents && data.students && data.students.length > 0) {
                         studentsData = data.students;
                         totalStudents = data.totalStudents || studentsData.length;
                         completedStudents = data.completedStudents || 0;
@@ -1619,31 +1676,83 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
 function renderTaskRecords() {
   const container = document.getElementById('taskRecordsList');
   if (!container) return;
-  container.innerHTML = '';
+  
+  // 添加加载动画
+  container.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> 加载历史记录中...</div>';
+  
+  // 延迟渲染，避免页面卡顿
+  setTimeout(() => {
+    container.innerHTML = '';
 
-  if (!taskRecords || taskRecords.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:#718096;padding:20px;">暂无任务记录</div>';
-    return;
-  }
+    if (!taskRecords || taskRecords.length === 0) {
+      container.innerHTML = `
+        <div class="empty-records">
+          <i class="fas fa-history" style="font-size:48px;color:#cbd5e0;margin-bottom:10px;"></i>
+          <div style="color:#718096;font-size:14px;">暂无任务记录</div>
+          <div style="color:#a0aec0;font-size:12px;margin-top:5px;">开始新任务后，记录将自动保存</div>
+        </div>
+      `;
+      return;
+    }
 
-  taskRecords.slice().reverse().forEach((rec, idx) => {
-    const div = document.createElement('div');
-    div.className = 'task-record-item';
-    div.dataset.index = idx;
-    div.innerHTML = `
-      <div class="record-header">${rec.taskName || '未命名任务'}</div>
-      <div class="record-details">📅 ${rec.date}</div>
-      <div class="record-details">⏱️ ${rec.duration}</div>
-      <div class="record-details">✅ ${rec.completedStudents.length}人完成</div>
-      <div class="record-details">⏳ ${rec.pendingStudents.length}人未完成</div>
-      <div style="margin-top:6px;display:flex;gap:6px;">
-        <button class="btn-load" onclick="loadThisRecord(${idx})">加载</button>
-        <button class="btn-detail" onclick="showDetail(${idx})">详情</button>
-        <button class="btn-del" onclick="deleteThisRecord(${idx})">删除</button>
+    // 添加记录统计信息
+    const totalRecords = taskRecords.length;
+    const totalCompleted = taskRecords.reduce((sum, rec) => sum + rec.completedStudents.length, 0);
+    
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'records-header';
+    headerDiv.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-weight:bold;color:#2d3748;">历史记录 (${totalRecords}条)</span>
+        <span style="font-size:12px;color:#718096;">累计完成: ${totalCompleted}人次</span>
       </div>
     `;
-    container.appendChild(div);
-  });
+    container.appendChild(headerDiv);
+
+    // 按时间倒序显示记录，添加动画效果
+    taskRecords.slice().reverse().forEach((rec, idx) => {
+      const originalIndex = taskRecords.length - 1 - idx;
+      const div = document.createElement('div');
+      div.className = 'task-record-item';
+      div.dataset.index = originalIndex;
+      div.style.opacity = '0';
+      div.style.transform = 'translateY(20px)';
+      div.style.transition = 'all 0.3s ease';
+      
+      // 添加记录状态标识（最近3条记录有特殊标识）
+      const isRecent = idx < 3;
+      const statusClass = isRecent ? 'record-recent' : '';
+      
+      div.innerHTML = `
+        <div class="record-header ${statusClass}">
+          ${rec.taskName || '未命名任务'}
+          ${isRecent ? '<span class="recent-badge">最新</span>' : ''}
+        </div>
+        <div class="record-details">📅 ${rec.date}</div>
+        <div class="record-details">⏱️ ${rec.duration}</div>
+        <div class="record-details">✅ ${rec.completedStudents.length}人完成</div>
+        <div class="record-details">⏳ ${rec.pendingStudents.length}人未完成</div>
+        <div style="margin-top:6px;display:flex;gap:6px;">
+          <button class="btn-load" onclick="loadThisRecord(${originalIndex})" title="加载此记录">
+            <i class="fas fa-upload"></i> 加载
+          </button>
+          <button class="btn-detail" onclick="showDetail(${originalIndex})" title="查看详情">
+            <i class="fas fa-info-circle"></i> 详情
+          </button>
+          <button class="btn-del" onclick="deleteThisRecord(${originalIndex})" title="删除记录">
+            <i class="fas fa-trash"></i> 删除
+          </button>
+        </div>
+      `;
+      container.appendChild(div);
+      
+      // 添加动画延迟
+      setTimeout(() => {
+        div.style.opacity = '1';
+        div.style.transform = 'translateY(0)';
+      }, idx * 50);
+    });
+  }, 100);
 }
 
 function loadThisRecord(idx) {
@@ -1683,7 +1792,23 @@ function deleteThisRecord(idx) {
         // 返回主页按钮事件
         homeBtn.addEventListener('click', function() {
             if (confirm('确定要返回主页吗？当前任务进度将会保存。')) {
-                window.location.href = '积分成长系统.html';
+                // 清除当前显示的名字卡片数据，但保留任务记录
+                document.getElementById('studentsContainer').innerHTML = '';
+                document.getElementById('leaderboardList').innerHTML = '';
+                document.getElementById('pendingItems').innerHTML = '';
+                
+                // 重置计时器
+                if (isTimerRunning) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
+                }
+                
+                timerDisplay.textContent = '00:00:00';
+                counterDisplay.textContent = '0/0';
+                
+                // 跳转到主页
+                window.location.href = 'points.html';
             }
         });
 
@@ -1699,6 +1824,36 @@ function deleteThisRecord(idx) {
             
             // 显示同步积分设置模态框
             document.getElementById('syncPointsModal').style.display = 'flex';
+        });
+
+        // 技术支持按钮事件
+        document.getElementById('supportBtn').addEventListener('click', function() {
+            const supportInfo = `
+                <div style="text-align: center; padding: 20px;">
+                    <h3 style="color: #48bb78; margin-bottom: 15px;">💡 技术支持</h3>
+                    <div style="text-align: left; line-height: 1.6;">
+                        <p><strong>系统功能：</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>任务打卡与进度跟踪</li>
+                            <li>学生完成状态实时更新</li>
+                            <li>任务记录保存与同步</li>
+                            <li>积分系统集成</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><strong>使用说明：</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>点击学生头像标记完成状态</li>
+                            <li>使用"生成记录"保存任务数据</li>
+                            <li>通过"同步积分"将数据同步到主系统</li>
+                            <li>可调整字号、颜色、样式等显示效果</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            if (confirm(supportInfo + '\n\n需要进一步帮助吗？')) {
+                // 可以在这里添加更多技术支持功能
+                showCelebration('感谢使用！如有问题请联系技术支持。', '💚');
+            }
         });
 
         // 渲染记录选择器
@@ -1848,7 +2003,6 @@ function deleteThisRecord(idx) {
             saveDataToLocalStorage();
             
             // 重新渲染任务记录
-			
             renderTaskRecords();
             showCelebration('任务记录已生成！', '📝');
         });
@@ -1883,65 +2037,115 @@ function deleteThisRecord(idx) {
 
         // 页面加载时初始化
         window.addEventListener('load', function() {
-            initializeStudents();
-            loadDataFromLocalStorage();
+            // 显示页面加载状态
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.3s ease';
             
-            // 添加自动保存定时器（每30秒自动保存一次）
-            setInterval(saveDataToLocalStorage, 30000);
+            // 延迟执行初始化，避免页面卡顿
+            setTimeout(() => {
+                // 检查是否从主页跳转（带有URL参数）
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasURLParams = urlParams.has('students');
+                
+                // 优先从URL参数加载学生数据（从主页跳转时）
+                if (hasURLParams) {
+                    const wasDataLoaded = getStudentsFromURL();
+                    if (wasDataLoaded) {
+                        // 成功加载URL参数数据，但保留现有任务状态（不自动开始新任务）
+                        // 先加载历史数据，包括任务记录和当前任务状态
+                        loadDataFromLocalStorage();
+                        
+                        // 如果历史数据中没有学生数据，则使用URL参数的数据
+                        if (!studentsData || studentsData.length === 0) {
+                            studentsData.forEach(s => {
+                                s.completed = false;
+                                s.time = null;
+                            });
+                            completedStudents = 0;
+                            
+                            // 重置计时器状态
+                            if (isTimerRunning) {
+                                clearInterval(timerInterval);
+                                isTimerRunning = false;
+                            }
+                            startTime = null;
+                            timerDisplay.textContent = '00:00:00';
+                            document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
+                        }
+                        
+                        // 渲染学生列表
+                        renderStudents();
+                        updateCounter();
+                        updatePendingList();
+                        
+                        showCelebration('已加载班级名单数据！任务记录已保留。', '�');
+                    } else {
+                        // URL参数加载失败，使用默认初始化
+                        initializeStudents();
+                        loadDataFromLocalStorage();
+                    }
+                } else {
+                    // 直接访问页面，使用常规初始化
+                    initializeStudents();
+                    loadDataFromLocalStorage();
+                }
+                
+                // 页面加载完成，淡入显示
+                setTimeout(() => {
+                    document.body.style.opacity = '1';
+                }, 100);
+                
+                // 添加自动保存定时器（每30秒自动保存一次）
+                setInterval(saveDataToLocalStorage, 30000);
+                
+            }, 50);
         });
 		
-		function showDetail(idx){
-  const rec  = taskRecords[idx];
-  if(!rec) return;
-  document.getElementById('detailTitle').textContent = rec.taskName || '未命名任务';
-  document.getElementById('doneCount').textContent   = rec.completedStudents.length;
-  document.getElementById('undoneCount').textContent = rec.pendingStudents.length;
-
-  document.getElementById('doneList').innerHTML   = rec.completedStudents.map(n=>`<li>${n}</li>`).join('');
-  document.getElementById('undoneList').innerHTML = rec.pendingStudents.map(n=>`<li>${n}</li>`).join('');
-
-  document.getElementById('detailModal').style.display = 'flex';
-}
-function closeDetail(){
-  document.getElementById('detailModal').style.display = 'none';
-}
-function deleteThisRecord(idx){
-  if(confirm('确定删除这条记录？')){
-    taskRecords.splice(idx,1);
-    saveDataToLocalStorage();
-    renderTaskRecords();
-  }
-}
-
-function loadThisRecord(idx){
-  if(confirm('加载后会替换当前进度，确定继续？')){
-    const rec = taskRecords[idx];
-    // 恢复数据
-    studentsData = rec.students.map(s=> ({...s}));
-    totalStudents = studentsData.length;
-    completedStudents = studentsData.filter(s=>s.completed).length;
-    currentTaskName = rec.taskName || '未命名任务';
-    // 重置计时
-    if(isTimerRunning){clearInterval(timerInterval);isTimerRunning=false;}
-    startTime = null;
-    timerDisplay.textContent = '00:00:00';
-    document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
-    // 重新渲染
-    renderStudents(); renderTaskRecords();
-    saveDataToLocalStorage();
-  }
-}
+		
 
 document.getElementById('newTaskBtn').addEventListener('click', function(){
   if(confirm('开始新任务将清空当前进度，确定？')){
-    localStorage.removeItem('taskCheckinData');
-    studentsData.forEach(s=>{s.completed=false;s.time=null;});
-    completedStudents=0;
-    if(isTimerRunning){clearInterval(timerInterval);isTimerRunning=false;}
-    startTime=null; timerDisplay.textContent='00:00:00';
+    // 停止计时器
+    if(isTimerRunning){
+      clearInterval(timerInterval);
+      isTimerRunning=false;
+    }
+    
+    // 重置计时器显示
+    startTime=null; 
+    timerDisplay.textContent='00:00:00';
     document.getElementById('startTaskBtn').innerHTML='<i class="fas fa-play"></i> 开始任务';
-    renderStudents(); renderTaskRecords();
+    
+    // 设置更大的字号（24px）
+    fontSizeSlider.value = 24;
+    
+    // 重新从URL参数读取学生数据（从当前选中的班级重新读取）
+    const wasDataLoaded = getStudentsFromURL();
+    
+    if (wasDataLoaded) {
+      // 成功重新读取数据，重置完成状态
+      studentsData.forEach(s => {
+        s.completed = false;
+        s.time = null;
+      });
+      completedStudents = 0;
+      
+      // 重新渲染学生列表
+      renderStudents(); 
+      updateCounter();
+      updatePendingList();
+      
+      showCelebration('新任务已开始！已重新加载班级名单数据。', '🔄');
+    } else {
+      // 如果没有URL参数，使用示例数据重新初始化
+      initializeStudents();
+      showCelebration('新任务已开始！使用示例数据初始化。', '🔄');
+    }
+    
     saveDataToLocalStorage();
+    
+    // 重新渲染任务记录，确保显示更新
+    renderTaskRecords();
   }
 });
 
