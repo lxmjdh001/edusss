@@ -4335,6 +4335,38 @@ editClass(classId) {
   setupEventListeners(){
     console.log('设置事件监听器...');
     
+    // 积分历史折叠功能
+    const historyToggleBtn = document.getElementById('historyToggleBtn');
+    const historyList = document.getElementById('historyList');
+    
+    if (historyToggleBtn && historyList) {
+      // 初始化折叠状态（从localStorage读取）
+      const isCollapsed = localStorage.getItem('historyCollapsed') === 'true';
+      if (isCollapsed) {
+        historyList.classList.add('collapsed');
+        historyToggleBtn.classList.add('collapsed');
+        historyToggleBtn.querySelector('.toggle-text').textContent = '展开';
+      }
+      
+      historyToggleBtn.addEventListener('click', () => {
+        const isCurrentlyCollapsed = historyList.classList.contains('collapsed');
+        
+        if (isCurrentlyCollapsed) {
+          // 展开
+          historyList.classList.remove('collapsed');
+          historyToggleBtn.classList.remove('collapsed');
+          historyToggleBtn.querySelector('.toggle-text').textContent = '折叠';
+          localStorage.setItem('historyCollapsed', 'false');
+        } else {
+          // 折叠
+          historyList.classList.add('collapsed');
+          historyToggleBtn.classList.add('collapsed');
+          historyToggleBtn.querySelector('.toggle-text').textContent = '展开';
+          localStorage.setItem('historyCollapsed', 'true');
+        }
+      });
+    }
+    
     // 添加全局事件委托处理积分历史按钮点击
     document.addEventListener('click', (e) => {
       if (e.target.classList.contains('history-btn')) {
@@ -7682,7 +7714,7 @@ if (historyTabBtn && petTabBtn) {
               };
               
               // 获取学生完整积分记录（不受统计页面筛选影响）
-              this.loadDetailRecords('all');
+              this.loadDetailRecords();
             })
             .catch(error => {
               console.error('Error loading students list:', error);
@@ -7701,18 +7733,13 @@ if (historyTabBtn && petTabBtn) {
   }
   
   // 加载详情页面的记录数据
-  loadDetailRecords(timePeriod, customStartDate = null, customEndDate = null) {
+  loadDetailRecords() {
     if (!this.currentDetail) return;
     
     const { studentId } = this.currentDetail;
     
     // 构建查询参数
-    let url = `/api/points/students/${studentId}/records`;
-    
-    // 如果是自定义日期范围，添加查询参数
-    if (timePeriod === 'custom' && customStartDate && customEndDate) {
-      url += `?start_date=${customStartDate}&end_date=${customEndDate}`;
-    }
+    const url = `/api/points/students/${studentId}/records`;
     
     fetch(url)
       .then(response => {
@@ -7722,15 +7749,8 @@ if (historyTabBtn && petTabBtn) {
         return response.json();
       })
       .then(records => {
-        // 根据时间筛选条件过滤记录
-        let filteredRecords = records;
-        
-        if (timePeriod !== 'all' && timePeriod !== 'custom') {
-          filteredRecords = this.filterRecordsByPeriod(records, timePeriod);
-        }
-        
         // 转换后端数据格式为前端期望的格式
-        const formattedRecords = filteredRecords.map(record => ({
+        const formattedRecords = records.map(record => ({
           ...record,
           date: record.created_at ? record.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
           rule: record.reason || record.rule || '-',
@@ -7750,6 +7770,9 @@ if (historyTabBtn && petTabBtn) {
         } else {
           this.updateDetailModal(targetStat);
         }
+        
+        // 更新统计概览卡片
+        this.updateStatisticsOverview(targetStat);
       })
       .catch(error => {
         console.error('Error fetching student records:', error);

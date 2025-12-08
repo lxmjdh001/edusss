@@ -100,7 +100,13 @@
         
         <!-- 历史记录区域 -->
         <div class="history-section">
-          <div class="history-title">📜 积分历史</div>
+          <div class="history-header">
+            <div class="history-title">📜 积分历史</div>
+            <button class="history-toggle-btn" id="historyToggleBtn">
+              <span class="toggle-icon">▼</span>
+              <span class="toggle-text">折叠</span>
+            </button>
+          </div>
           <div id="historyList" class="history-list"></div>
         </div>
       </div>
@@ -855,7 +861,6 @@
 
   <!-- <script src="/static/xlsx.full.min.js"></script> -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="/static/points-api.js"></script>
   <script src="/static/db-adapter.js"></script>
   <script>
     // 配置：使用数据库模式
