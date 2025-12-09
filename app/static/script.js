@@ -3180,16 +3180,22 @@ renderLevelSettings() {
   this.renderGroupLevelSettings();
   this.renderScoreRatioSettings();
 // 把两个总按钮插到“等级积分设置”标签页最底部
-const tab=document.getElementById('levelSettingsTab');   // 等级设置标签页
-const bottomBar=document.createElement('div');
-bottomBar.style.display='flex';           // 横向排列
-bottomBar.style.justifyContent='center';  // 居中
-bottomBar.style.gap='12px';               // 按钮间距
-bottomBar.style.margin='25px 0 10px 0';
-bottomBar.innerHTML=
-  '<button class="btn btn-warning" id="resetPetBtn">🔄 恢复个人宠物默认</button>'+
-  '<button class="btn btn-warning" id="resetGroupBtn">🔄 恢复小组积分默认</button>';
-tab.appendChild(bottomBar);
+const tab = document.getElementById('levelSettingsTab');   // 等级设置标签页
+
+// 检查是否已经存在按钮容器，避免重复添加
+let bottomBar = document.getElementById('levelSettingsBottomBar');
+if (!bottomBar) {
+  bottomBar = document.createElement('div');
+  bottomBar.id = 'levelSettingsBottomBar'; // 添加唯一标识
+  bottomBar.style.display = 'flex';           // 横向排列
+  bottomBar.style.justifyContent = 'center';  // 居中
+  bottomBar.style.gap = '12px';               // 按钮间距
+  bottomBar.style.margin = '25px 0 10px 0';
+  bottomBar.innerHTML =
+    '<button class="btn btn-warning" id="resetPetBtn">🔄 恢复个人等级积分</button>' +
+    '<button class="btn btn-warning" id="resetGroupBtn">🔄 恢复小组等级积分</button>';
+  tab.appendChild(bottomBar);
+}
 }
 
 
@@ -3277,9 +3283,14 @@ saveScoreRatio() {
 }
 
 resetPetToDefault(){
-  if(!confirm('确定把个人宠物图片、名字、积分区间全部恢复成默认吗？')) return;
-  // 1. 恢复默认数据
-  this.petStages=[
+  if(!confirm('确定恢复个人各等级的分值设置和成绩换算比例为默认值吗？当前宠物的图片和名称将保持不变。')) return;
+  
+  // 保存当前宠物的图片和名称
+  const currentPetImages = this.petStages.map(stage => stage.img);
+  const currentPetNames = this.petStages.map(stage => stage.name);
+  
+  // 1. 仅恢复默认的积分区间和成绩换算比例
+  const defaultPetStages = [
     {name:'蛋',   img:'images/pet/1.png', minPoints:0,  maxPoints:20},
     {name:'孵化中',img:'images/pet/2.png', minPoints:20, maxPoints:50},
     {name:'雏鸟', img:'images/pet/3.png', minPoints:50, maxPoints:100},
@@ -3287,16 +3298,35 @@ resetPetToDefault(){
     {name:'成长鸟',img:'images/pet/5.png', minPoints:200,maxPoints:400},
     {name:'雄鹰', img:'images/pet/6.png', minPoints:400,maxPoints:Infinity}
   ];
-  // 2. 存盘
+  
+  // 2. 恢复默认积分区间，但保持当前宠物的图片和名称
+  this.petStages = defaultPetStages.map((stage, index) => ({
+    name: currentPetNames[index] || stage.name,  // 保持当前名称
+    img: currentPetImages[index] || stage.img,   // 保持当前图片
+    minPoints: stage.minPoints,                  // 恢复默认积分区间
+    maxPoints: stage.maxPoints
+  }));
+  
+  // 3. 恢复默认成绩换算比例
+  this.scoreToPointsRatio = 10;
+  
+  // 4. 存盘
   this.saveAll();
-  // 3. 重新画界面
+  // 5. 重新画界面
   this.renderPetLevelSettings();
-  alert('已恢复个人宠物默认设置！');
+  this.renderScoreRatioSettings();
+  alert('已恢复个人等级积分默认设置！');
 }
 
 resetGroupToDefault(){
-  if(!confirm('确定把小组积分区间全部恢复成默认吗？')) return;
-  this.groupStages=[
+  if(!confirm('确定恢复小组各等级的分值设置为默认值吗？当前小组的图片和名称将保持不变。')) return;
+  
+  // 保存当前小组的图片和名称
+  const currentGroupImages = this.groupStages.map(stage => stage.img);
+  const currentGroupNames = this.groupStages.map(stage => stage.name);
+  
+  // 1. 仅恢复默认的积分区间
+  const defaultGroupStages = [
     {name:'青铜',img:'images/group/1.png', minPoints:0,  maxPoints:40},
     {name:'白银',img:'images/group/2.png', minPoints:40, maxPoints:100},
     {name:'黄金',img:'images/group/3.png', minPoints:100,maxPoints:200},
@@ -3304,9 +3334,20 @@ resetGroupToDefault(){
     {name:'钻石',img:'images/group/5.png', minPoints:400,maxPoints:800},
     {name:'王者',img:'images/group/6.png', minPoints:800,maxPoints:Infinity}
   ];
+  
+  // 2. 恢复默认积分区间，但保持当前小组的图片和名称
+  this.groupStages = defaultGroupStages.map((stage, index) => ({
+    name: currentGroupNames[index] || stage.name,  // 保持当前名称
+    img: currentGroupImages[index] || stage.img,   // 保持当前图片
+    minPoints: stage.minPoints,                    // 恢复默认积分区间
+    maxPoints: stage.maxPoints
+  }));
+  
+  // 3. 存盘
   this.saveAll();
+  // 4. 重新画界面
   this.renderGroupLevelSettings();
-  alert('已恢复小组等级默认设置！');
+  alert('已恢复小组等级积分默认设置！');
 }
     
   // 加载班级列表
