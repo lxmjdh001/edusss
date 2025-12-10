@@ -293,7 +293,6 @@
           <div class="student-info">
             <span id="studentNo">学号：2024001</span>
             <span id="className"></span>
-            <span id="examName"></span>
           </div>
           <div class="exam-selector" id="examSelector" style="display: none;">
             <label for="examSelect">切换考试：</label>
@@ -516,7 +515,6 @@
         document.getElementById("studentName").textContent = student.name;
         document.getElementById("studentNo").textContent = `学号：${student.student_no}`;
         document.getElementById("className").textContent = student.class_name ? ` | ${student.class_name}` : "";
-        document.getElementById("examName").textContent = student.exam_name ? ` | ${student.exam_name}` : "";
 
         // 渲染成绩概览
         renderOverviewTab(student);
@@ -823,9 +821,19 @@
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.getElementById('overviewTab').classList.add('active');
 
-        document.getElementById("examName").textContent = ` | ${examData.exam_name}`;
+        const avgScore = examData.average_score || 0;
         document.getElementById("totalScore").textContent = examData.total_score.toFixed(1);
-        document.getElementById("avgScore").textContent = examData.average_score.toFixed(1);
+        document.getElementById("avgScore").textContent = avgScore.toFixed(1);
+
+        // 更新等级评定
+        let level = '待提高', levelColor = '#dc2626', levelBg = '#fee2e2';
+        if (avgScore >= 90) { level = '优秀'; levelColor = '#059669'; levelBg = '#ecfdf5'; }
+        else if (avgScore >= 80) { level = '良好'; levelColor = '#d97706'; levelBg = '#fef3c7'; }
+        else if (avgScore >= 60) { level = '及格'; levelColor = '#2563eb'; levelBg = '#dbeafe'; }
+
+        document.getElementById('levelValue').textContent = level;
+        document.getElementById('levelValue').style.color = levelColor;
+        document.getElementById('levelItem').style.background = levelBg;
 
         const scores = Object.entries(examData.subject_scores || {}).map(([subject, score]) => ({ subject, score }));
 
