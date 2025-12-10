@@ -1,6 +1,91 @@
-INFO:     Started server process [10317]
+INFO:     Started server process [61287]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-ERROR:    [Errno 1] error while attempting to bind on address ('127.0.0.1', 8010): operation not permitted
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
+INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50065 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50077 - "GET /api/students/public-query?keyword=%E6%AE%B5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50892 - "GET /static/query.html?unified=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50892 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50912 - "GET /static/unified-query.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50983 - "GET /api/students/public-query?keyword=%E5%A7%93%E5%90%8D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50983 - "GET /static/query.html?unified=true HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51208 - "GET /api/auth/check HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51208 - "GET /static/grades.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51208 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51209 - "GET /api/students/ranges HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51209 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51209 - "GET /api/students HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51209 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51209 - "GET /api/students/class-stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51209 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51239 - "GET /static/unified-query.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51245 - "GET /api/students/public-query?keyword=%E5%A7%93%E5%90%8D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51245 - "GET /static/query.html?unified=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51322 - "GET /static/query.html?unified=true HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51363 - "GET /static/grades.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51363 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/ranges HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51364 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/class-stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /static/grades.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51364 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students/ranges HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51363 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students/class-stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /static/grades.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51363 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/ranges HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51364 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/class-stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /static/grades.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51364 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students/ranges HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51363 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /api/students/class-stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51363 - "GET /static/grades.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51363 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/ranges HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51364 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/students/class-stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51411 - "GET /api/students/public-query?keyword=%E5%A7%93%E5%90%8D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51411 - "GET /static/query.html?unified=true HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51431 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52373 - "GET /static/query.html?unified=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52374 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52373 - "GET /api/students/student-trend/12345678 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52410 - "GET /api/students/class-subject-stats?class_name=(1)%E7%8F%AD&exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52411 - "GET /api/students/?exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83&class_name=%281%29%E7%8F%AD HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52721 - "GET /api/students/class-subject-stats?class_name=(1)%E7%8F%AD&exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52721 - "GET /api/students/?class_name=(1)%E7%8F%AD&exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54732 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54762 - "GET /api/students/public-query?keyword=%E5%A7%93%E5%90%8D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54762 - "GET /static/query.html?unified=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54764 - "GET /api/students/class-subject-stats?class_name=%E9%AB%98%E4%B8%80%E7%8F%AD&exam_name=%E6%9C%9F%E6%9C%AB%E8%80%83%E8%AF%95 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54762 - "GET /api/students/student-trend/12345678 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54764 - "GET /api/students/class-subject-stats?class_name=%E9%AB%98%E4%B8%80%E7%8F%AD&exam_name=%E6%9C%9F%E6%9C%AB%E8%80%83%E8%AF%95 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54811 - "GET /api/students/student-trend/12345678 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60113 - "GET /api/auth/check HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60113 - "GET /static/grades.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60113 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60116 - "GET /api/students/ranges HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60116 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60116 - "GET /api/students HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:60116 - "GET /api/students/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60116 - "GET /api/students/class-stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60116 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60137 - "GET /api/students/class-subject-stats?class_name=(1)%E7%8F%AD&exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60138 - "GET /api/students/?exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83&class_name=%281%29%E7%8F%AD HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "GET /api/students/class-subject-stats?class_name=(1)%E7%8F%AD&exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60178 - "GET /api/students/?exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83&class_name=%281%29%E7%8F%AD HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60274 - "GET /api/students/class-subject-stats?class_name=(1)%E7%8F%AD&exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "GET /api/students/?exam_name=%E7%AC%AC%E4%BA%8C%E6%AC%A1%E6%9C%88%E8%80%83&class_name=%281%29%E7%8F%AD HTTP/1.1" 200 OK

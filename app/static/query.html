@@ -270,6 +270,7 @@
         .level-item .value { font-size: 14px; }
         .tab-button { padding: 6px 8px; font-size: 11px; }
         .chart-container { height: 180px; }
+        #radarContainer { height: 300px; }
       }
     </style>
   </head>
@@ -350,7 +351,7 @@
             </div>
           </div>
           <h4 style="margin: 16px 0 10px; font-size: 13px;">各科成绩对比</h4>
-          <div style="height: 220px; position: relative; margin-bottom: 16px;">
+          <div id="radarContainer" style="height: 280px; position: relative; margin-bottom: 16px;">
             <canvas id="overviewRadarChart"></canvas>
           </div>
           <h4 style="margin: 16px 0 10px; font-size: 13px;">各科成绩详情</h4>
@@ -604,51 +605,69 @@
         const values = scores.map(s => s.score);
 
         // 获取班级平均分
-        let classAvg = values.map(v => v * 0.95); // 默认值
-        try {
-          const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
-          if (response.ok) {
-            const classStats = await response.json();
-            const statsMap = {};
-            classStats.subject_stats.forEach(stat => {
-              statsMap[stat.subject] = stat.average;
-            });
-            classAvg = subjects.map(subject => statsMap[subject] || 0);
+        let classAvg = null;
+        let hasClassData = false;
+
+        if (student.class_name && student.exam_name) {
+          try {
+            const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
+            if (response.ok) {
+              const classStats = await response.json();
+              if (classStats.subject_stats && classStats.subject_stats.length > 0) {
+                const statsMap = {};
+                classStats.subject_stats.forEach(stat => {
+                  statsMap[stat.subject] = stat.average;
+                });
+                classAvg = subjects.map(subject => statsMap[subject] || 0);
+                hasClassData = true;
+              }
+            }
+          } catch (error) {
+            console.error('获取班级统计数据失败:', error);
           }
-        } catch (error) {
-          console.error('获取班级统计数据失败:', error);
         }
 
         if (overviewRadarChart) {
           overviewRadarChart.destroy();
         }
 
+        // 动态计算最大值
+        const allValues = hasClassData ? [...values, ...classAvg] : values;
+        const maxValue = Math.max(...allValues);
+        const radarMax = Math.ceil(maxValue / 20) * 20;
+        const stepSize = radarMax / 5;
+
+        // 构建数据集
+        const datasets = [{
+          label: '本人成绩',
+          data: values,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.2)',
+          pointBackgroundColor: '#2563eb',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: '#2563eb'
+        }];
+
+        // 如果有班级数据，添加班级平均线
+        if (hasClassData) {
+          datasets.push({
+            label: '班级平均',
+            data: classAvg,
+            borderColor: '#dc2626',
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            pointBackgroundColor: '#dc2626',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#dc2626'
+          });
+        }
+
         overviewRadarChart = new Chart(ctx, {
           type: 'radar',
           data: {
             labels: subjects,
-            datasets: [
-              {
-                label: '本人成绩',
-                data: values,
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37, 99, 235, 0.2)',
-                pointBackgroundColor: '#2563eb',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: '#2563eb'
-              },
-              {
-                label: '班级平均',
-                data: classAvg,
-                borderColor: '#dc2626',
-                backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                pointBackgroundColor: '#dc2626',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: '#dc2626'
-              }
-            ]
+            datasets: datasets
           },
           options: {
             responsive: true,
@@ -656,8 +675,8 @@
             scales: {
               r: {
                 beginAtZero: true,
-                max: 150,
-                ticks: { stepSize: 30, font: { size: 9 } }
+                max: radarMax,
+                ticks: { stepSize: stepSize, font: { size: 9 } }
               }
             },
             plugins: {
