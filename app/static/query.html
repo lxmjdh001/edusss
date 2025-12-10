@@ -543,7 +543,7 @@
         resultCard.classList.add("show");
       }
 
-      function renderOverviewTab(student) {
+      async function renderOverviewTab(student) {
         const totalScore = student.total_score || 0;
         const avgScore = student.average_score || 0;
 
@@ -569,8 +569,27 @@
           document.getElementById('weakSubject').textContent = sorted[sorted.length - 1].subject;
         }
 
-        // 渲染雷达图
-        renderOverviewRadarChart(student);
+        // 获取班级统计数据用于表格和雷达图
+        let classAvgMap = {};
+        let classRankMap = {};
+        if (student.class_name && student.exam_name) {
+          try {
+            const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
+            if (response.ok) {
+              const classStats = await response.json();
+              if (classStats.subject_stats && classStats.subject_stats.length > 0) {
+                classStats.subject_stats.forEach(stat => {
+                  classAvgMap[stat.subject] = stat.average;
+                });
+              }
+            }
+          } catch (error) {
+            console.error('获取班级统计数据失败:', error);
+          }
+        }
+
+        // 渲染雷达图（传递班级平均数据）
+        renderOverviewRadarChart(student, classAvgMap);
 
         // 各科成绩表格
         const tbody = document.getElementById('subjectTableBody');
@@ -583,12 +602,22 @@
           else if (score >= 80) { grade = '良好'; gradeColor = '#d97706'; }
           else if (score >= 60) { grade = '及格'; gradeColor = '#2563eb'; }
 
+          // 计算与班级均分差
+          const classAvg = classAvgMap[s.subject];
+          let diffText = '-';
+          let diffColor = '#6b7280';
+          if (classAvg !== undefined) {
+            const diff = (score - classAvg).toFixed(1);
+            diffText = diff > 0 ? `+${diff}` : diff;
+            diffColor = diff >= 0 ? '#059669' : '#dc2626';
+          }
+
           tbody.innerHTML += `
             <tr>
               <td class="subject-name">${s.subject}</td>
               <td style="font-weight: 600;">${score}</td>
               <td>-</td>
-              <td>-</td>
+              <td style="color: ${diffColor}; font-weight: 500;">${diffText}</td>
               <td style="color: ${gradeColor}; font-weight: 500;">${grade}</td>
             </tr>
           `;
@@ -596,7 +625,7 @@
       }
 
       // 渲染雷达图
-      async function renderOverviewRadarChart(student) {
+      function renderOverviewRadarChart(student, classAvgMap = {}) {
         const ctx = document.getElementById('overviewRadarChart');
         if (!ctx) return;
 
@@ -604,28 +633,9 @@
         const subjects = scores.map(s => s.subject);
         const values = scores.map(s => s.score);
 
-        // 获取班级平均分
-        let classAvg = null;
-        let hasClassData = false;
-
-        if (student.class_name && student.exam_name) {
-          try {
-            const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
-            if (response.ok) {
-              const classStats = await response.json();
-              if (classStats.subject_stats && classStats.subject_stats.length > 0) {
-                const statsMap = {};
-                classStats.subject_stats.forEach(stat => {
-                  statsMap[stat.subject] = stat.average;
-                });
-                classAvg = subjects.map(subject => statsMap[subject] || 0);
-                hasClassData = true;
-              }
-            }
-          } catch (error) {
-            console.error('获取班级统计数据失败:', error);
-          }
-        }
+        // 使用传入的班级平均数据
+        const hasClassData = Object.keys(classAvgMap).length > 0;
+        const classAvg = hasClassData ? subjects.map(subject => classAvgMap[subject] || 0) : null;
 
         if (overviewRadarChart) {
           overviewRadarChart.destroy();
@@ -634,7 +644,7 @@
         // 动态计算最大值
         const allValues = hasClassData ? [...values, ...classAvg] : values;
         const maxValue = Math.max(...allValues);
-        const radarMax = Math.ceil(maxValue / 20) * 20;
+        const radarMax = Math.ceil(maxValue / 20) * 20 || 100;
         const stepSize = radarMax / 5;
 
         // 构建数据集
@@ -968,7 +978,7 @@
         }
       }
 
-      function displayExamFromTrend(examData) {
+      async function displayExamFromTrend(examData) {
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
         document.querySelector('.tab-button[data-tab="overview"]').classList.add('active');
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -996,10 +1006,29 @@
           currentStudent.scores = scores;
           currentStudent.total_score = examData.total_score;
           currentStudent.average_score = examData.average_score;
-          // 刷新雷达图和学科分析
-          renderOverviewRadarChart(currentStudent);
-          renderAnalysisTab(currentStudent);
         }
+
+        // 获取班级平均数据
+        let classAvgMap = {};
+        if (currentStudent && currentStudent.class_name && examData.exam_name) {
+          try {
+            const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(currentStudent.class_name)}&exam_name=${encodeURIComponent(examData.exam_name)}`);
+            if (response.ok) {
+              const classStats = await response.json();
+              if (classStats.subject_stats && classStats.subject_stats.length > 0) {
+                classStats.subject_stats.forEach(stat => {
+                  classAvgMap[stat.subject] = stat.average;
+                });
+              }
+            }
+          } catch (error) {
+            console.error('获取班级统计数据失败:', error);
+          }
+        }
+
+        // 刷新雷达图和学科分析
+        renderOverviewRadarChart(currentStudent, classAvgMap);
+        renderAnalysisTab(currentStudent);
 
         // 重新渲染表格
         const tbody = document.getElementById('subjectTableBody');
@@ -1012,12 +1041,22 @@
           else if (score >= 80) { grade = '良好'; gradeColor = '#d97706'; }
           else if (score >= 60) { grade = '及格'; gradeColor = '#2563eb'; }
 
+          // 计算与班级均分差
+          const classAvg = classAvgMap[s.subject];
+          let diffText = '-';
+          let diffColor = '#6b7280';
+          if (classAvg !== undefined) {
+            const diff = (score - classAvg).toFixed(1);
+            diffText = diff > 0 ? `+${diff}` : diff;
+            diffColor = diff >= 0 ? '#059669' : '#dc2626';
+          }
+
           tbody.innerHTML += `
             <tr>
               <td class="subject-name">${s.subject}</td>
               <td style="font-weight: 600;">${score}</td>
               <td>-</td>
-              <td>-</td>
+              <td style="color: ${diffColor}; font-weight: 500;">${diffText}</td>
               <td style="color: ${gradeColor}; font-weight: 500;">${grade}</td>
             </tr>
           `;
