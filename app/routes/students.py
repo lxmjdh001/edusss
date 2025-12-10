@@ -136,7 +136,7 @@ def get_exams(db: Session = Depends(get_db)):
 @router.get("/public-query")
 def public_query_student(
     keyword: str = Query(..., description="姓名或学号"),
-    exam_name: str = Query(..., description="考试场次"),
+    exam_name: Optional[str] = Query(None, description="考试场次，不传则返回该学生最新考试成绩"),
     db: Session = Depends(get_db)
 ):
     """公开查询接口：通过姓名/学号和考试场次查询成绩（无需认证）"""
@@ -145,16 +145,20 @@ def public_query_student(
         or_(
             models.Student.name.ilike(like),
             models.Student.student_no.ilike(like),
-        ),
-        models.Student.exam_name == exam_name
+        )
     )
 
-    students = query.order_by(models.Student.updated_at.desc()).all()
+    # 如果指定了考试场次，则筛选
+    if exam_name:
+        query = query.filter(models.Student.exam_name == exam_name)
+
+    # 按创建时间倒序，获取最新的记录
+    students = query.order_by(models.Student.created_at.desc()).all()
 
     if not students:
         raise HTTPException(status_code=404, detail="未找到匹配的学生成绩")
 
-    # 返回第一个匹配的学生
+    # 返回第一个匹配的学生（最新的考试记录）
     student = students[0]
     return _serialize_student(student)
 
@@ -872,6 +876,71 @@ def download_rank_template():
     return _workbook_response(wb, "rank_import_template.xlsx")
 
 
+@router.get("/backup")
+def backup_data(db: Session = Depends(get_db)):
+    """备份所有成绩数据"""
+    students = db.query(models.Student).all()
+    ranges = db.query(models.SubjectRange).all()
+
+    data = {
+        "students": [_serialize_student(s) for s in students],
+        "ranges": {r.subject: r.config for r in ranges}
+    }
+    return data
+
+
+@router.post("/restore")
+def restore_data(data: Dict, db: Session = Depends(get_db)):
+    """从备份恢复数据"""
+    restored = 0
+
+    # 恢复学生数据
+    if "students" in data:
+        for student_data in data["students"]:
+            # 查找是否存在相同学号和考试的记录
+            existing = db.query(models.Student).filter(
+                models.Student.student_no == student_data.get("student_no"),
+                models.Student.exam_name == student_data.get("exam_name")
+            ).first()
+
+            if existing:
+                # 更新现有记录
+                for key, value in student_data.items():
+                    if key not in ["id", "created_at", "updated_at"]:
+                        setattr(existing, key, value)
+            else:
+                # 创建新记录
+                new_student = models.Student(**{
+                    k: v for k, v in student_data.items()
+                    if k not in ["id", "created_at", "updated_at"]
+                })
+                db.add(new_student)
+            restored += 1
+
+    # 恢复区间设置
+    if "ranges" in data:
+        for subject, config in data["ranges"].items():
+            record = db.query(models.SubjectRange).filter(
+                models.SubjectRange.subject == subject
+            ).first()
+            if record:
+                record.config = config
+            else:
+                record = models.SubjectRange(subject=subject, config=config)
+                db.add(record)
+
+    db.commit()
+    return {"restored": restored}
+
+
+@router.delete("/clear-all")
+def clear_all_data(db: Session = Depends(get_db)):
+    """清空所有成绩数据（危险操作）"""
+    deleted = db.query(models.Student).delete()
+    db.commit()
+    return {"deleted": deleted}
+
+
 @router.get("/{student_id}", response_model=schemas.Student)
 def get_student(student_id: int, db: Session = Depends(get_db)):
     student = db.get(models.Student, student_id)
@@ -1341,66 +1410,3 @@ def calculate_ranks(db: Session = Depends(get_db)):
     return {"updated": updated}
 
 
-@router.get("/backup")
-def backup_data(db: Session = Depends(get_db)):
-    """备份所有成绩数据"""
-    students = db.query(models.Student).all()
-    ranges = db.query(models.SubjectRange).all()
-
-    data = {
-        "students": [_serialize_student(s) for s in students],
-        "ranges": {r.subject: r.config for r in ranges}
-    }
-    return data
-
-
-@router.post("/restore")
-def restore_data(data: Dict, db: Session = Depends(get_db)):
-    """从备份恢复数据"""
-    restored = 0
-
-    # 恢复学生数据
-    if "students" in data:
-        for student_data in data["students"]:
-            # 查找是否存在相同学号和考试的记录
-            existing = db.query(models.Student).filter(
-                models.Student.student_no == student_data.get("student_no"),
-                models.Student.exam_name == student_data.get("exam_name")
-            ).first()
-
-            if existing:
-                # 更新现有记录
-                for key, value in student_data.items():
-                    if key not in ["id", "created_at", "updated_at"]:
-                        setattr(existing, key, value)
-            else:
-                # 创建新记录
-                new_student = models.Student(**{
-                    k: v for k, v in student_data.items()
-                    if k not in ["id", "created_at", "updated_at"]
-                })
-                db.add(new_student)
-            restored += 1
-
-    # 恢复区间设置
-    if "ranges" in data:
-        for subject, config in data["ranges"].items():
-            record = db.query(models.SubjectRange).filter(
-                models.SubjectRange.subject == subject
-            ).first()
-            if record:
-                record.config = config
-            else:
-                record = models.SubjectRange(subject=subject, config=config)
-                db.add(record)
-
-    db.commit()
-    return {"restored": restored}
-
-
-@router.delete("/clear-all")
-def clear_all_data(db: Session = Depends(get_db)):
-    """清空所有成绩数据（危险操作）"""
-    deleted = db.query(models.Student).delete()
-    db.commit()
-    return {"deleted": deleted}

@@ -140,6 +140,34 @@
         color: var(--subtext);
         font-size: 14px;
       }
+      .exam-selector {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+      .exam-selector label {
+        font-size: 14px;
+        color: var(--subtext);
+        font-weight: 500;
+      }
+      .exam-selector select {
+        padding: 8px 32px 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+      }
+      .exam-selector select:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
       .info-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -349,6 +377,12 @@
             <span id="className"></span>
             <span id="examName"></span>
           </div>
+          <div class="exam-selector" id="examSelector" style="display: none;">
+            <label for="examSelect">切换考试：</label>
+            <select id="examSelect">
+              <option value="">加载中...</option>
+            </select>
+          </div>
         </div>
 
         <!-- 标签页导航 -->
@@ -420,6 +454,7 @@
       // 全局变量
       let currentStudentNo = null;
       let trendData = null;
+      let allExamsData = null; // 存储所有考试的成绩数据
 
       // 从URL获取查询码或统一查询标识
       const urlParams = new URLSearchParams(window.location.search);
@@ -435,6 +470,8 @@
             queryCard.style.display = "none";
             displayResult(student);
             sessionStorage.removeItem('unifiedQueryResult'); // 清除数据
+            // 加载该学生的所有考试数据
+            loadStudentExams(student.student_no, student.exam_name);
           } catch (error) {
             console.error('解析统一查询结果失败:', error);
             showError("数据加载失败，请返回重新查询");
@@ -567,6 +604,93 @@
 
       function hideError() {
         errorMessage.classList.remove("show");
+      }
+
+      // 加载学生的所有考试数据（仅在统一查询模式下使用）
+      async function loadStudentExams(studentNo, currentExamName) {
+        try {
+          const res = await fetch(`${API_BASE}/student-trend/${studentNo}`);
+          if (!res.ok) {
+            console.error('无法加载学生考试列表');
+            return;
+          }
+
+          const data = await res.json();
+          allExamsData = data.exams || [];
+
+          // 如果没有考试数据，不显示
+          if (allExamsData.length === 0) {
+            return;
+          }
+
+          // 显示考试切换下拉框
+          const examSelector = document.getElementById('examSelector');
+          const examSelect = document.getElementById('examSelect');
+
+          examSelector.style.display = 'flex';
+          examSelect.innerHTML = '';
+
+          // 填充下拉选项
+          allExamsData.forEach(exam => {
+            const option = document.createElement('option');
+            option.value = exam.exam_name;
+            option.textContent = exam.exam_name;
+            if (exam.exam_name === currentExamName) {
+              option.selected = true;
+            }
+            examSelect.appendChild(option);
+          });
+
+          // 添加切换事件监听
+          examSelect.addEventListener('change', (e) => {
+            const selectedExam = e.target.value;
+            const examData = allExamsData.find(exam => exam.exam_name === selectedExam);
+            if (examData) {
+              displayExamFromTrend(examData);
+            }
+          });
+
+        } catch (error) {
+          console.error('加载学生考试列表失败:', error);
+        }
+      }
+
+      // 从趋势数据显示指定考试的成绩
+      function displayExamFromTrend(examData) {
+        // 重置到当前成绩标签页
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.tab-button[data-tab="current"]').classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById('currentTab').classList.add('active');
+
+        // 更新考试名称显示
+        const examNameEl = document.getElementById("examName");
+        examNameEl.textContent = ` | 考试：${examData.exam_name}`;
+
+        // 更新总分和平均分
+        document.getElementById("totalScore").textContent = examData.total_score.toFixed(1);
+        document.getElementById("avgScore").textContent = examData.average_score.toFixed(1);
+
+        // 更新各科成绩
+        const scoreList = document.getElementById("scoreList");
+        scoreList.innerHTML = "";
+
+        const subjectScores = examData.subject_scores || {};
+        const subjects = Object.keys(subjectScores);
+
+        if (subjects.length > 0) {
+          subjects.forEach(subject => {
+            const scoreItem = document.createElement("div");
+            scoreItem.className = "score-item";
+            scoreItem.innerHTML = `
+              <span class="subject">${subject}</span>
+              <span class="score">${subjectScores[subject]}</span>
+            `;
+            scoreList.appendChild(scoreItem);
+          });
+        } else {
+          scoreList.innerHTML = '<p style="text-align: center; color: var(--subtext);">暂无科目成绩</p>';
+        }
       }
 
       // 标签页切换功能

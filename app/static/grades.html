@@ -1221,143 +1221,128 @@
               </table>
             </div>
           </section>
-          <section class="collapsible-section">
-            <div class="collapsible-header" data-target="importSection">
-              <h2>批量导入成绩</h2>
-              <span class="collapsible-toggle">▼</span>
-            </div>
-            <div class="collapsible-content" id="importSection">
-              <div class="collapsible-body">
-                <p class="hint-text">先下载模板并录入成绩，再上传 Excel。支持一次导入一个班级的某次考试。</p>
-                <div class="import-actions">
-                  <button class="btn secondary" id="downloadTemplate">下载导入模板</button>
-                </div>
-                <form class="inline-form" id="importForm">
+
+          <!-- 四个模块：两行两列布局 -->
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <!-- 第一行左：成绩区间设置 -->
+            <section class="collapsible-section" style="margin: 0;">
+              <div class="collapsible-header" data-target="rangeSection">
+                <h2>成绩区间设置</h2>
+                <span class="collapsible-toggle">▼</span>
+              </div>
+              <div class="collapsible-content" id="rangeSection">
+                <div class="collapsible-body">
+                  <p class="hint-text">为每个科目定义不及格/及格/良好/优秀的分数范围。</p>
                   <div class="inline-form-row">
-                    <label style="flex: 1;">年级
-                      <input type="text" id="importGrade" list="gradeList" placeholder="请选择或输入新年级" />
-                      <datalist id="gradeList"></datalist>
-                    </label>
-                    <label style="flex: 1;">班级
-                      <input type="text" id="importClass" list="classList" placeholder="请选择或输入新班级" />
-                      <datalist id="classList"></datalist>
-                    </label>
-                    <label style="flex: 1;">考试名称
-                      <input type="text" id="importExam" placeholder="例：期中考试" required />
-                    </label>
-                    <label style="flex: 1;">Excel 文件
-                      <input type="file" id="importFile" accept=".xlsx,.xls" required />
+                    <label>
+                      科目
+                      <select id="rangeSubjectSelect"></select>
                     </label>
                   </div>
+                  <form id="rangeForm">
+                    <div class="range-config-list" id="rangeRows"></div>
+                    <div class="import-actions">
+                      <button class="btn" type="submit">保存配置</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </section>
+
+            <!-- 第一行右：批量导入成绩 -->
+            <section class="collapsible-section" style="margin: 0;">
+              <div class="collapsible-header" data-target="importSection">
+                <h2>批量导入成绩</h2>
+                <span class="collapsible-toggle">▼</span>
+              </div>
+              <div class="collapsible-content" id="importSection">
+                <div class="collapsible-body">
+                  <p class="hint-text">先下载模板并录入成绩，再上传 Excel。</p>
                   <div class="import-actions">
-                    <button class="btn" type="submit">上传并导入</button>
+                    <button class="btn secondary" id="downloadTemplate">下载导入模板</button>
                   </div>
-                </form>
-              </div>
-            </div>
-          </section>
-          <section class="collapsible-section">
-            <div class="collapsible-header" data-target="rankImportSection">
-              <h2>导入年级排名</h2>
-              <span class="collapsible-toggle">▼</span>
-            </div>
-            <div class="collapsible-content" id="rankImportSection">
-              <div class="collapsible-body">
-                <p class="hint-text">导入全年级学生的年级排名和班级排名数据。如果某次考试所有科目成绩都已录入，系统可自动计算年级排名和班级排名，无需手动导入。</p>
-                <div class="import-actions">
-                  <button class="btn secondary" id="downloadRankTemplate">下载排名模板</button>
-                  <button class="btn" id="autoCalculateRanksBtn">自动计算排名</button>
+                  <form class="inline-form" id="importForm">
+                    <div class="inline-form-row" style="flex-wrap: wrap;">
+                      <label style="flex: 1; min-width: 120px;">年级
+                        <input type="text" id="importGrade" list="gradeList" placeholder="选择或输入" />
+                        <datalist id="gradeList"></datalist>
+                      </label>
+                      <label style="flex: 1; min-width: 120px;">班级
+                        <input type="text" id="importClass" list="classList" placeholder="选择或输入" />
+                        <datalist id="classList"></datalist>
+                      </label>
+                      <label style="flex: 1; min-width: 120px;">考试名称
+                        <input type="text" id="importExam" placeholder="例：期中考试" required />
+                      </label>
+                      <label style="flex: 1; min-width: 120px;">Excel 文件
+                        <input type="file" id="importFile" accept=".xlsx,.xls" required />
+                      </label>
+                    </div>
+                    <div class="import-actions">
+                      <button class="btn" type="submit">上传并导入</button>
+                    </div>
+                  </form>
                 </div>
-                <form class="inline-form" id="rankImportForm">
-                  <label>
-                    <span>选择排名文件 (Excel)</span>
-                    <input type="file" id="rankImportFile" accept=".xlsx,.xls" required />
-                  </label>
+              </div>
+            </section>
+
+            <!-- 第二行左：导入年级排名 -->
+            <section class="collapsible-section" style="margin: 0;">
+              <div class="collapsible-header" data-target="rankImportSection">
+                <h2>导入年级排名（可选）</h2>
+                <span class="collapsible-toggle">▼</span>
+              </div>
+              <div class="collapsible-content" id="rankImportSection">
+                <div class="collapsible-body">
+                  <p class="hint-text">导入年级排名数据，或系统自动计算。</p>
                   <div class="import-actions">
-                    <button class="btn" type="submit">上传并导入排名</button>
+                    <button class="btn secondary" id="downloadRankTemplate">下载排名模板</button>
+                    <button class="btn" id="autoCalculateRanksBtn">自动计算排名</button>
                   </div>
-                </form>
-              </div>
-            </div>
-          </section>
-          <section class="collapsible-section">
-            <div class="collapsible-header" data-target="exportSection">
-              <h2>成绩导出</h2>
-              <span class="collapsible-toggle">▼</span>
-            </div>
-            <div class="collapsible-content" id="exportSection">
-              <div class="collapsible-body">
-                <p class="hint-text">选择班级或考试导出成绩，若都为空则导出所有数据。</p>
-                <div class="inline-form-row">
-                  <label>班级
-                    <select id="exportClassSelect">
-                      <option value="">全部班级</option>
-                    </select>
-                  </label>
-                  <label>考试
-                    <select id="exportExamSelect">
-                      <option value="">全部考试</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="import-actions">
-                  <button class="btn secondary" id="exportBtn">导出 Excel</button>
+                  <form class="inline-form" id="rankImportForm">
+                    <label>
+                      <span>选择排名文件 (Excel)</span>
+                      <input type="file" id="rankImportFile" accept=".xlsx,.xls" required />
+                    </label>
+                    <div class="import-actions">
+                      <button class="btn" type="submit">上传并导入排名</button>
+                    </div>
+                  </form>
                 </div>
               </div>
-            </div>
-          </section>
-          <section class="collapsible-section">
-            <div class="collapsible-header" data-target="backupSection">
-              <h2>数据备份与恢复</h2>
-              <span class="collapsible-toggle">▼</span>
-            </div>
-            <div class="collapsible-content" id="backupSection">
-              <div class="collapsible-body">
-                <p class="hint-text">备份所有成绩数据到文件，或从备份文件恢复数据。</p>
-                <div class="import-actions" style="gap: 12px;">
-                  <button class="btn secondary" id="backupDataBtn">导出数据备份</button>
-                </div>
-                <form class="inline-form" id="restoreForm" style="margin-top: 20px;">
-                  <label>
-                    <span>选择备份文件恢复数据</span>
-                    <input type="file" id="restoreFile" accept=".json" />
-                  </label>
-                  <div class="import-actions">
-                    <button class="btn" type="submit">恢复数据</button>
+            </section>
+
+            <!-- 第二行右：数据备份与恢复 -->
+            <section class="collapsible-section" style="margin: 0;">
+              <div class="collapsible-header" data-target="backupSection">
+                <h2>数据备份与恢复</h2>
+                <span class="collapsible-toggle">▼</span>
+              </div>
+              <div class="collapsible-content" id="backupSection">
+                <div class="collapsible-body">
+                  <p class="hint-text">备份数据到文件，或从备份恢复。</p>
+                  <div class="import-actions" style="gap: 12px;">
+                    <button class="btn secondary" id="backupDataBtn">导出数据备份</button>
                   </div>
-                </form>
-                <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
-                  <p class="hint-text" style="color: var(--danger); font-weight: 500;">危险操作：清空所有数据</p>
-                  <div class="import-actions" style="margin-top: 12px;">
-                    <button class="btn" id="clearDataBtn" style="background: var(--danger); border-color: var(--danger);">清空所有数据</button>
+                  <form class="inline-form" id="restoreForm" style="margin-top: 16px;">
+                    <label>
+                      <span>选择备份文件恢复数据</span>
+                      <input type="file" id="restoreFile" accept=".json" />
+                    </label>
+                    <div class="import-actions">
+                      <button class="btn" type="submit">恢复数据</button>
+                    </div>
+                  </form>
+                  <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+                    <p class="hint-text" style="color: var(--danger); font-weight: 500;">危险操作</p>
+                    <div class="import-actions" style="margin-top: 8px;">
+                      <button class="btn" id="clearDataBtn" style="background: var(--danger); border-color: var(--danger);">清空所有数据</button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
-          <section class="collapsible-section">
-            <div class="collapsible-header" data-target="rangeSection">
-              <h2>成绩区间设置</h2>
-              <span class="collapsible-toggle">▼</span>
-            </div>
-            <div class="collapsible-content" id="rangeSection">
-              <div class="collapsible-body">
-                <p class="hint-text">为每个科目定义不及格/及格/良好/优秀的分数范围，仪表盘与成绩管理共用。</p>
-                <div class="inline-form-row">
-                  <label>
-                    科目
-                    <select id="rangeSubjectSelect"></select>
-                  </label>
-                </div>
-                <form id="rangeForm">
-                  <div class="range-config-list" id="rangeRows"></div>
-                  <div class="import-actions">
-                    <button class="btn" type="submit">保存配置</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
       </main>
     </div>
@@ -1453,9 +1438,9 @@
         <!-- 选项卡导航 -->
         <div class="tabs" style="margin-bottom: 20px;">
           <button class="tab-button active" data-detail-tab="overview">成绩概览</button>
+          <button class="tab-button" data-detail-tab="analysis">学科分析</button>
           <button class="tab-button" data-detail-tab="trend">趋势分析</button>
-          <button class="tab-button" data-detail-tab="points">积分记录</button>
-          <button class="tab-button" data-detail-tab="analysis">详细分析</button>
+          <button class="tab-button" data-detail-tab="points">积分表现</button>
           <button class="tab-button" data-detail-tab="info">学生信息</button>
         </div>
 
@@ -1524,13 +1509,13 @@
           </div>
         </div>
 
-        <!-- 积分记录标签页 -->
+        <!-- 积分表现标签页 -->
         <div class="tab-content" id="pointsTab" style="max-height: 60vh; overflow-y: auto;">
-          <div id="pointsAccountInfo" style="margin-bottom: 24px;">
-            <!-- 积分账户信息将在这里动态加载 -->
+          <div id="pointsHeader" style="text-align: center; margin-bottom: 20px;">
+            <!-- 标题和学生信息 -->
           </div>
           <div id="pointsRecordsList">
-            <!-- 积分记录列表将在这里动态加载 -->
+            <!-- 积分记录列表 -->
           </div>
         </div>
 
@@ -1556,8 +1541,6 @@
 
         <div class="modal-footer" style="margin-top: 20px;">
           <button type="button" class="btn secondary" id="closeDetailModal">关闭</button>
-          <button type="button" class="btn secondary" id="editDetailBtn">编辑</button>
-          <button type="button" class="btn" id="saveDetailBtn" style="display: none;">保存</button>
         </div>
       </div>
     </div>
@@ -1658,35 +1641,6 @@
         <div class="modal-footer" style="margin-top: 24px;">
           <button type="button" class="btn secondary" id="cancelProgressSettings">取消</button>
           <button type="button" class="btn" id="saveProgressSettings">保存</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-backdrop" id="shareModal" role="dialog" aria-modal="true">
-      <div class="modal">
-        <h2>生成分享链接</h2>
-        <p class="hint-text">选择考试场次和查询链接的有效期，过期后家长将无法使用该链接查询成绩。</p>
-        <div style="margin-top: 24px;">
-          <label style="display: block; margin-bottom: 8px; font-weight: 600;">选择考试场次 *</label>
-          <select id="shareExamSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px;">
-            <option value="">全部考试</option>
-          </select>
-
-          <label style="display: block; margin-bottom: 12px; font-weight: 600;">选择有效期</label>
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-            <button type="button" class="btn secondary" data-days="3" style="padding: 16px;">3天</button>
-            <button type="button" class="btn secondary" data-days="7" style="padding: 16px;">7天</button>
-            <button type="button" class="btn secondary" data-days="15" style="padding: 16px;">15天</button>
-            <button type="button" class="btn secondary" data-days="30" style="padding: 16px;">30天</button>
-          </div>
-          <div style="margin-top: 16px;">
-            <label style="display: block; margin-bottom: 8px; font-size: 14px; color: var(--subtext);">自定义天数</label>
-            <input type="number" id="customDays" min="1" max="365" placeholder="输入1-365天" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn secondary" id="cancelShare">取消</button>
-          <button type="button" class="btn" id="confirmShare">生成链接</button>
         </div>
       </div>
     </div>
@@ -1842,9 +1796,6 @@
       const importClassInput = document.getElementById("importClass");
       const importGradeInput = document.getElementById("importGrade");
       const importExamInput = document.getElementById("importExam");
-      const exportClassSelect = document.getElementById("exportClassSelect");
-      const exportExamSelect = document.getElementById("exportExamSelect");
-      const exportBtn = document.getElementById("exportBtn");
       const rangeSubjectSelect = document.getElementById("rangeSubjectSelect");
       const rangeForm = document.getElementById("rangeForm");
       const rangeRows = document.getElementById("rangeRows");
@@ -1862,8 +1813,6 @@
       const detailStudentName = document.getElementById("detailStudentName");
       const studentInfoGrid = document.getElementById("studentInfoGrid");
       const closeDetailModal = document.getElementById("closeDetailModal");
-      const editDetailBtn = document.getElementById("editDetailBtn");
-      const saveDetailBtn = document.getElementById("saveDetailBtn");
       const studentDetailForm = document.getElementById("studentDetailForm");
       const classStatsBody = document.getElementById("classStatsBody");
       const classEditModal = document.getElementById("classEditModal");
@@ -1916,11 +1865,6 @@
       const studentTrendChartContainer = document.getElementById("studentTrendChartContainer");
       const studentTrendPlaceholder = document.getElementById("studentTrendPlaceholder");
       const studentTrendStats = document.getElementById("studentTrendStats");
-      const shareModal = document.getElementById("shareModal");
-      const cancelShare = document.getElementById("cancelShare");
-      const confirmShare = document.getElementById("confirmShare");
-      const customDays = document.getElementById("customDays");
-      const shareExamSelect = document.getElementById("shareExamSelect");
 
       let students = [];
       let editingClassName = null;
@@ -1931,8 +1875,6 @@
       let classStats = [];
       let trendExamCount = 3; // 按场次：默认显示近3场
       let trendDateRange = null; // 按时间：{startDate, endDate} 或 null
-      let shareClassName = null;
-      let selectedDays = 30;
       let selectedStudentNos = []; // 学生走势对比：选中的学生学号列表（最多5个）
       let selectedTrendSubjects = ["总分"]; // 学生走势对比：选中的科目列表
       let studentTrendChart = null; // 学生走势对比图表实例
@@ -2175,8 +2117,6 @@
 
         populateSelect(classFilter, availableClasses, "全部班级", true);
         populateSelect(examFilter, availableExams, "全部考试", true);
-        populateSelect(exportClassSelect, availableClasses, "全部班级", true);
-        populateSelect(exportExamSelect, availableExams, "全部考试", true);
         populateDatalist('gradeList', availableGrades);
         populateDatalist('classList', availableClasses);
         renderSubjectTabs();
@@ -2272,8 +2212,6 @@
         // 渲染学生信息（第四个标签页）
         renderStudentInfo(student, false);
 
-        editDetailBtn.style.display = '';
-        saveDetailBtn.style.display = 'none';
         studentDetailModal.classList.add("active");
       }
 
@@ -2281,7 +2219,21 @@
       function renderOverviewTab(student) {
         const totalScore = student.total_score || 0;
         const avgScore = student.average_score || 0;
-        const classRank = student.class_rank || '-';
+
+        // 计算班级排名：同班级、同考试的学生按总分排序
+        let classRank = '-';
+        if (student.class_name && student.exam_name && totalScore > 0) {
+          const classmates = students.filter(s =>
+            s.class_name === student.class_name &&
+            s.exam_name === student.exam_name &&
+            s.total_score > 0
+          ).sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
+
+          const rankIndex = classmates.findIndex(s => s.id === student.id);
+          if (rankIndex !== -1) {
+            classRank = rankIndex + 1;
+          }
+        }
 
         document.getElementById('overviewTotalScore').textContent = totalScore.toFixed(1);
         document.getElementById('overviewAvgScore').textContent = avgScore.toFixed(1);
@@ -2793,13 +2745,13 @@
         }
       }
 
-      // 渲染积分记录标签页
+      // 渲染积分表现标签页
       async function renderPointsTab(student) {
-        const accountInfo = document.getElementById('pointsAccountInfo');
+        const headerEl = document.getElementById('pointsHeader');
         const recordsList = document.getElementById('pointsRecordsList');
 
         // 显示加载中
-        accountInfo.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 20px;">加载中...</p>';
+        headerEl.innerHTML = '<p style="color: #9ca3af; padding: 20px;">加载中...</p>';
         recordsList.innerHTML = '';
 
         try {
@@ -2809,98 +2761,63 @@
           const data = await res.json();
 
           if (!data.has_points_account) {
-            // 没有积分账户
-            accountInfo.innerHTML = `
-              <div style="text-align: center; padding: 40px 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🎮</div>
-                <h3 style="margin: 0 0 8px; font-size: 18px; color: #111827;">该学生暂未加入积分系统</h3>
-                <p style="margin: 0; color: #6b7280; font-size: 14px;">请先在积分系统中为该学生创建账户</p>
-                <a href="/static/points.html" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">前往积分系统</a>
+            headerEl.innerHTML = `
+              <div style="font-size: 20px; margin-bottom: 8px;">📊 学生积分历史</div>
+              <p style="color: #6b7280; font-size: 14px;">该学生暂未加入积分系统</p>
+            `;
+            recordsList.innerHTML = `
+              <div style="text-align: center; padding: 40px 20px; color: #9ca3af;">
+                <a href="/static/points.html" style="color: var(--primary); text-decoration: none;">前往积分系统创建账户</a>
               </div>
             `;
-            recordsList.innerHTML = '';
             return;
           }
 
-          // 渲染积分账户信息
-          accountInfo.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">当前积分</div>
-                <div style="font-size: 36px; font-weight: 700;">${data.total_points}</div>
-              </div>
-              ${data.pet_type ? `
-                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);">
-                  <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">宠物类型</div>
-                  <div style="font-size: 24px; font-weight: 700;">${data.pet_type}</div>
-                  <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">等级 ${data.pet_level}</div>
-                </div>
-              ` : ''}
-              ${data.class_name ? `
-                <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
-                  <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">积分班级</div>
-                  <div style="font-size: 20px; font-weight: 700;">${data.class_name}</div>
-                </div>
-              ` : ''}
-            </div>
+          // 渲染标题和学生信息
+          headerEl.innerHTML = `
+            <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">📊 学生积分历史</div>
+            <p style="color: #6b7280; font-size: 15px;">学生: ${student.name} (${data.total_points}积分)</p>
           `;
 
           // 渲染积分记录列表
           if (data.records.length === 0) {
             recordsList.innerHTML = `
               <div style="text-align: center; padding: 40px 20px; color: #9ca3af;">
-                <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
-                <p style="margin: 0; font-size: 16px;">暂无积分记录</p>
+                <p style="margin: 0;">暂无积分记录</p>
               </div>
             `;
             return;
           }
 
-          recordsList.innerHTML = `
-            <h3 style="margin: 24px 0 16px; font-size: 16px; color: #111827;">积分记录 (最近100条)</h3>
-            <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
-              ${data.records.map((record, index) => {
-                const isPositive = record.points > 0;
-                const pointsColor = isPositive ? '#10b981' : '#ef4444';
-                const pointsSign = isPositive ? '+' : '';
-                const date = new Date(record.created_at);
-                const dateStr = date.toLocaleString('zh-CN', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                });
+          recordsList.innerHTML = data.records.map((record) => {
+            const isPositive = record.points > 0;
+            const pointsColor = isPositive ? '#3b82f6' : '#ef4444';
+            const pointsSign = isPositive ? '+' : '';
+            const date = new Date(record.created_at);
+            const dateStr = date.toLocaleString('zh-CN', {
+              year: 'numeric',
+              month: 'numeric',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
 
-                return `
-                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f3f4f6; ${index === 0 ? 'border-top: none;' : ''}">
-                    <div style="flex: 1;">
-                      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
-                        <span style="font-size: 24px; font-weight: 700; color: ${pointsColor};">${pointsSign}${record.points}</span>
-                        <span style="font-size: 14px; font-weight: 500; color: #111827;">${record.reason}</span>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 16px; font-size: 12px; color: #9ca3af;">
-                        <span>🕐 ${dateStr}</span>
-                        ${record.operator ? `<span>👤 ${record.operator}</span>` : ''}
-                      </div>
-                    </div>
-                    <div style="text-align: right;">
-                      <div style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: ${isPositive ? '#ecfdf5' : '#fef2f2'};">
-                        <span style="font-size: 20px;">${isPositive ? '📈' : '📉'}</span>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          `;
+            return `
+              <div style="padding: 16px 0; border-bottom: 1px solid #e5e7eb; text-align: center;">
+                <div style="font-size: 13px; color: #9ca3af; margin-bottom: 6px;">${dateStr}</div>
+                <div style="font-size: 18px; font-weight: 600; color: ${pointsColor};">
+                  ${record.reason} ${pointsSign}${record.points}积分
+                </div>
+              </div>
+            `;
+          }).join('');
 
         } catch (error) {
           console.error('加载积分记录失败:', error);
-          accountInfo.innerHTML = `
-            <div style="text-align: center; padding: 40px 20px; color: #dc2626;">
-              <p style="margin: 0;">加载失败: ${error.message}</p>
-            </div>
+          headerEl.innerHTML = `
+            <div style="font-size: 20px; margin-bottom: 8px;">📊 学生积分历史</div>
+            <p style="color: #dc2626;">加载失败: ${error.message}</p>
           `;
           recordsList.innerHTML = '';
         }
@@ -2984,14 +2901,6 @@
         }
       }
 
-      function enableDetailEdit() {
-        if (!currentDetailStudent) return;
-        isEditingDetail = true;
-        renderStudentInfo(currentDetailStudent, true);
-        editDetailBtn.style.display = 'none';
-        saveDetailBtn.style.display = '';
-      }
-
       async function saveDetailEdit(event) {
         event.preventDefault();
         if (!currentDetailStudent) return;
@@ -3045,8 +2954,6 @@
             detailStudentName.textContent = `${updatedStudent.name} - 学生信息`;
             renderStudentInfo(updatedStudent, false);
             isEditingDetail = false;
-            editDetailBtn.style.display = '';
-            saveDetailBtn.style.display = 'none';
           }
         } catch (error) {
           showToast(error.message, true);
@@ -3211,8 +3118,7 @@
               <td>${cls.good_rate}%</td>
               <td>${cls.excellent_rate}%</td>
               <td>
-                <button class="btn compact-btn" type="button" data-share-class="${cls.class_name}">分享查询</button>
-                <button class="btn secondary compact-btn" type="button" data-edit-class="${cls.class_name}" style="margin-left:4px;">编辑</button>
+                <button class="btn secondary compact-btn" type="button" data-edit-class="${cls.class_name}">编辑</button>
                 <button class="btn danger compact-btn" type="button" data-delete-class="${cls.class_name}" style="margin-left:4px;">删除</button>
               </td>
             </tr>
@@ -4073,22 +3979,6 @@
         }
       }
 
-      async function exportScores(event) {
-        event.preventDefault();
-        const params = new URLSearchParams();
-        if (exportClassSelect?.value) params.append("class_name", exportClassSelect.value);
-        if (exportExamSelect?.value) params.append("exam_name", exportExamSelect.value);
-        const query = params.toString();
-        try {
-          const res = await fetch(`${API_BASE}/export${query ? `?${query}` : ""}`);
-          if (!res.ok) throw new Error("导出失败");
-          const blob = await res.blob();
-          downloadBlob(blob, "成绩导出.xlsx");
-        } catch (error) {
-          showToast(error.message, true);
-        }
-      }
-
       async function handleAutoCalculateRanks() {
         if (!confirm('确认要自动计算所有考试的年级排名和班级排名吗？\n\n此操作将根据总分重新计算排名，已有的排名数据将被覆盖。')) {
           return;
@@ -4505,10 +4395,27 @@
       restoreForm?.addEventListener("submit", handleRestoreData);
       clearDataBtn?.addEventListener("click", handleClearData);
 
-      // 统一查询入口按钮
+      // 统一查询入口按钮 - 复制链接
       const unifiedQueryBtn = document.getElementById("unifiedQueryBtn");
-      unifiedQueryBtn?.addEventListener("click", () => {
-        window.open("/static/unified-query.html", "_blank");
+      unifiedQueryBtn?.addEventListener("click", async () => {
+        const url = window.location.origin + "/static/unified-query.html";
+        try {
+          await navigator.clipboard.writeText(url);
+          const originalText = unifiedQueryBtn.innerHTML;
+          unifiedQueryBtn.innerHTML = '<span>✅</span><span>已复制链接</span>';
+          setTimeout(() => {
+            unifiedQueryBtn.innerHTML = originalText;
+          }, 2000);
+        } catch (err) {
+          // 降级方案
+          const textArea = document.createElement("textarea");
+          textArea.value = url;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+          alert("链接已复制: " + url);
+        }
       });
 
       addStudentBtn?.addEventListener("click", () => openModal());
@@ -4523,7 +4430,6 @@
         renderRangeRows();
       });
       importForm?.addEventListener("submit", handleImport);
-      exportBtn?.addEventListener("click", exportScores);
       rangeForm?.addEventListener("submit", handleRangeSave);
       searchInput.addEventListener("input", renderTable);
       classFilter.addEventListener("change", renderTable);
@@ -4537,7 +4443,6 @@
       });
 
       closeDetailModal?.addEventListener("click", closeStudentDetail);
-      editDetailBtn?.addEventListener("click", enableDetailEdit);
       studentDetailForm?.addEventListener("submit", saveDetailEdit);
       studentDetailModal?.addEventListener("click", (event) => {
         if (event.target === studentDetailModal) closeStudentDetail();
@@ -4550,13 +4455,9 @@
       });
 
       classStatsBody?.addEventListener("click", (event) => {
-        const shareClassName = event.target.getAttribute("data-share-class");
         const editClassName = event.target.getAttribute("data-edit-class");
         const deleteClassName = event.target.getAttribute("data-delete-class");
 
-        if (shareClassName) {
-          shareClassQuery(shareClassName);
-        }
         if (editClassName) {
           openClassEditModal(editClassName);
         }
@@ -4564,92 +4465,6 @@
           deleteClass(deleteClassName);
         }
       });
-
-      function shareClassQuery(className) {
-        shareClassName = className;
-        selectedDays = 30;
-        customDays.value = '';
-
-        // 获取该班级的所有考试
-        const classExams = new Set();
-        students.forEach(student => {
-          if (student.class_name === className && student.exam_name) {
-            classExams.add(student.exam_name);
-          }
-        });
-
-        // 填充考试选择下拉框
-        shareExamSelect.innerHTML = '<option value="">全部考试</option>';
-        Array.from(classExams).forEach(examName => {
-          const option = document.createElement('option');
-          option.value = examName;
-          option.textContent = examName;
-          shareExamSelect.appendChild(option);
-        });
-
-        shareModal.classList.add('active');
-      }
-
-      function closeShareModal() {
-        shareModal.classList.remove('active');
-        shareClassName = null;
-        selectedDays = 30;
-        customDays.value = '';
-        shareExamSelect.value = '';
-      }
-
-      async function generateShareLink() {
-        if (!shareClassName) return;
-
-        const days = customDays.value ? parseInt(customDays.value) : selectedDays;
-        const examName = shareExamSelect.value;
-
-        if (days < 1 || days > 365) {
-          showToast('有效期必须在1-365天之间', true);
-          return;
-        }
-
-        try {
-          const params = new URLSearchParams();
-          params.append('valid_days', days);
-          if (examName) {
-            params.append('exam_name', examName);
-          }
-
-          const res = await fetch(`${API_BASE}/class/${encodeURIComponent(shareClassName)}/share?${params.toString()}`, {
-            method: 'POST'
-          });
-
-          if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || '生成分享链接失败');
-          }
-
-          const result = await res.json();
-          const queryUrl = `${window.location.origin}/static/query.html?code=${result.code}`;
-
-          let toastMessage = `分享链接已复制到剪贴板！\n班级：${shareClassName}`;
-          if (examName) {
-            toastMessage += `\n考试：${examName}`;
-          } else {
-            toastMessage += `\n考试：全部考试`;
-          }
-          toastMessage += `\n有效期：${days}天\n过期时间：${new Date(result.expires_at).toLocaleString()}`;
-
-          // 复制到剪贴板
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(queryUrl);
-            showToast(toastMessage);
-          } else {
-            // 降级方案：显示链接让用户手动复制
-            prompt('请复制以下链接分享给家长：', queryUrl);
-          }
-
-          closeShareModal();
-        } catch (error) {
-          showToast(error.message, true);
-        }
-      }
 
       // 学生成绩对比走势图事件监听
 
@@ -4723,28 +4538,6 @@
         if (event.target === subjectSelectModal) {
           subjectSelectModal.classList.remove("active");
         }
-      });
-
-      // 分享弹窗事件监听
-      cancelShare?.addEventListener("click", closeShareModal);
-      confirmShare?.addEventListener("click", generateShareLink);
-      shareModal?.addEventListener("click", (event) => {
-        if (event.target === shareModal) closeShareModal();
-      });
-
-      // 快捷天数按钮点击事件
-      shareModal?.querySelectorAll('button[data-days]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          selectedDays = parseInt(btn.getAttribute('data-days'));
-          customDays.value = '';
-          // 高亮选中的按钮
-          shareModal.querySelectorAll('button[data-days]').forEach(b => {
-            b.style.background = '#e5e7eb';
-            b.style.color = '#111827';
-          });
-          btn.style.background = 'var(--primary)';
-          btn.style.color = 'white';
-        });
       });
 
       studentBody.addEventListener("click", (event) => {
@@ -4983,8 +4776,9 @@
               label: '人数',
               data: distribution,
               backgroundColor: '#3b82f6',
-              borderRadius: 8,
-              barThickness: 40
+              borderRadius: 4,
+              barPercentage: 0.6,
+              categoryPercentage: 0.8
             }]
           },
           options: {

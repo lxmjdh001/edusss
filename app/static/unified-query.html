@@ -197,7 +197,7 @@
         <div class="logo">
           <div class="logo-icon">📊</div>
           <h1>统一成绩查询</h1>
-          <p>输入姓名/学号和考试场次查询成绩</p>
+          <p>输入姓名或学号查询成绩</p>
         </div>
 
         <div class="error-message" id="errorMessage"></div>
@@ -211,13 +211,6 @@
               placeholder="请输入姓名或学号"
               required
             />
-          </div>
-
-          <div class="form-group">
-            <label for="examName">考试场次</label>
-            <select id="examName" required>
-              <option value="">请选择考试场次</option>
-            </select>
           </div>
 
           <button type="submit" class="btn" id="submitBtn">
@@ -241,7 +234,6 @@
       const errorMessage = document.getElementById('errorMessage');
       const queryForm = document.getElementById('queryForm');
       const studentInfoInput = document.getElementById('studentInfo');
-      const examNameSelect = document.getElementById('examName');
       const submitBtn = document.getElementById('submitBtn');
       const loading = document.getElementById('loading');
 
@@ -254,52 +246,17 @@
         }, 5000);
       }
 
-      // 加载考试场次列表
-      async function loadExams() {
-        try {
-          const res = await fetch(`${API_BASE}/exams`);
-          if (!res.ok) throw new Error('无法加载考试列表');
-
-          const exams = await res.json();
-
-          if (exams.length === 0) {
-            examNameSelect.innerHTML = '<option value="">暂无考试数据</option>';
-            return;
-          }
-
-          // 清空现有选项
-          examNameSelect.innerHTML = '<option value="">请选择考试场次</option>';
-
-          // 添加考试选项
-          exams.forEach((exam, index) => {
-            const option = document.createElement('option');
-            option.value = exam;
-            option.textContent = exam;
-            // 默认选中第一个（最新的）考试
-            if (index === 0) {
-              option.selected = true;
-            }
-            examNameSelect.appendChild(option);
-          });
-
-        } catch (error) {
-          console.error('加载考试列表失败:', error);
-          showError('加载考试列表失败，请刷新页面重试');
-        }
-      }
-
-      // 查询学生成绩
-      async function queryStudent(studentInfo, examName) {
+      // 查询学生成绩（不指定考试，返回该学生最新考试成绩）
+      async function queryStudent(studentInfo) {
         try {
           // 显示加载状态
           loading.classList.add('show');
           queryForm.style.display = 'none';
           submitBtn.disabled = true;
 
-          // 构建查询参数
+          // 构建查询参数（不传exam_name，后端返回该学生最新考试成绩）
           const params = new URLSearchParams({
-            keyword: studentInfo.trim(),
-            exam_name: examName
+            keyword: studentInfo.trim()
           });
 
           const res = await fetch(`${API_BASE}/public-query?${params.toString()}`);
@@ -322,7 +279,7 @@
           loading.classList.remove('show');
           queryForm.style.display = 'block';
           submitBtn.disabled = false;
-          showError(error.message || '查询失败，请检查姓名/学号和考试场次是否正确');
+          showError(error.message || '查询失败，请检查姓名或学号是否正确');
         }
       }
 
@@ -331,24 +288,13 @@
         e.preventDefault();
 
         const studentInfo = studentInfoInput.value.trim();
-        const examName = examNameSelect.value;
 
         if (!studentInfo) {
           showError('请输入姓名或学号');
           return;
         }
 
-        if (!examName) {
-          showError('请选择考试场次');
-          return;
-        }
-
-        await queryStudent(studentInfo, examName);
-      });
-
-      // 页面加载时获取考试列表
-      window.addEventListener('DOMContentLoaded', () => {
-        loadExams();
+        await queryStudent(studentInfo);
       });
     </script>
   </body>
