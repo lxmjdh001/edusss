@@ -1084,9 +1084,15 @@ async def import_students(
 
         try:
             name = _get_cell_value(row, header_map, "姓名")
-            student_no = _get_cell_value(row, header_map, "学号")
-            if not name or not student_no:
+            student_no_raw = _get_cell_value(row, header_map, "学号")
+            if not name or not student_no_raw:
                 continue
+            # 确保学号是字符串，处理数字格式（如 12345678.0 -> "12345678"）
+            if isinstance(student_no_raw, float):
+                student_no = str(int(student_no_raw)) if student_no_raw == int(student_no_raw) else str(student_no_raw)
+            else:
+                student_no = str(student_no_raw).strip()
+            name = str(name).strip()
             row_class = _get_cell_value(row, header_map, "班级") or class_name
             row_grade = _get_cell_value(row, header_map, "年级") or grade_name
             row_exam = _get_cell_value(row, header_map, "考试名称") or exam_name

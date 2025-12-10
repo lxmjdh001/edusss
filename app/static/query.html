@@ -176,14 +176,24 @@
       .subject-table .subject-name { text-align: left; font-weight: 500; }
 
       /* 学科分析样式 */
-      .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+      .analysis-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      @media (max-width: 400px) {
+        .analysis-grid { grid-template-columns: 1fr; }
+      }
       .analysis-item {
-        background: var(--bg);
+        background: #f9fafb;
         border-radius: 8px;
         padding: 12px;
+        border-left: 3px solid #d97706;
       }
+      .analysis-item.excellent { border-left-color: #059669; }
+      .analysis-item.good { border-left-color: #d97706; }
+      .analysis-item.pass { border-left-color: #2563eb; }
+      .analysis-item.fail { border-left-color: #dc2626; }
       .analysis-item h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
-      .analysis-item p { margin: 0; font-size: 12px; color: var(--subtext); line-height: 1.5; }
+      .analysis-item .detail { font-size: 11px; color: var(--subtext); line-height: 1.6; }
+      .analysis-item .detail div { margin-bottom: 2px; }
+      .analysis-item .status { margin-top: 6px; font-size: 11px; font-weight: 500; }
 
       /* 趋势分析样式 */
       .chart-section { margin-bottom: 20px; }
@@ -339,6 +349,10 @@
               <div class="label">待提高</div>
             </div>
           </div>
+          <h4 style="margin: 16px 0 10px; font-size: 13px;">各科成绩对比</h4>
+          <div style="height: 220px; position: relative; margin-bottom: 16px;">
+            <canvas id="overviewRadarChart"></canvas>
+          </div>
           <h4 style="margin: 16px 0 10px; font-size: 13px;">各科成绩详情</h4>
           <table class="subject-table">
             <thead>
@@ -358,12 +372,13 @@
 
         <!-- 学科分析标签页 -->
         <div class="tab-content" id="analysisTab">
+          <h4 style="margin: 0 0 12px; font-size: 13px;">详细分析报告</h4>
           <div class="analysis-grid" id="analysisGrid">
             <!-- 动态生成 -->
           </div>
-          <div style="margin-top: 16px; padding: 12px; background: var(--bg); border-radius: 8px;">
-            <h4 style="margin: 0 0 8px; font-size: 13px;">弱项分析</h4>
-            <div id="weaknessAnalysis" style="font-size: 12px; color: var(--subtext); line-height: 1.5;">
+          <div style="margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+            <h4 style="margin: 0 0 8px; font-size: 13px;">知识点与弱项分析</h4>
+            <div id="weaknessAnalysis" style="font-size: 12px; color: var(--subtext); line-height: 1.6;">
               <!-- 动态生成 -->
             </div>
           </div>
@@ -553,6 +568,9 @@
           document.getElementById('weakSubject').textContent = sorted[sorted.length - 1].subject;
         }
 
+        // 渲染雷达图
+        renderOverviewRadarChart(student);
+
         // 各科成绩表格
         const tbody = document.getElementById('subjectTableBody');
         tbody.innerHTML = '';
@@ -576,36 +594,151 @@
         });
       }
 
-      function renderAnalysisTab(student) {
+      // 渲染雷达图
+      async function renderOverviewRadarChart(student) {
+        const ctx = document.getElementById('overviewRadarChart');
+        if (!ctx) return;
+
         const scores = student.scores || [];
+        const subjects = scores.map(s => s.subject);
+        const values = scores.map(s => s.score);
+
+        // 获取班级平均分
+        let classAvg = values.map(v => v * 0.95); // 默认值
+        try {
+          const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
+          if (response.ok) {
+            const classStats = await response.json();
+            const statsMap = {};
+            classStats.subject_stats.forEach(stat => {
+              statsMap[stat.subject] = stat.average;
+            });
+            classAvg = subjects.map(subject => statsMap[subject] || 0);
+          }
+        } catch (error) {
+          console.error('获取班级统计数据失败:', error);
+        }
+
+        if (overviewRadarChart) {
+          overviewRadarChart.destroy();
+        }
+
+        overviewRadarChart = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: subjects,
+            datasets: [
+              {
+                label: '本人成绩',
+                data: values,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#2563eb'
+              },
+              {
+                label: '班级平均',
+                data: classAvg,
+                borderColor: '#dc2626',
+                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                pointBackgroundColor: '#dc2626',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#dc2626'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              r: {
+                beginAtZero: true,
+                max: 150,
+                ticks: { stepSize: 30, font: { size: 9 } }
+              }
+            },
+            plugins: {
+              legend: { position: 'top', labels: { font: { size: 10 } } }
+            }
+          }
+        });
+      }
+
+      async function renderAnalysisTab(student) {
+        const scores = student.scores || [];
+        const avgScore = student.average_score || 0;
         const grid = document.getElementById('analysisGrid');
-        grid.innerHTML = '';
 
-        scores.forEach(s => {
+        // 获取班级统计数据
+        let classAvgMap = {};
+        try {
+          const response = await fetch(`${API_BASE}/class-subject-stats?class_name=${encodeURIComponent(student.class_name)}&exam_name=${encodeURIComponent(student.exam_name)}`);
+          if (response.ok) {
+            const classStats = await response.json();
+            classStats.subject_stats.forEach(stat => {
+              classAvgMap[stat.subject] = stat.average;
+            });
+          }
+        } catch (error) {
+          console.error('获取班级数据失败:', error);
+        }
+
+        // 生成各科目详细分析
+        grid.innerHTML = scores.map(s => {
           const score = s.score || 0;
-          let analysis = '';
-          if (score >= 90) analysis = '成绩优秀，继续保持！';
-          else if (score >= 80) analysis = '成绩良好，还有提升空间。';
-          else if (score >= 60) analysis = '及格，需要加强练习。';
-          else analysis = '不及格，需要重点关注。';
+          const subject = s.subject;
 
-          grid.innerHTML += `
-            <div class="analysis-item">
-              <h4>${s.subject}: ${score}分</h4>
-              <p>${analysis}</p>
+          // 等级和颜色
+          let levelClass = 'fail', statusText = '✗ 低于及格线，需重点关注', statusColor = '#dc2626';
+          if (score >= 90) {
+            levelClass = 'excellent'; statusText = '✓ 优秀，继续保持'; statusColor = '#059669';
+          } else if (score >= 80) {
+            levelClass = 'good'; statusText = '○ 良好，需要继续努力'; statusColor = '#d97706';
+          } else if (score >= 60) {
+            levelClass = 'pass'; statusText = '△ 及格，属于及格线'; statusColor = '#2563eb';
+          }
+
+          // 与班级平均差距
+          const classAvg = classAvgMap[subject] || avgScore;
+          const diff = (score - classAvg).toFixed(1);
+          const diffText = diff > 0 ? `+${diff}` : diff;
+          const diffColor = diff >= 0 ? '#059669' : '#dc2626';
+
+          return `
+            <div class="analysis-item ${levelClass}">
+              <h4>${subject}详细分析</h4>
+              <div class="detail">
+                <div>得分率: <strong style="color: #111827;">${score.toFixed(1)}%</strong></div>
+                <div>与班级均分差: <strong style="color: ${diffColor};">${diffText}分</strong></div>
+              </div>
+              <div class="status" style="color: ${statusColor};">${statusText}</div>
             </div>
           `;
-        });
+        }).join('');
 
-        // 弱项分析
+        // 生成弱项分析
         const weaknessDiv = document.getElementById('weaknessAnalysis');
-        const weakSubjects = scores.filter(s => s.score < 60);
+        const weakSubjects = scores.map(s => {
+          const classAvg = classAvgMap[s.subject] || avgScore;
+          return { ...s, belowAvg: s.score < classAvg, diff: classAvg - s.score };
+        }).filter(s => s.belowAvg).sort((a, b) => b.diff - a.diff);
+
         if (weakSubjects.length > 0) {
-          weaknessDiv.innerHTML = `以下科目需要重点关注：${weakSubjects.map(s => s.subject).join('、')}`;
-          weaknessDiv.style.color = '#dc2626';
+          weaknessDiv.innerHTML = `
+            <ul style="margin: 0; padding-left: 16px; line-height: 1.8;">
+              ${weakSubjects.map(s => `
+                <li><strong>${s.subject}</strong>科目低于班级平均${s.diff.toFixed(1)}分，需要加强学习。</li>
+              `).join('')}
+              ${weakSubjects.length > 2 ? `<li>建议重点关注<strong>${weakSubjects[0].subject}</strong>和<strong>${weakSubjects[1].subject}</strong>。</li>` : ''}
+              <li>建议加强弱项训练，多做练习。</li>
+            </ul>
+          `;
+          weaknessDiv.style.color = '#374151';
         } else {
-          weaknessDiv.innerHTML = '各科成绩均已及格，继续保持！';
-          weaknessDiv.style.color = '#059669';
+          weaknessDiv.innerHTML = '<p style="margin: 0; color: #059669;">所有科目均达到或超过班级平均分，继续保持！</p>';
         }
       }
 
@@ -689,6 +822,7 @@
       // 标签页切换
       let scoreChart = null;
       let subjectChart = null;
+      let overviewRadarChart = null;
 
       document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', async () => {
@@ -836,6 +970,17 @@
         document.getElementById('levelItem').style.background = levelBg;
 
         const scores = Object.entries(examData.subject_scores || {}).map(([subject, score]) => ({ subject, score }));
+
+        // 更新 currentStudent 的考试信息用于雷达图和学科分析
+        if (currentStudent) {
+          currentStudent.exam_name = examData.exam_name;
+          currentStudent.scores = scores;
+          currentStudent.total_score = examData.total_score;
+          currentStudent.average_score = examData.average_score;
+          // 刷新雷达图和学科分析
+          renderOverviewRadarChart(currentStudent);
+          renderAnalysisTab(currentStudent);
+        }
 
         // 重新渲染表格
         const tbody = document.getElementById('subjectTableBody');
