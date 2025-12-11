@@ -631,21 +631,26 @@
 
         const scores = student.scores || [];
         const subjects = scores.map(s => s.subject);
-        const values = scores.map(s => s.score);
+        const values = scores.map(s => Number(s.score) || 0);
 
         // 使用传入的班级平均数据
-        const hasClassData = Object.keys(classAvgMap).length > 0;
-        const classAvg = hasClassData ? subjects.map(subject => classAvgMap[subject] || 0) : null;
+        const classAvgValues = Object.keys(classAvgMap).length > 0
+          ? subjects.map(subject => Number(classAvgMap[subject]) || 0)
+          : [];
+        const hasClassData = classAvgValues.length > 0;
 
         if (overviewRadarChart) {
           overviewRadarChart.destroy();
         }
 
         // 动态计算最大值
-        const allValues = hasClassData ? [...values, ...classAvg] : values;
-        const maxValue = Math.max(...allValues);
-        const radarMax = Math.ceil(maxValue / 20) * 20 || 100;
-        const stepSize = radarMax / 5;
+        const allValues = (hasClassData ? [...values, ...classAvgValues] : values)
+          .filter(v => Number.isFinite(v));
+        const maxValue = allValues.length ? Math.max(...allValues) : 0;
+        const tickCount = 5;
+        let radarMax = maxValue > 0 ? Math.ceil(maxValue / 10) * 10 : 100;
+        let stepSize = Math.max(5, Math.ceil(radarMax / tickCount));
+        radarMax = stepSize * tickCount;
 
         // 构建数据集
         const datasets = [{
@@ -663,7 +668,7 @@
         if (hasClassData) {
           datasets.push({
             label: '班级平均',
-            data: classAvg,
+            data: classAvgValues,
             borderColor: '#dc2626',
             backgroundColor: 'rgba(220, 38, 38, 0.1)',
             pointBackgroundColor: '#dc2626',
