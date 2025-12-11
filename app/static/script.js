@@ -9038,7 +9038,10 @@ refreshAllRulesDisplay() {
 		return;
 	  }
 	  
-	  this.applyRuleToStudent(this.currentStudent, ruleName, points);
+	  // 根据操作类型调整积分值：减分操作时，正数表示扣除
+	  const adjustedPoints = this.currentOperation === 'subtract' ? -Math.abs(points) : points;
+	  
+	  this.applyRuleToStudent(this.currentStudent, ruleName, adjustedPoints);
 	  this.closePointsModal();
 	}
 
@@ -9059,7 +9062,10 @@ refreshAllRulesDisplay() {
 		return;
 	  }
 	  
-	  this.applyRuleToGroup(this.currentGroup, ruleName, points);
+	  // 根据操作类型调整积分值：减分操作时，正数表示扣除
+	  const adjustedPoints = this.currentOperation === 'subtract' ? -Math.abs(points) : points;
+	  
+	  this.applyRuleToGroup(this.currentGroup, ruleName, adjustedPoints);
 	  this.closeGroupPointsModal();
 	}
 
@@ -9094,9 +9100,13 @@ refreshAllRulesDisplay() {
 		return;
 	  }
 	  
+	  // 批量操作中，临时规则输入正数表示加分，负数表示减分
+	  // 用户需要明确输入正数或负数来指定操作类型
+	  const adjustedPoints = points;
+	  
 	  // 应用规则到所有选中的学生
 	  selectedIndexes.forEach(index => {
-		this.applyRuleToStudent(index, ruleName, points);
+		this.applyRuleToStudent(index, ruleName, adjustedPoints);
 	  });
 	  
 	  this.closeBatchModal();
@@ -9134,9 +9144,13 @@ applyTempBatchGroupRule() {
     return;
   }
   
+  // 批量操作中，临时规则输入正数表示加分，负数表示减分
+  // 用户需要明确输入正数或负数来指定操作类型
+  const adjustedPoints = points;
+  
   // 应用规则到所有选中的小组
   selectedIndexes.forEach(index => {
-    this.applyRuleToGroup(index, ruleName, points);
+    this.applyRuleToGroup(index, ruleName, adjustedPoints);
   });
   
   this.closeBatchModal();

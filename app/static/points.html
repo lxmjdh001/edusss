@@ -177,7 +177,7 @@
 		  <h4>➕ 临时积分规则</h4>
 		  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
 			<input type="text" id="tempRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
-			<input type="number" id="tempRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+			<input type="number" id="tempRulePoints" class="modal-input" placeholder="积分值" min="1" style="margin: 0;">
 		  </div>
 		  <button class="btn btn-info" id="addTempRuleBtn" style="width: 100%;">添加临时规则并应用</button>
 		</div>
@@ -203,7 +203,7 @@
 		  <h4>➕ 临时小组规则</h4>
 		  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
 			<input type="text" id="tempGroupRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
-			<input type="number" id="tempGroupRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+			<input type="number" id="tempGroupRulePoints" class="modal-input" placeholder="积分值" min="1" style="margin: 0;">
 		  </div>
 		  <button class="btn btn-info" id="addTempGroupRuleBtn" style="width: 100%;">添加临时规则并应用</button>
 		</div>
@@ -495,13 +495,10 @@
           </div>
         </div>
         
-        <div class="modal-buttons" style="margin-top: 20px;">
+        <div class="modal-buttons horizontal-buttons" style="margin-top: 20px;">
           <button class="btn btn-primary" id="confirmPetSelection">确认选择</button>
+          <button class="btn btn-secondary modal-close-btn" id="closeHistoryBtn">关闭</button>
         </div>
-      </div>
-      
-      <div class="modal-buttons">
-        <button class="btn btn-secondary modal-close-btn" id="closeHistoryBtn">关闭</button>
       </div>
     </div>
   </div>
@@ -546,13 +543,10 @@
           </div>
         </div>
         
-        <div class="modal-buttons" style="margin-top: 20px;">
+        <div class="modal-buttons horizontal-buttons" style="margin-top: 20px;">
           <button class="btn btn-primary" id="confirmGroupPetSelection">确认选择</button>
+          <button class="btn btn-secondary modal-close-btn" id="closeGroupHistoryBtn">关闭</button>
         </div>
-      </div>
-      
-      <div class="modal-buttons">
-        <button class="btn btn-secondary modal-close-btn" id="closeGroupHistoryBtn">关闭</button>
       </div>
     </div>
   </div>
@@ -751,7 +745,7 @@
 		<h4>➕ 临时积分规则</h4>
 		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
 		  <input type="text" id="tempBatchRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
-		  <input type="number" id="tempBatchRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+		  <input type="number" id="tempBatchRulePoints" class="modal-input" placeholder="积分值（正数加分，负数减分）" style="margin: 0;">
 		</div>
 		<button class="btn btn-info" id="addTempBatchRuleBtn" style="width: 100%;">添加临时规则并应用</button>
 	  </div>
@@ -791,7 +785,7 @@
 		<h4>➕ 临时小组规则</h4>
 		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
 		  <input type="text" id="tempBatchGroupRuleName" class="modal-input" placeholder="输入规则名称" style="margin: 0;">
-		  <input type="number" id="tempBatchGroupRulePoints" class="modal-input" placeholder="积分值" style="margin: 0;">
+		  <input type="number" id="tempBatchGroupRulePoints" class="modal-input" placeholder="积分值（正数加分，负数减分）" style="margin: 0;">
 		</div>
 		<button class="btn btn-info" id="addTempBatchGroupRuleBtn" style="width: 100%;">添加临时规则并应用</button>
 	  </div>
