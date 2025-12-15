@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>班级幸运抽奖大转盘</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <style>
         body {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
@@ -202,6 +202,16 @@
             animation: fadeIn 0.5s;
         }
         
+        .title-input {
+            border: 1px solid #cbd5e0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 16px;
+            color: #2d3748;
+            background: white;
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.9); }
             to { opacity: 1; transform: scale(1); }
@@ -256,11 +266,15 @@
         .btn-container {
             display: flex;
             justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
             position: fixed;
             bottom: 30px;
             left: 0;
             right: 0;
             z-index: 90;
+            padding: 0 20px;
         }
         
         textarea {
@@ -341,6 +355,25 @@
             background: #4299e1;
             border-radius: 50%;
             cursor: pointer;
+        }
+        
+        .control-item {
+            margin-bottom: 16px;
+        }
+        
+        .btn-icon {
+            margin-right: 8px;
+        }
+        
+        .btn-spacing {
+            margin-left: 16px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
         }
         
         /* 撒花效果 */
@@ -548,7 +581,7 @@
         <h1 id="mainTitle" class="title">班级幸运抽奖大转盘</h1>
         
         <div class="flex justify-center mb-8">
-            <button id="inputDataBtn" class="btn btn-warning">
+            <button id="inputDataBtn" class="btn btn-warning" style="margin: 0 auto;">
                 <i class="fas fa-edit mr-2"></i>输入内容
             </button>
         </div>
@@ -567,27 +600,27 @@
 
             <!-- 2️⃣ 原有“从商店获取奖品” -->
             <button id="loadShopBtn" class="btn btn-info">
-                <i class="fas fa-store mr-2"></i>从商店获取奖品
+                <i class="fas fa-store btn-icon"></i>从商店获取奖品
             </button>
 
             <!-- 3️⃣ 其余按钮保持原顺序 -->
             <button id="startSpin" class="btn btn-primary">
-                <i class="fas fa-play mr-2"></i>开始抽奖
+                <i class="fas fa-play btn-icon"></i>开始抽奖
             </button>
             <button id="stopSpin" class="btn btn-danger">
-                <i class="fas fa-stop mr-2"></i>停止抽奖
+                <i class="fas fa-stop btn-icon"></i>停止抽奖
             </button>
             <button id="resetBtn" class="btn btn-info">
-                <i class="fas fa-redo mr-2"></i>初始化
+                <i class="fas fa-redo btn-icon"></i>初始化
             </button>
             <button id="saveAsPNG" class="btn">
-                <i class="fas fa-download mr-2"></i>保存图片
+                <i class="fas fa-download btn-icon"></i>保存图片
             </button>
             <button id="changeBgBtn" class="btn">
-                <i class="fas fa-image mr-2"></i>更换背景
+                <i class="fas fa-image btn-icon"></i>更换背景
             </button>
             <button id="backHomeBtn" class="btn btn-info">
-                <i class="fas fa-home mr-2"></i>返回主页
+                <i class="fas fa-home btn-icon"></i>返回主页
             </button>
         </div>
 
@@ -608,11 +641,11 @@
         <div class="bg-option">
             <label>背景图片</label>
             <label for="bgImageUpload" class="bg-upload-btn">
-                <i class="fas fa-upload mr-2"></i>上传图片
+                <i class="fas fa-upload btn-icon"></i>上传图片
             </label>
             <input type="file" id="bgImageUpload" accept="image/*">
             <button id="removeBgImage" class="btn btn-danger" style="width:100%;">
-                <i class="fas fa-trash mr-2"></i>移除背景图片
+                <i class="fas fa-trash btn-icon"></i>移除背景图片
             </button>
         </div>
         <div class="bg-btns">
@@ -625,23 +658,23 @@
         <div class="control-panel-toggle" id="controlPanelToggle">
             <i class="fas fa-sliders-h"></i>
         </div>
-        <div class="mb-4">
+        <div class="control-item">
             <label for="sizeSlider">转盘大小</label>
             <input type="range" id="sizeSlider" min="100" max="650" value="300">
         </div>
-        <div class="mb-4">
+        <div class="control-item">
             <label for="textSizeSlider">文字大小</label>
             <input type="range" id="textSizeSlider" min="10" max="30" value="16">
         </div>
-        <div class="mb-4">
+        <div class="control-item">
             <label for="textAreaSizeSlider">文字位置</label>
             <input type="range" id="textAreaSizeSlider" min="0.5" max="2" step="0.1" value="1">
         </div>
-        <div>
+        <div class="control-item">
             <label for="speedSlider">转盘转速</label>
             <input type="range" id="speedSlider" min="5" max="30" value="15">
         </div>
-		<div class="mb-4">
+		<div class="control-item">
 			<label for="wheelPositionSlider">转盘高度</label>
 			<input type="range" id="wheelPositionSlider" min="-100" max="100" value="0">
 		</div>
@@ -654,7 +687,7 @@
         <div class="history-title">抽取记录</div>
         <div id="historyList"></div>
         <button id="exportHistory" class="btn history-export">
-            <i class="fas fa-file-excel mr-2"></i>导出Excel
+            <i class="fas fa-file-excel btn-icon"></i>导出Excel
         </button>
     </div>
     
@@ -664,8 +697,8 @@
             <div class="import-section">
                 <h3>导入文本文件</h3>
                 <label for="fileInput" class="import-file-btn">
-                    <i class="fas fa-file-import mr-2"></i>选择文本文件
-                </label>
+                <i class="fas fa-file-import btn-icon"></i>选择文本文件
+            </label>
                 <input type="file" id="fileInput" class="file-input" accept=".txt">
                 <p style="font-size: 12px; text-align: center; margin-top: 5px;">支持.txt文件，每行一个选项</p>
             </div>
@@ -675,9 +708,9 @@
 二等奖
 三等奖
 纪念奖"></textarea>
-            <div>
+            <div class="modal-buttons">
                 <button id="saveData" class="btn btn-primary">保存内容</button>
-                <button id="cancelInput" class="btn btn-danger ml-4">取消</button>
+                <button id="cancelInput" class="btn btn-danger">取消</button>
             </div>
         </div>
     </div>
@@ -685,10 +718,10 @@
     <div id="titleModal" class="modal">
         <div class="modal-content">
             <h2>修改标题</h2>
-            <input type="text" id="titleInput" class="border border-gray-300 p-2 rounded w-full mb-4 text-black" value="终极炫酷抽奖大转盘">
-            <div>
+            <input type="text" id="titleInput" class="title-input" value="终极炫酷抽奖大转盘">
+            <div class="modal-buttons">
                 <button id="saveTitle" class="btn btn-primary">保存</button>
-                <button id="cancelTitle" class="btn btn-danger ml-4">取消</button>
+                <button id="cancelTitle" class="btn btn-danger">取消</button>
             </div>
         </div>
     </div>
@@ -1039,7 +1072,14 @@
             drawWheel();
             
             // 播放中奖音效
-            winSound.play();
+            try {
+                if (winSound && winSound.play) {
+                    winSound.currentTime = 0;
+                    winSound.play().catch(e => console.log('中奖音效播放失败:', e));
+                }
+            } catch (e) {
+                console.log('中奖音效播放错误:', e);
+            }
             
             // 创建撒花效果
             createConfetti();
@@ -1247,7 +1287,14 @@
             drawWheel();
             
             // 播放开始音效
-            startSound.play();
+            try {
+                if (startSound && startSound.play) {
+                    startSound.currentTime = 0;
+                    startSound.play().catch(e => console.log('开始音效播放失败:', e));
+                }
+            } catch (e) {
+                console.log('开始音效播放错误:', e);
+            }
             
             spinWheel();
         });
@@ -1268,9 +1315,18 @@
                 slowDownSpeed = Math.max(0.3, Math.min(1.5, slowDownSpeed));
                 
                 // 停止开始音效并播放停止音效
-                startSound.pause();
-                startSound.currentTime = 0;
-                stopSound.play();
+                try {
+                    if (startSound && startSound.pause) {
+                        startSound.pause();
+                        startSound.currentTime = 0;
+                    }
+                    if (stopSound && stopSound.play) {
+                        stopSound.currentTime = 0;
+                        stopSound.play().catch(e => console.log('停止音效播放失败:', e));
+                    }
+                } catch (e) {
+                    console.log('停止音效播放错误:', e);
+                }
             }
         });
 
@@ -1388,7 +1444,7 @@
 			
 			// 返回主页
 document.getElementById('backHomeBtn').addEventListener('click', () => {
-  location.href = '积分成长系统.html';   // 如主页文件名不同请自行修改
+  location.href = 'points.html';   // 跳转到积分管理页面
 });
 
 /* ===== 直接读全局商店 ===== */
@@ -1396,18 +1452,74 @@ function getShopPrizes() {
   // 全局商店键名就是 classPointsGlobalShopItems
   const raw = localStorage.getItem('classPointsGlobalShopItems');
   console.log('【debug】全局商店内容 =', raw);
-  if (!raw) return [];
+  if (!raw) {
+    console.log('【debug】未找到全局商店数据');
+    return [];
+  }
   try {
     const items = JSON.parse(raw);
-    return items.map(it => it.name);
+    console.log('【debug】解析后的商店数据 =', items);
+    
+    // 增强数据格式检查
+    if (!Array.isArray(items)) {
+      console.log('【debug】商店数据不是数组格式，尝试处理为对象或字符串');
+      // 如果是对象，尝试提取items属性
+      if (items && typeof items === 'object' && items.items) {
+        return getShopPrizesFromItems(items.items);
+      }
+      // 如果是字符串，直接返回
+      if (typeof items === 'string') {
+        return [items];
+      }
+      return [];
+    }
+    
+    // 处理数组格式的数据
+    return getShopPrizesFromItems(items);
   } catch (e) {
     console.log('【debug】全局解析失败', e);
     return [];
+  }
 }
+
+// 辅助函数：从商品数组中提取奖品名称
+function getShopPrizesFromItems(items) {
+  if (!Array.isArray(items)) return [];
+  
+  const prizes = items.map(it => {
+    if (typeof it === 'string') return it;
+    if (it && typeof it === 'object') {
+      // 尝试多种可能的字段名
+      return it.name || it.title || it.item || it.text || it.label || '';
+    }
+    return '';
+  }).filter(name => name.trim() !== '');
+  
+  console.log('【debug】提取的奖品列表 =', prizes);
+  return prizes;
 }
 
 /* ===== 按钮事件 ===== */
 document.getElementById('loadShopBtn').addEventListener('click', () => {
+  // 先详细检查数据格式
+  const raw = localStorage.getItem('classPointsGlobalShopItems');
+  console.log('【详细检查】原始数据:', raw);
+  
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      console.log('【详细检查】解析后数据:', parsed);
+      console.log('【详细检查】数据类型:', typeof parsed);
+      console.log('【详细检查】是否为数组:', Array.isArray(parsed));
+      if (Array.isArray(parsed)) {
+        console.log('【详细检查】数组长度:', parsed.length);
+        console.log('【详细检查】数组内容:', parsed);
+      }
+    } catch (e) {
+      console.log('【详细检查】解析错误:', e);
+    }
+  }
+  
   const prizes = getShopPrizes();
   if (prizes.length === 0) {
     console.log('全局商店也空，请先去主页-系统配置-全局配置里添加商品！');
@@ -1469,8 +1581,25 @@ document.addEventListener('DOMContentLoaded', () => {
   /* 1. 再读本地存储（此时本地若保存过直径，也把它约束到新范围） */
   loadFromLocalStorage();
 
-  /* 2. 如果已经有数据，画转盘 */
-  if (data.length) drawWheel();
+  /* 2. 如果有数据，检查数据来源并决定是否显示转盘 */
+  if (data.length > 0) {
+    // 检查是否是学生名字（包含中文字符）
+    const hasChineseChars = data.some(item => /[\u4e00-\u9fa5]/.test(item));
+    
+    // 检查是否是商店商品（通过检查是否有商品数据存在）
+    const hasShopData = localStorage.getItem('classPointsGlobalShopItems');
+    
+    // 如果是学生名字且没有商店数据，清空数据
+    if (hasChineseChars && !hasShopData) {
+      // 如果是学生名字，清空数据，不显示转盘
+      data = [];
+      inputData.value = '';
+      saveToLocalStorage();
+    } else {
+      // 如果是奖品数据或者有商店数据，显示转盘
+      drawWheel();
+    }
+  }
 });
 
 /* 按比例初始化 / 修正本地旧值 */
