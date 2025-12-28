@@ -1,4 +1,4 @@
-class ClassPointsSystem {
+﻿class ClassPointsSystem {
 	
 // 增强的通用兜底方法
 getStageImage(stage, index, type) {
@@ -170,10 +170,6 @@ toggleDisplayMode() {
     this.editingGroupIndex=null;
     this.editingStudentIndex=null;
     
-    // 排序相关属性
-    this.currentSortMode = 'none'; // 当前排序模式：'none', 'name_asc', 'name_desc', 'points_asc', 'points_desc'
-    this.sortDirection = 'asc'; // 当前排序方向：'asc' 或 'desc'
-    
     // 计时器变量
     this.stopwatchRunning = false;
     this.stopwatchElapsed = 0;
@@ -238,14 +234,10 @@ toggleDisplayMode() {
             this.closeEditGroupModal();
           } else if (modalId === 'statisticsModal') {
             this.closeStatistics();
-          } else if (modalId === 'statisticsDetailModal') {
-            this.closeStatisticsDetail();
           } else if (modalId === 'randomNameModal') {
             this.closeRandomNameModal();
           } else if (modalId === 'timerModal') {
             this.closeTimerModal();
-          } else if (modalId === 'techSupportModal') {
-            this.closeTechSupportModal();
           }
         }
       });
@@ -436,60 +428,44 @@ renderPetConfig() {
       headerDiv.className = 'pet-config-header';
       headerDiv.innerHTML = `
         <div class="pet-config-type-info" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <!-- 多选框 -->
-            <input 
-              type="checkbox" 
-              class="pet-type-checkbox" 
-              data-pet-type="${type.id}"
-              style="width: 16px; height: 16px; cursor: pointer;"
-            >
-            <div class="pet-config-basic-info" style="display: flex; align-items: center; gap: 8px;">
-              <div class="pet-config-emoji" style="background: ${type.color}30; color: ${type.color}; padding: 8px; border-radius: 8px; font-size: 24px; margin-right: 15px;">
-                ${type.emoji}
-              </div>
-              <input 
-                type="text" 
-                class="pet-config-name-input" 
-                value="${type.name}" 
-                data-pet-type="${type.id}"
-                placeholder="宠物名称"
-                style="width: 100px; flex-shrink: 0;"
-              >
-              <input 
-                type="text" 
-                class="pet-config-emoji-input" 
-                value="${type.emoji}" 
-                data-pet-type="${type.id}"
-                placeholder="表情符号"
-                style="width: 60px; text-align: center;"
-                maxlength="2"
-              >
-              <input 
-                type="color" 
-                class="pet-config-color-input" 
-                value="${type.color}" 
-                data-pet-type="${type.id}"
-                style="width: 50px; height: 32px; cursor: pointer;"
-              >
+          <div style="display: flex; align-items: center;">
+            <div class="pet-config-emoji" style="background: ${type.color}30; color: ${type.color}; padding: 8px; border-radius: 8px; font-size: 24px; margin-right: 15px;">
+              ${type.emoji}
             </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button 
-              class="btn btn-info btn-sm batch-apply-pet-btn" 
+            <div class="pet-config-basic-info">
+            <input 
+              type="text" 
+              class="pet-config-name-input" 
+              value="${type.name}" 
               data-pet-type="${type.id}"
-              style="padding: 4px 12px; font-size: 0.8em;"
+              placeholder="宠物名称"
+              style="width: 120px; margin-right: 10px;"
             >
-              批量应用
-            </button>
-            <button 
-              class="btn btn-danger btn-sm delete-pet-type-btn" 
+            <input 
+              type="text" 
+              class="pet-config-emoji-input" 
+              value="${type.emoji}" 
               data-pet-type="${type.id}"
-              style="padding: 4px 12px; font-size: 0.8em;"
+              placeholder="表情符号"
+              style="width: 60px; margin-right: 10px; text-align: center;"
+              maxlength="2"
             >
-              删除
-            </button>
+            <input 
+              type="color" 
+              class="pet-config-color-input" 
+              value="${type.color}" 
+              data-pet-type="${type.id}"
+              style="width: 50px; height: 32px; cursor: pointer;"
+            >
           </div>
+          </div>
+          <button 
+            class="btn btn-danger btn-sm delete-pet-type-btn" 
+            data-pet-type="${type.id}"
+            style="margin-left: 10px; padding: 4px 12px; font-size: 0.8em;"
+          >
+            删除
+          </button>
         </div>
       `;
     
@@ -497,7 +473,7 @@ renderPetConfig() {
     const levelsDiv = document.createElement('div');
     levelsDiv.className = 'pet-config-levels';
     levelsDiv.style.display = 'grid';
-    levelsDiv.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    levelsDiv.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))';
     levelsDiv.style.gap = '15px';
     levelsDiv.style.marginTop = '15px';
     
@@ -609,81 +585,15 @@ renderPetConfig() {
   // 添加事件监听器
   this.addPetConfigEventListeners();
   
-  // 创建顶部操作栏（在宠物标签上方）
-  const topActionsDiv = document.createElement('div');
-  topActionsDiv.className = 'top-actions';
-  topActionsDiv.style.display = 'flex';
-  topActionsDiv.style.alignItems = 'center';
-  topActionsDiv.style.justifyContent = 'space-between';
-  topActionsDiv.style.marginBottom = '20px';
-  topActionsDiv.style.padding = '15px';
-  topActionsDiv.style.background = '#f8fafc';
-  topActionsDiv.style.borderRadius = '8px';
-  topActionsDiv.style.border = '1px solid #e2e8f0';
-  
-  // 左侧：添加新宠物按钮
-  const leftActionsDiv = document.createElement('div');
-  leftActionsDiv.style.display = 'flex';
-  leftActionsDiv.style.alignItems = 'center';
-  leftActionsDiv.style.gap = '15px';
-  
+  // 添加添加宠物类型按钮
   const addPetTypeBtn = document.createElement('button');
   addPetTypeBtn.className = 'btn btn-primary';
   addPetTypeBtn.textContent = '添加新宠物类型';
+  addPetTypeBtn.style.marginTop = '20px';
   addPetTypeBtn.addEventListener('click', () => {
     this.addNewPetType();
   });
-  
-  // 批量导入宠物按钮
-  const importPetsBtn = document.createElement('button');
-  importPetsBtn.className = 'btn btn-info';
-  importPetsBtn.textContent = '批量导入宠物';
-  importPetsBtn.addEventListener('click', () => {
-    this.batchImportPets();
-  });
-  
-  leftActionsDiv.appendChild(addPetTypeBtn);
-  leftActionsDiv.appendChild(importPetsBtn);
-  
-  // 右侧：批量操作区域
-  const rightActionsDiv = document.createElement('div');
-  rightActionsDiv.style.display = 'flex';
-  rightActionsDiv.style.alignItems = 'center';
-  rightActionsDiv.style.gap = '15px';
-  
-  // 全选/取消全选按钮
-  const selectAllBtn = document.createElement('button');
-  selectAllBtn.className = 'btn btn-secondary btn-sm';
-  selectAllBtn.textContent = '全选';
-  selectAllBtn.id = 'selectAllPetTypes';
-  
-  // 批量删除按钮
-  const batchDeleteBtn = document.createElement('button');
-  batchDeleteBtn.className = 'btn btn-danger';
-  batchDeleteBtn.textContent = '批量删除 (0)';
-  batchDeleteBtn.id = 'batchDeletePetTypes';
-  batchDeleteBtn.disabled = true;
-  
-  // 选中数量显示
-  const selectedCountSpan = document.createElement('span');
-  selectedCountSpan.id = 'selectedPetTypesCount';
-  selectedCountSpan.textContent = '已选择 0 个宠物类型';
-  selectedCountSpan.style.color = '#667eea';
-  selectedCountSpan.style.fontWeight = 'bold';
-  
-  rightActionsDiv.appendChild(selectAllBtn);
-  rightActionsDiv.appendChild(batchDeleteBtn);
-  rightActionsDiv.appendChild(selectedCountSpan);
-  
-  // 组合左右两侧
-  topActionsDiv.appendChild(leftActionsDiv);
-  topActionsDiv.appendChild(rightActionsDiv);
-  
-  // 将顶部操作栏插入到宠物标签上方
-  container.insertBefore(topActionsDiv, tabsContainer);
-  
-  // 添加批量操作事件监听器
-  this.addBatchActionsEventListeners();
+  container.appendChild(addPetTypeBtn);
 }
 
 // 添加新宠物类型
@@ -753,745 +663,6 @@ deletePetType(petTypeId) {
   
   // 重新渲染宠物配置界面
   this.renderPetConfig();
-}
-
-// 添加批量操作事件监听器
-addBatchActionsEventListeners() {
-  // 多选框选择事件
-  document.addEventListener('change', (e) => {
-    if (e.target.classList.contains('pet-type-checkbox')) {
-      this.updateBatchActionsState();
-    }
-  });
-  
-  // 全选/取消全选按钮
-  const selectAllBtn = document.getElementById('selectAllPetTypes');
-  if (selectAllBtn) {
-    selectAllBtn.addEventListener('click', () => {
-      this.toggleSelectAllPetTypes();
-    });
-  }
-  
-  // 批量删除按钮
-  const batchDeleteBtn = document.getElementById('batchDeletePetTypes');
-  if (batchDeleteBtn) {
-    batchDeleteBtn.addEventListener('click', () => {
-      this.batchDeletePetTypes();
-    });
-  }
-}
-
-// 更新批量操作状态
-updateBatchActionsState() {
-  const checkboxes = document.querySelectorAll('.pet-type-checkbox');
-  const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-  const totalCount = checkboxes.length;
-  
-  // 更新选中数量显示
-  const selectedCountSpan = document.getElementById('selectedPetTypesCount');
-  if (selectedCountSpan) {
-    selectedCountSpan.textContent = `已选择 ${selectedCount} 个宠物类型`;
-  }
-  
-  // 更新批量删除按钮
-  const batchDeleteBtn = document.getElementById('batchDeletePetTypes');
-  if (batchDeleteBtn) {
-    batchDeleteBtn.textContent = `批量删除 (${selectedCount})`;
-    batchDeleteBtn.disabled = selectedCount === 0;
-  }
-  
-  // 更新全选按钮状态
-  const selectAllBtn = document.getElementById('selectAllPetTypes');
-  if (selectAllBtn) {
-    if (selectedCount === totalCount && totalCount > 0) {
-      selectAllBtn.textContent = '取消全选';
-      selectAllBtn.classList.add('btn-warning');
-      selectAllBtn.classList.remove('btn-secondary');
-    } else {
-      selectAllBtn.textContent = '全选';
-      selectAllBtn.classList.remove('btn-warning');
-      selectAllBtn.classList.add('btn-secondary');
-    }
-  }
-}
-
-// 全选/取消全选宠物类型
-toggleSelectAllPetTypes() {
-  const checkboxes = document.querySelectorAll('.pet-type-checkbox');
-  const selectAllBtn = document.getElementById('selectAllPetTypes');
-  
-  if (!selectAllBtn) return;
-  
-  const isSelectingAll = selectAllBtn.textContent === '全选';
-  
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = isSelectingAll;
-  });
-  
-  this.updateBatchActionsState();
-}
-
-// 批量删除宠物类型
-batchDeletePetTypes() {
-  const selectedCheckboxes = document.querySelectorAll('.pet-type-checkbox:checked');
-  const selectedCount = selectedCheckboxes.length;
-  
-  if (selectedCount === 0) {
-    alert('请先选择要删除的宠物类型');
-    return;
-  }
-  
-  // 确认删除对话框
-  const confirmed = confirm(`确定要删除选中的 ${selectedCount} 个宠物类型吗？此操作不可撤销`);
-  if (!confirmed) {
-    return;
-  }
-  
-  try {
-    // 收集要删除的宠物类型ID
-    const petTypeIdsToDelete = Array.from(selectedCheckboxes).map(cb => cb.dataset.petType);
-    
-    // 批量删除
-    petTypeIdsToDelete.forEach(petTypeId => {
-      this.deletePetTypeById(petTypeId);
-    });
-    
-    // 保存配置
-    this.saveAllPetConfig();
-    
-    // 重新渲染界面
-    this.renderPetConfig();
-    
-    // 显示成功提示
-    alert(`成功删除 ${selectedCount} 个宠物类型`);
-    
-  } catch (error) {
-    console.error('批量删除宠物类型失败:', error);
-    alert('删除过程中出现错误，请重试');
-  }
-}
-
-// 根据ID删除宠物类型（不显示确认对话框）
-deletePetTypeById(petTypeId) {
-  // 从宠物类型数组中删除
-  const index = this.petTypes.findIndex(type => type.id === petTypeId);
-  if (index === -1) {
-    return;
-  }
-  
-  this.petTypes.splice(index, 1);
-  
-  // 删除相关的等级名称配置
-  if (this.petStagesByType && this.petStagesByType[petTypeId]) {
-    delete this.petStagesByType[petTypeId];
-  }
-  
-  // 删除相关的图片配置
-  if (this.petImages && this.petImages[petTypeId]) {
-    delete this.petImages[petTypeId];
-  }
-}
-
-// 批量导入宠物功能
-batchImportPets() {
-  this.showNotification('请选择包含宠物数据的文件夹（支持单个宠物文件夹或"宠物"主文件夹）', 'info');
-  
-  // 创建文件夹选择对话框
-  const folderInput = document.createElement('input');
-  folderInput.type = 'file';
-  folderInput.webkitdirectory = true;
-  folderInput.multiple = true;
-  folderInput.style.display = 'none';
-  
-  folderInput.addEventListener('change', (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length === 0) {
-      this.showNotification('未选择任何文件夹', 'warning');
-      return;
-    }
-    
-    // 检测是否为单个宠物文件夹
-    const isSinglePetFolder = this.isSinglePetFolder(files);
-    
-    if (isSinglePetFolder) {
-      // 单个宠物文件夹模式：直接处理所有文件
-      this.selectFolderDialog(files);
-    } else {
-      // 批量导入模式：验证是否选择了"宠物"文件夹
-      const petFolderFiles = files.filter(file => 
-        file.webkitRelativePath.includes('宠物/') || 
-        file.webkitRelativePath.startsWith('宠物/')
-      );
-      
-      if (petFolderFiles.length === 0) {
-        this.showNotification('请选择名为"宠物"的主文件夹或包含1-6.jpg和等级名称.txt的单个宠物文件夹', 'error');
-        return;
-      }
-      
-      this.selectFolderDialog(petFolderFiles);
-    }
-  });
-  
-  document.body.appendChild(folderInput);
-  folderInput.click();
-  document.body.removeChild(folderInput);
-}
-
-// 文件夹选择对话框处理
-selectFolderDialog(files) {
-  // 解析文件夹结构
-  const folderStructure = this.parseFolderStructure(files);
-  
-  // 验证宠物文件夹结构
-  const validationResult = this.validatePetFolders(folderStructure);
-  if (!validationResult.isValid) {
-    this.showNotification(`文件夹结构验证失败: ${validationResult.message}`, 'error');
-    return;
-  }
-  
-  // 显示导入确认对话框
-  this.showImportConfirmationDialog(folderStructure);
-}
-
-// 解析文件夹结构
-parseFolderStructure(files) {
-  const structure = {};
-  
-  files.forEach(file => {
-    const pathParts = file.webkitRelativePath.split('/');
-    const fileName = pathParts[pathParts.length - 1];
-    
-    // 检测是否选择了单个宠物文件夹（直接包含1-6.jpg和等级名称.txt）
-    const isSinglePetFolder = this.isSinglePetFolder(files);
-    
-    let petName;
-    
-    if (isSinglePetFolder) {
-      // 单个宠物文件夹模式：使用文件夹名作为宠物名
-      // 对于单个文件夹，路径结构应该是 [文件夹名]/文件名
-      petName = pathParts[0]; // 获取第一个路径部分（文件夹名）
-      if (!petName || petName === '宠物') {
-        // 如果文件夹名为"宠物"，则使用默认名称
-        petName = '导入的宠物';
-      }
-    } else {
-      // 批量导入模式：查找宠物文件夹下的子文件夹
-      // 路径结构应该是 宠物/[宠物名]/文件名
-      const petFolderIndex = pathParts.indexOf('宠物');
-      if (petFolderIndex === -1) {
-        // 如果没有找到"宠物"文件夹，跳过此文件
-        return;
-      }
-      
-      petName = pathParts[petFolderIndex + 1];
-      if (!petName) {
-        // 如果宠物名为空，跳过此文件
-        return;
-      }
-    }
-    
-    if (!structure[petName]) {
-      structure[petName] = {
-        images: {},
-        levelNames: null
-      };
-    }
-    
-    // 处理图片文件（严格验证命名格式）
-    if (fileName.match(/^[1-6]\.jpg$/i)) {
-      const level = parseInt(fileName.split('.')[0]);
-      
-      // 验证图片文件命名规范
-      if (level < 1 || level > 6) {
-        throw new Error(`图片文件名格式错误：${fileName}，应为1.jpg到6.jpg`);
-      }
-      
-      structure[petName].images[level] = file;
-    }
-    
-    // 处理等级名称文件（支持大小写）
-    if (fileName.toLowerCase() === '等级名称.txt') {
-      structure[petName].levelNames = file;
-    }
-  });
-  
-  return structure;
-}
-
-// 检测是否为单个宠物文件夹
-isSinglePetFolder(files) {
-  if (!files || files.length === 0) return false;
-  
-  // 检查是否包含宠物文件夹的必需文件：至少包含等级名称.txt和部分图片文件
-  const hasLevelNamesFile = files.some(file => 
-    file.name.toLowerCase() === '等级名称.txt'
-  );
-  
-  const hasImageFiles = files.some(file => 
-    /^[1-6]\.jpg$/i.test(file.name)
-  );
-  
-  if (!hasLevelNamesFile || !hasImageFiles) return false;
-  
-  // 检查路径结构：单个宠物文件夹的路径应该只有一层（文件夹名/文件名）
-  const hasSingleLevelPath = files.every(file => {
-    const pathParts = file.webkitRelativePath.split('/');
-    return pathParts.length === 2; // 只有文件夹名和文件名
-  });
-  
-  if (!hasSingleLevelPath) return false;
-  
-  // 检查是否没有"宠物"文件夹路径
-  const hasPetFolderPath = files.some(file => 
-    file.webkitRelativePath.includes('宠物/')
-  );
-  
-  return !hasPetFolderPath;
-}
-
-// 验证宠物文件夹结构
-validatePetFolders(structure) {
-  const petNames = Object.keys(structure);
-  
-  if (petNames.length === 0) {
-    return { isValid: false, message: '未找到任何宠物数据' };
-  }
-  
-  for (const petName of petNames) {
-    const petData = structure[petName];
-    
-    // 验证图片文件完整性（1-6.jpg必须齐全）
-    const missingImages = [];
-    for (let level = 1; level <= 6; level++) {
-      if (!petData.images[level]) {
-        missingImages.push(`${level}.jpg`);
-      }
-    }
-    
-    if (missingImages.length > 0) {
-      return { 
-        isValid: false, 
-        message: `宠物"${petName}"缺少以下图片文件: ${missingImages.join(', ')}` 
-      };
-    }
-    
-    // 验证等级名称文件
-    if (!petData.levelNames) {
-      return { 
-        isValid: false, 
-        message: `宠物"${petName}"缺少等级名称文件(等级名称.txt)` 
-      };
-    }
-    
-    // 验证图片文件命名规范
-    for (let level = 1; level <= 6; level++) {
-      const imageFile = petData.images[level];
-      if (imageFile && !imageFile.name.match(/^[1-6]\.jpg$/i)) {
-        return { 
-          isValid: false, 
-          message: `宠物"${petName}"的图片文件命名不规范: ${imageFile.name}，应为${level}.jpg` 
-        };
-      }
-    }
-  }
-  
-  return { isValid: true, message: '文件夹结构验证通过' };
-}
-
-// 显示导入确认对话框
-showImportConfirmationDialog(structure) {
-  const petNames = Object.keys(structure);
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.style.display = 'block';
-  modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-  modal.style.position = 'fixed';
-  modal.style.top = '0';
-  modal.style.left = '0';
-  modal.style.width = '100%';
-  modal.style.height = '100%';
-  modal.style.zIndex = '1000';
-  
-  modal.innerHTML = `
-    <div class="modal-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
-      <h3 style="margin-bottom: 20px; color: #333;">批量导入宠物确认</h3>
-      <div style="margin-bottom: 20px;">
-        <p>检测到以下宠物数据，确认导入吗？</p>
-        <ul style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
-          ${petNames.map(petName => `
-            <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
-              <strong>${petName}</strong> - 包含6张图片和等级名称文件
-            </li>
-          `).join('')}
-        </ul>
-        <p style="margin-top: 10px; color: #666;">总计: ${petNames.length} 个宠物</p>
-      </div>
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button id="cancelImport" class="btn btn-secondary" style="padding: 8px 16px;">取消</button>
-        <button id="confirmImport" class="btn btn-primary" style="padding: 8px 16px;">确认导入</button>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-  
-  // 绑定事件
-  document.getElementById('cancelImport').addEventListener('click', () => {
-    document.body.removeChild(modal);
-    this.showNotification('导入已取消', 'info');
-  });
-  
-  document.getElementById('confirmImport').addEventListener('click', () => {
-    document.body.removeChild(modal);
-    this.startImportProcess(structure);
-  });
-  
-  // 点击外部关闭
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-      this.showNotification('导入已取消', 'info');
-    }
-  });
-}
-
-// 开始导入过程
-async startImportProcess(structure) {
-  const petNames = Object.keys(structure);
-  let successCount = 0;
-  let failedCount = 0;
-  const failedPets = []; // 记录失败的宠物和错误信息
-  
-  // 显示进度对话框
-  const progressModal = this.showImportProgressDialog(petNames.length);
-  
-  try {
-    for (let i = 0; i < petNames.length; i++) {
-      const petName = petNames[i];
-      const petData = structure[petName];
-      
-      // 更新进度
-      this.updateImportProgress(progressModal, i + 1, petNames.length, petName);
-      
-      try {
-        await this.importSinglePet(petName, petData);
-        successCount++;
-        
-        // 添加短暂延迟，避免过快导入导致界面卡顿
-        if (i < petNames.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-      } catch (error) {
-        console.error(`导入宠物"${petName}"失败:`, error);
-        failedCount++;
-        failedPets.push({
-          name: petName,
-          error: error.message
-        });
-        
-        // 显示当前宠物导入失败的通知
-        this.showNotification(`宠物"${petName}"导入失败: ${error.message}`, 'error', 3000);
-      }
-    }
-    
-    // 关闭进度对话框
-    document.body.removeChild(progressModal);
-    
-    // 显示导入结果（包含详细错误信息）
-    this.showImportResult(successCount, failedCount, failedPets);
-    
-    // 🆕 新增：保存所有宠物配置数据（包括等级名称）
-    if (successCount > 0) {
-      this.saveAllPetConfig();
-      // 刷新宠物列表
-      this.renderPetConfig();
-    }
-    
-  } catch (error) {
-    console.error('导入过程出现错误:', error);
-    document.body.removeChild(progressModal);
-    this.showNotification(`导入过程出现错误：${error.message}`, 'error');
-  }
-}
-
-// 显示导入进度对话框
-showImportProgressDialog(totalCount) {
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.style.display = 'block';
-  modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-  modal.style.position = 'fixed';
-  modal.style.top = '0';
-  modal.style.left = '0';
-  modal.style.width = '100%';
-  modal.style.height = '100%';
-  modal.style.zIndex = '1000';
-  
-  modal.innerHTML = `
-    <div class="modal-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 400px; width: 90%;">
-      <h3 style="margin-bottom: 20px; color: #333;">正在导入宠物数据...</h3>
-      <div style="margin-bottom: 15px;">
-        <div id="importProgressText" style="margin-bottom: 10px; color: #666;">
-          准备开始导入 (0/${totalCount})
-        </div>
-        <div style="width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden;">
-          <div id="importProgressBar" style="height: 100%; background: #4CAF50; width: 0%; transition: width 0.3s;"></div>
-        </div>
-      </div>
-      <div id="currentPetName" style="text-align: center; color: #888; font-style: italic;"></div>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-  return modal;
-}
-
-// 更新导入进度
-updateImportProgress(modal, current, total, petName) {
-  const progressText = modal.querySelector('#importProgressText');
-  const progressBar = modal.querySelector('#importProgressBar');
-  const currentPetName = modal.querySelector('#currentPetName');
-  
-  if (progressText) {
-    progressText.textContent = `正在导入 ${current}/${total}`;
-  }
-  
-  if (progressBar) {
-    const percentage = (current / total) * 100;
-    progressBar.style.width = `${percentage}%`;
-  }
-  
-  if (currentPetName) {
-    currentPetName.textContent = `当前: ${petName}`;
-  }
-}
-
-// 导入单个宠物
-async importSinglePet(petName, petData) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // 读取等级名称文件
-      const levelNames = await this.readLevelNamesFile(petData.levelNames);
-      if (levelNames.length !== 6) {
-        throw new Error('等级名称文件必须包含6行文本');
-      }
-      
-      // 创建新的宠物类型
-      const newPetType = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        name: petName,
-        emoji: '🐾', // 默认表情符号
-        color: this.getRandomColor() // 随机颜色
-      };
-      
-      // 添加到宠物类型数组
-      this.petTypes.push(newPetType);
-      
-      // 初始化该宠物类型的图片数据结构
-      if (!this.petImages[newPetType.id]) {
-        this.petImages[newPetType.id] = {};
-      }
-      
-      // 初始化等级名称配置
-      if (!this.petStagesByType) {
-        this.petStagesByType = {};
-      }
-      if (!this.petStagesByType[newPetType.id]) {
-        this.petStagesByType[newPetType.id] = JSON.parse(JSON.stringify(this.petStages));
-      }
-      
-      // 更新等级名称
-      for (let i = 0; i < 6; i++) {
-        if (this.petStagesByType[newPetType.id][i]) {
-          this.petStagesByType[newPetType.id][i].name = levelNames[i];
-        }
-      }
-      
-      // 上传图片文件
-      for (let level = 1; level <= 6; level++) {
-        const imageFile = petData.images[level];
-        if (imageFile) {
-          await this.uploadPetImageForImport(imageFile, newPetType.id, level);
-        }
-      }
-      
-      resolve();
-      
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-// 读取等级名称文件
-readLevelNamesFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        const content = e.target.result;
-        
-        // 验证文件内容不为空
-        if (!content || content.trim().length === 0) {
-          reject(new Error('等级名称文件内容为空'));
-          return;
-        }
-        
-        // 按行分割并处理
-        const lines = content.split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0); // 过滤空行
-        
-        // 验证行数
-        if (lines.length !== 6) {
-          reject(new Error(`等级名称文件必须包含6行文本，当前有${lines.length}行`));
-          return;
-        }
-        
-        // 验证每行内容不为空
-        for (let i = 0; i < lines.length; i++) {
-          if (lines[i].length === 0) {
-            reject(new Error(`等级名称文件第${i + 1}行为空`));
-            return;
-          }
-          
-          // 验证名称长度（防止过长名称）
-          if (lines[i].length > 20) {
-            reject(new Error(`等级名称文件第${i + 1}行名称过长（超过20个字符）`));
-            return;
-          }
-        }
-        
-        resolve(lines);
-        
-      } catch (error) {
-        reject(new Error('读取等级名称文件失败：' + error.message));
-      }
-    };
-    
-    reader.onerror = () => {
-      reject(new Error('读取等级名称文件失败'));
-    };
-    
-    reader.readAsText(file, 'UTF-8'); // 指定UTF-8编码
-  });
-}
-
-// 为导入功能上传宠物图片
-uploadPetImageForImport(file, petTypeId, level) {
-  return new Promise((resolve, reject) => {
-    // 验证文件类型
-    if (!file.type.startsWith('image/')) {
-      reject(new Error(`文件"${file.name}"不是图片格式`));
-      return;
-    }
-    
-    // 验证文件大小（最大5MB）
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      reject(new Error(`图片"${file.name}"过大（${(file.size / 1024 / 1024).toFixed(2)}MB），最大支持5MB`));
-      return;
-    }
-    
-    // 验证图片尺寸（可选，通过Image对象）
-    const img = new Image();
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        const imageData = e.target.result;
-        
-        // 验证图片格式
-        if (!imageData.startsWith('data:image/')) {
-          reject(new Error('文件不是有效的图片格式'));
-          return;
-        }
-        
-        // 加载图片验证尺寸
-        img.onload = () => {
-          // 验证图片尺寸（建议最小100x100）
-          if (img.width < 100 || img.height < 100) {
-            reject(new Error(`图片"${file.name}"尺寸过小（${img.width}x${img.height}），建议至少100x100像素`));
-            return;
-          }
-          
-          // 验证图片比例（可选，防止变形）
-          const aspectRatio = img.width / img.height;
-          if (aspectRatio < 0.5 || aspectRatio > 2) {
-            console.warn(`图片"${file.name}"比例异常（${aspectRatio.toFixed(2)}），可能影响显示效果`);
-          }
-          
-          // 保存图片数据
-          const levelKey = `level${level}`;
-          if (!this.petImages[petTypeId]) {
-            this.petImages[petTypeId] = {};
-          }
-          this.petImages[petTypeId][levelKey] = imageData;
-          
-          resolve();
-        };
-        
-        img.onerror = () => {
-          reject(new Error(`无法加载图片"${file.name}"，可能已损坏`));
-        };
-        
-        img.src = imageData;
-        
-      } catch (error) {
-        reject(new Error('处理图片文件失败：' + error.message));
-      }
-    };
-    
-    reader.onerror = () => {
-      reject(new Error(`读取图片文件"${file.name}"失败`));
-    };
-    
-    reader.readAsDataURL(file);
-  });
-}
-
-// 显示导入结果
-showImportResult(successCount, failedCount, failedPets = []) {
-  let message = '';
-  let type = 'success';
-  
-  if (successCount > 0 && failedCount === 0) {
-    message = `成功导入 ${successCount} 个宠物`;
-  } else if (successCount > 0 && failedCount > 0) {
-    message = `成功导入 ${successCount} 个宠物，失败 ${failedCount} 个`;
-    type = 'warning';
-    
-    // 显示详细失败信息（如果失败数量较少）
-    if (failedCount <= 5) {
-      message += '\n失败详情：';
-      failedPets.forEach(pet => {
-        message += `\n• ${pet.name}: ${pet.error}`;
-      });
-    } else {
-      message += `\n（失败数量较多，请检查控制台获取详细错误信息）`;
-    }
-  } else {
-    message = `导入失败，所有 ${failedCount} 个宠物均未成功导入`;
-    type = 'error';
-    
-    // 显示详细失败信息
-    if (failedCount > 0) {
-      message += '\n失败详情：';
-      failedPets.forEach(pet => {
-        message += `\n• ${pet.name}: ${pet.error}`;
-      });
-    }
-  }
-  
-  this.showNotification(message, type);
-}
-
-// 生成随机颜色
-getRandomColor() {
-  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
-  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 // 渲染小组宠物形象配置（新增）
@@ -1792,39 +963,6 @@ addPetConfigEventListeners() {
       }
     });
   });
-  
-  // 批量应用宠物按钮事件
-  document.addEventListener('click', (e) => {
-    if (e.target.matches('.batch-apply-pet-btn')) {
-      const petTypeId = e.target.dataset.petType;
-      this.showBatchApplyPetModal(petTypeId);
-    }
-  });
-  
-  // 批量应用宠物模态框确认按钮事件
-  const confirmBatchApplyBtn = document.getElementById('confirmBatchApplyPetBtn');
-  const cancelBatchApplyBtn = document.getElementById('cancelBatchApplyPetBtn');
-  const selectAllCheckbox = document.getElementById('selectAllStudents');
-  
-  if (confirmBatchApplyBtn) {
-    confirmBatchApplyBtn.addEventListener('click', () => {
-      this.confirmBatchApplyPet();
-    });
-  }
-  
-  if (cancelBatchApplyBtn) {
-    cancelBatchApplyBtn.addEventListener('click', () => {
-      // 用户明确取消操作，清除宠物类型选择
-      this.currentBatchApplyPetTypeId = null;
-      this.hideBatchApplyPetModal();
-    });
-  }
-  
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener('change', (e) => {
-      this.toggleSelectAllStudents(e.target.checked);
-    });
-  }
 }
 
 // 上传宠物图片
@@ -2200,11 +1338,6 @@ saveAllPetConfig() {
     // groupLevels已废弃，不再保存
     localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
     localStorage.setItem(`groupPets_${this.currentClassId}`, JSON.stringify(this.groupPets)); // 保存小组宠物选择
-    
-    // 🆕 新增：保存按宠物类型存储的等级名称数据
-    if (this.petStagesByType && typeof this.petStagesByType === 'object') {
-      localStorage.setItem(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
-    }
     
     this.showNotification('宠物配置保存成功！', 'success');
     return true;
@@ -2830,14 +1963,20 @@ getStudentPetImage(student) {
       }
       return imageData;
     } else {
-      // 如果没有自定义图片，显示对应宠物类型的emoji
-      const petStage = this.getPetStage(totalPoints, student.name);
-      return petStage.emoji || '❓';
+      // 如果没有自定义图片，显示默认emoji
+      const emojiMap = {  
+        0: '🥚', 1: '🐣', 2: '🐤', 3: '🐦', 4: '🕊️', 5: '🦅'
+      };
+      const validLevel = Math.max(0, Math.min(5, studentLevel));
+      return emojiMap[validLevel] || '❓';
     }
   } else {
     // emoji模式下直接返回对应的宠物等级emoji
-    const petStage = this.getPetStage(totalPoints, student.name);
-    return petStage.emoji || '❓';
+    const emojiMap = {  
+      0: '🥚', 1: '🐣', 2: '🐤', 3: '🐦', 4: '🕊️', 5: '🦅'
+    };
+    const validLevel = Math.max(0, Math.min(5, studentLevel));
+    return emojiMap[validLevel] || '❓';
   }
 }
 
@@ -3070,16 +2209,16 @@ init(){
   // 创建切换按钮
   this.toggleModeBtn = document.createElement('button');
   
-  // 禁用开发环境下的自动测试功能，防止测试数据覆盖真实数据
-  // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-  //   setTimeout(() => {
-  //     if (this.testPetConfigSystem()) {
-  //       this.showNotification('宠物配置系统测试通过', 'success');
-  //     } else {
-  //       this.showNotification('宠物配置系统测试失败', 'warning');
-  //     }
-  //   }, 1000);
-  // }
+  // 运行配置系统测试（仅在开发模式）
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    setTimeout(() => {
+      if (this.testPetConfigSystem()) {
+        this.showNotification('宠物配置系统测试通过', 'success');
+      } else {
+        this.showNotification('宠物配置系统测试失败', 'warning');
+      }
+    }, 1000);
+  }
   this.toggleModeBtn.className = 'btn btn-info';
   this.toggleModeBtn.textContent = this.displayMode === 'emoji' ? '🖼️ 自定义宠物' : '🎭 恢复默认宠物';
   this.toggleModeBtn.style.margin = '0 8px';
@@ -3101,10 +2240,7 @@ init(){
 localStorage.setItem('currentClassId', this.currentClassId);
 
 // 全屏功能
-const fullscreenBtn = document.getElementById('fullscreenBtn');
-if (fullscreenBtn) {
-    fullscreenBtn.addEventListener('click', toggleFullscreen);
-}
+document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -3135,16 +2271,14 @@ document.addEventListener('msfullscreenchange', updateFullscreenButton);
 
 function updateFullscreenButton() {
   const fullscreenBtn = document.getElementById('fullscreenBtn');
-  if (fullscreenBtn) {
-    if (document.fullscreenElement || 
-        document.webkitFullscreenElement || 
-        document.msFullscreenElement) {
-      fullscreenBtn.innerHTML = '⛶ 退出全屏';
-      fullscreenBtn.classList.add('fullscreen-active');
-    } else {
-      fullscreenBtn.innerHTML = '⛶ 全屏';
-      fullscreenBtn.classList.remove('fullscreen-active');
-    }
+  if (document.fullscreenElement || 
+      document.webkitFullscreenElement || 
+      document.msFullscreenElement) {
+    fullscreenBtn.innerHTML = '⛶ 退出全屏';
+    fullscreenBtn.classList.add('fullscreen-active');
+  } else {
+    fullscreenBtn.innerHTML = '⛶ 全屏';
+    fullscreenBtn.classList.remove('fullscreen-active');
   }
 }
 }
@@ -3182,22 +2316,16 @@ renderLevelSettings() {
   this.renderGroupLevelSettings();
   this.renderScoreRatioSettings();
 // 把两个总按钮插到“等级积分设置”标签页最底部
-const tab = document.getElementById('levelSettingsTab');   // 等级设置标签页
-
-// 检查是否已经存在按钮容器，避免重复添加
-let bottomBar = document.getElementById('levelSettingsBottomBar');
-if (!bottomBar) {
-  bottomBar = document.createElement('div');
-  bottomBar.id = 'levelSettingsBottomBar'; // 添加唯一标识
-  bottomBar.style.display = 'flex';           // 横向排列
-  bottomBar.style.justifyContent = 'center';  // 居中
-  bottomBar.style.gap = '12px';               // 按钮间距
-  bottomBar.style.margin = '25px 0 10px 0';
-  bottomBar.innerHTML =
-    '<button class="btn btn-warning" id="resetPetBtn">🔄 恢复个人等级积分</button>' +
-    '<button class="btn btn-warning" id="resetGroupBtn">🔄 恢复小组等级积分</button>';
-  tab.appendChild(bottomBar);
-}
+const tab=document.getElementById('levelSettingsTab');   // 等级设置标签页
+const bottomBar=document.createElement('div');
+bottomBar.style.display='flex';           // 横向排列
+bottomBar.style.justifyContent='center';  // 居中
+bottomBar.style.gap='12px';               // 按钮间距
+bottomBar.style.margin='25px 0 10px 0';
+bottomBar.innerHTML=
+  '<button class="btn btn-warning" id="resetPetBtn">🔄 恢复个人宠物默认</button>'+
+  '<button class="btn btn-warning" id="resetGroupBtn">🔄 恢复小组积分默认</button>';
+tab.appendChild(bottomBar);
 }
 
 
@@ -3285,14 +2413,9 @@ saveScoreRatio() {
 }
 
 resetPetToDefault(){
-  if(!confirm('确定恢复个人各等级的分值设置和成绩换算比例为默认值吗？当前宠物的图片和名称将保持不变。')) return;
-  
-  // 保存当前宠物的图片和名称
-  const currentPetImages = this.petStages.map(stage => stage.img);
-  const currentPetNames = this.petStages.map(stage => stage.name);
-  
-  // 1. 仅恢复默认的积分区间和成绩换算比例
-  const defaultPetStages = [
+  if(!confirm('确定把个人宠物图片、名字、积分区间全部恢复成默认吗？')) return;
+  // 1. 恢复默认数据
+  this.petStages=[
     {name:'蛋',   img:'images/pet/1.png', minPoints:0,  maxPoints:20},
     {name:'孵化中',img:'images/pet/2.png', minPoints:20, maxPoints:50},
     {name:'雏鸟', img:'images/pet/3.png', minPoints:50, maxPoints:100},
@@ -3300,35 +2423,16 @@ resetPetToDefault(){
     {name:'成长鸟',img:'images/pet/5.png', minPoints:200,maxPoints:400},
     {name:'雄鹰', img:'images/pet/6.png', minPoints:400,maxPoints:Infinity}
   ];
-  
-  // 2. 恢复默认积分区间，但保持当前宠物的图片和名称
-  this.petStages = defaultPetStages.map((stage, index) => ({
-    name: currentPetNames[index] || stage.name,  // 保持当前名称
-    img: currentPetImages[index] || stage.img,   // 保持当前图片
-    minPoints: stage.minPoints,                  // 恢复默认积分区间
-    maxPoints: stage.maxPoints
-  }));
-  
-  // 3. 恢复默认成绩换算比例
-  this.scoreToPointsRatio = 10;
-  
-  // 4. 存盘
+  // 2. 存盘
   this.saveAll();
-  // 5. 重新画界面
+  // 3. 重新画界面
   this.renderPetLevelSettings();
-  this.renderScoreRatioSettings();
-  alert('已恢复个人等级积分默认设置！');
+  alert('已恢复个人宠物默认设置！');
 }
 
 resetGroupToDefault(){
-  if(!confirm('确定恢复小组各等级的分值设置为默认值吗？当前小组的图片和名称将保持不变。')) return;
-  
-  // 保存当前小组的图片和名称
-  const currentGroupImages = this.groupStages.map(stage => stage.img);
-  const currentGroupNames = this.groupStages.map(stage => stage.name);
-  
-  // 1. 仅恢复默认的积分区间
-  const defaultGroupStages = [
+  if(!confirm('确定把小组积分区间全部恢复成默认吗？')) return;
+  this.groupStages=[
     {name:'青铜',img:'images/group/1.png', minPoints:0,  maxPoints:40},
     {name:'白银',img:'images/group/2.png', minPoints:40, maxPoints:100},
     {name:'黄金',img:'images/group/3.png', minPoints:100,maxPoints:200},
@@ -3336,20 +2440,9 @@ resetGroupToDefault(){
     {name:'钻石',img:'images/group/5.png', minPoints:400,maxPoints:800},
     {name:'王者',img:'images/group/6.png', minPoints:800,maxPoints:Infinity}
   ];
-  
-  // 2. 恢复默认积分区间，但保持当前小组的图片和名称
-  this.groupStages = defaultGroupStages.map((stage, index) => ({
-    name: currentGroupNames[index] || stage.name,  // 保持当前名称
-    img: currentGroupImages[index] || stage.img,   // 保持当前图片
-    minPoints: stage.minPoints,                    // 恢复默认积分区间
-    maxPoints: stage.maxPoints
-  }));
-  
-  // 3. 存盘
   this.saveAll();
-  // 4. 重新画界面
   this.renderGroupLevelSettings();
-  alert('已恢复小组等级积分默认设置！');
+  alert('已恢复小组等级默认设置！');
 }
     
   // 加载班级列表
@@ -3481,7 +2574,7 @@ setupTimeFilterListeners() {
     toggleBtn.addEventListener('click', () => {
       const isHidden = advancedPanel.style.display === 'none';
       advancedPanel.style.display = isHidden ? 'block' : 'none';
-      toggleBtn.textContent = isHidden ? '↑ 收起' : '更多';
+      toggleBtn.textContent = isHidden ? '↑ 收起' : '⋯ 更多';
     });
   }
 
@@ -3591,11 +2684,6 @@ saveAll(){
     localStorage.setItem(`groupStages_${this.currentClassId}`, JSON.stringify(groupStagesData));
   }
   
-  // 保存学生宠物选择数据（关键修复：确保批量应用宠物数据持久化）
-  if (this.studentPets && Object.keys(this.studentPets).length > 0) {
-    localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
-  }
-  
   this.updateClassStudentCount();
 }
   
@@ -3609,30 +2697,9 @@ saveAll(){
   }
   
   // 加载所有宠物相关配置
-loadAllPetConfig(preventPetStagesByTypeOverride = true) {
+loadAllPetConfig() {
   try {
     if (!this.currentClassId) return false;
-    
-    // 加载按宠物类型存储的等级数据（关键修复）
-    // 总是优先从localStorage加载petStagesByType数据，确保数据一致性
-    const savedPetStagesByType = localStorage.getItem(`petStagesByType_${this.currentClassId}`);
-    if (savedPetStagesByType) {
-      try {
-        const parsedPetStagesByType = JSON.parse(savedPetStagesByType);
-        if (parsedPetStagesByType && typeof parsedPetStagesByType === 'object') {
-          // 如果从按类型存储加载成功，使用按类型存储的数据
-          this.petStagesByType = {};
-          for (const petType in parsedPetStagesByType) {
-            this.petStagesByType[petType] = this.migrateStages(parsedPetStagesByType[petType], 'pet');
-          }
-          // 使用第一个宠物类型的等级作为默认显示（兼容性）
-          const firstPetType = Object.keys(this.petStagesByType)[0];
-          this.petStages = this.petStagesByType[firstPetType] || this.migrateStages(this.getDefaultPetStages(), 'pet');
-        }
-      } catch (error) {
-        console.error('加载按类型存储的个人等级配置失败:', error);
-      }
-    }
     
     // 加载宠物类型配置
     const savedPetTypes = localStorage.getItem(`petTypes_${this.currentClassId}`);
@@ -3652,20 +2719,17 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
       }
     }
     
-    // 加载个人宠物阶段配置（仅在需要时覆盖）
-    // 只有当明确允许覆盖且petStagesByType为空时才加载旧的个人宠物阶段配置
-    if (preventPetStagesByTypeOverride === false && (!this.petStagesByType || Object.keys(this.petStagesByType).length === 0)) {
-      const savedPetStages = localStorage.getItem(`petStages_${this.currentClassId}`);
-      if (savedPetStages) {
-        try {
-          const parsedStages = JSON.parse(savedPetStages);
-          if (Array.isArray(parsedStages)) {
-            this.petStages = this.migrateStages(parsedStages, 'pet');
-          }
-        } catch (error) {
-          console.error('加载个人宠物阶段配置失败:', error);
-          this.showNotification('个人宠物阶段配置加载失败', 'warning');
+    // 加载个人宠物阶段配置
+    const savedPetStages = localStorage.getItem(`petStages_${this.currentClassId}`);
+    if (savedPetStages) {
+      try {
+        const parsedStages = JSON.parse(savedPetStages);
+        if (Array.isArray(parsedStages)) {
+          this.petStages = this.migrateStages(parsedStages, 'pet');
         }
+      } catch (error) {
+        console.error('加载个人宠物阶段配置失败:', error);
+        this.showNotification('个人宠物阶段配置加载失败', 'warning');
       }
     }
     
@@ -3943,23 +3007,8 @@ loadFromLocalStorage(){
     this.initializeClassData();
   }
   
-  // 加载学生宠物分配数据（无论是否有班级数据）
-  const savedStudentPets = localStorage.getItem(`studentPets_${this.currentClassId}`);
-  if (savedStudentPets) {
-    try {
-      const parsedStudentPets = JSON.parse(savedStudentPets);
-      if (typeof parsedStudentPets === 'object') {
-        this.studentPets = parsedStudentPets;
-      }
-    } catch (error) {
-      console.error('加载学生宠物选择失败:', error);
-      this.studentPets = {};
-    }
-  }
-  
-  // 无论是否找到班级数据，都加载宠物配置（但避免覆盖已加载的petStagesByType数据）
-  // 使用true参数，防止覆盖已加载的按宠物类型存储的等级数据
-  this.loadAllPetConfig(true);
+  // 无论是否找到班级数据，都加载宠物配置
+  this.loadAllPetConfig();
   
   const title = localStorage.getItem(`mainTitle_${this.currentClassId}`) || 
                 localStorage.getItem('mainTitle') || 
@@ -4065,8 +3114,6 @@ getDefaultGroupStages() {
     this.history = [];
     this.undoStack = [];
     this.randomNameRecords = [];
-    // 初始化学生宠物分配数据
-    this.studentPets = {};
     // 使用全局配置
     this.rules = this.globalRules;
     this.shopItems = this.globalShopItems;
@@ -4378,38 +3425,6 @@ editClass(classId) {
   setupEventListeners(){
     console.log('设置事件监听器...');
     
-    // 积分历史折叠功能
-    const historyToggleBtn = document.getElementById('historyToggleBtn');
-    const historyList = document.getElementById('historyList');
-    
-    if (historyToggleBtn && historyList) {
-      // 初始化折叠状态（从localStorage读取）
-      const isCollapsed = localStorage.getItem('historyCollapsed') === 'true';
-      if (isCollapsed) {
-        historyList.classList.add('collapsed');
-        historyToggleBtn.classList.add('collapsed');
-        historyToggleBtn.querySelector('.toggle-text').textContent = '展开';
-      }
-      
-      historyToggleBtn.addEventListener('click', () => {
-        const isCurrentlyCollapsed = historyList.classList.contains('collapsed');
-        
-        if (isCurrentlyCollapsed) {
-          // 展开
-          historyList.classList.remove('collapsed');
-          historyToggleBtn.classList.remove('collapsed');
-          historyToggleBtn.querySelector('.toggle-text').textContent = '折叠';
-          localStorage.setItem('historyCollapsed', 'false');
-        } else {
-          // 折叠
-          historyList.classList.add('collapsed');
-          historyToggleBtn.classList.add('collapsed');
-          historyToggleBtn.querySelector('.toggle-text').textContent = '展开';
-          localStorage.setItem('historyCollapsed', 'true');
-        }
-      });
-    }
-    
     // 添加全局事件委托处理积分历史按钮点击
     document.addEventListener('click', (e) => {
       if (e.target.classList.contains('history-btn')) {
@@ -4578,10 +3593,6 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       if(this.isLocked) return;
       this.openBatchModal();
     });
-    document.getElementById('techSupportBtn').addEventListener('click',()=>{
-      if(this.isLocked) return;
-      this.openTechSupportModal();
-    });
     
     // 积分操作模态框
     document.getElementById('confirmPointsBtn').addEventListener('click',()=>{
@@ -4672,9 +3683,6 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
     });
     document.getElementById('cancelBatchGroupBtn').addEventListener('click',()=>this.closeBatchModal());
     
-    // 技术支持模态框按钮事件
-    document.getElementById('closeTechSupportBtn').addEventListener('click',()=>this.closeTechSupportModal());
-    
     // 内容标签页切换
     document.querySelectorAll('.content-tab').forEach(tab => {
       tab.addEventListener('click', (e) => {
@@ -4688,30 +3696,21 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
 		return;
 	  }
 
-	  // 添加加载提示，提升用户体验
-	  const originalButtonText = document.getElementById('goToTaskBtn').textContent;
-	  document.getElementById('goToTaskBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 准备中...';
-	  document.getElementById('goToTaskBtn').disabled = true;
+	  const studentData = this.students.map(stu => {
+		const totalPoints = stu.points + (stu.purchases || []).reduce((sum, p) => sum + p.cost, 0);
+		const stage = this.getStudentPetStage(stu);
+		return {
+		  name: stu.name,
+		  avatar: stage.emoji
+		};
+	  });
 
-	  // 延迟执行跳转，让用户看到加载状态
-	  setTimeout(() => {
-		const studentData = this.students.map(stu => {
-		  const totalPoints = stu.points + (stu.purchases || []).reduce((sum, p) => sum + p.cost, 0);
-		  const stage = this.getStudentPetStage(stu);
-		  return {
-			name: stu.name,
-			avatar: stage.emoji
-		  };
-		});
+	  const query = new URLSearchParams({
+		students: JSON.stringify(studentData),
+		className: this.currentClassName
+	  });
 
-		const query = new URLSearchParams({
-		  students: encodeURIComponent(JSON.stringify(studentData)),
-		  className: encodeURIComponent(this.currentClassName || ''),
-		  timestamp: Date.now() // 添加时间戳避免缓存问题
-		});
-
-		window.location.href = `/static/renwu.html?${query.toString()}`;
-	  }, 500);
+	  window.location.href = `renwu.html?${query.toString()}`;
 	});
 	
 	// 模态框标签页切换
@@ -5397,11 +4396,12 @@ renderIndividualRanking() {
 
   // 计算每个学生在时间段内的总积分
   const studentsWithTotalPoints = this.students.map(student => {
-    let totalPoints;
+    // 直接使用学生的总积分（包括所有历史积分和兑换记录）
+    let totalPoints = this.getStudentTotalPoints(student);
     
-    // 如果指定了时间段（如"今天"），需要筛选该时间段内的积分
+    // 如果指定了时间段，需要筛选该时间段内的积分
     if (start && end) {
-      // 时间段内的总积分 = 时间段内获得的历史积分（不扣除兑换积分）
+      // 筛选时间段内的历史积分
       const periodHistoryPoints = (student.history || [])
         .filter(isInPeriod)
         .reduce((sum, h) => {
@@ -5409,10 +4409,16 @@ renderIndividualRanking() {
           return sum + pointsValue;
         }, 0);
       
-      totalPoints = periodHistoryPoints;
-    } else {
-      // 总榜使用学生的总积分（包括所有历史积分和兑换记录）
-      totalPoints = this.getStudentTotalPoints(student);
+      // 筛选时间段内的兑换积分
+      const periodPurchaseDeductions = (student.purchases || [])
+        .filter(isInPeriod)
+        .reduce((sum, p) => {
+          const costValue = parseInt(p.cost) || 0;
+          return sum + costValue;
+        }, 0);
+      
+      // 时间段内的总积分 = 时间段内历史积分 - 时间段内兑换积分
+      totalPoints = periodHistoryPoints - periodPurchaseDeductions;
     }
 
     // 确保totalPoints是有效数字
@@ -5517,8 +4523,8 @@ renderGroupRanking() {
               return sum + costValue;
             }, 0);
           
-          // 积分 = 获得的积分（不扣除兑换花费）
-          points += memberEarnedPoints;
+          // 净积分 = 获得的积分 - 兑换花费
+          points += memberEarnedPoints - memberSpentPoints;
         }
       });
     }
@@ -7327,911 +6333,67 @@ if (historyTabBtn && petTabBtn) {
   
   renderStatistics(history, containerId, title){
     const container = document.getElementById(containerId);
-    container.innerHTML = '<div class="loading-spinner">加载统计数据中...</div>';
     
-    // 使用requestAnimationFrame优化渲染性能
-    requestAnimationFrame(() => {
-      // 使用Map优化性能，按学生/小组统计
-      const studentStats = new Map();
-      const groupStats = new Map();
-      let totalPoints = 0;
-      let totalRecords = history.length;
-      
-      history.forEach(record => {
-        if(record.type === 'student') {
-          if(!studentStats.has(record.name)) {
-            studentStats.set(record.name, { points: 0, records: [] });
-          }
-          const stats = studentStats.get(record.name);
-          stats.points += record.points;
-          stats.records.push(record);
-          totalPoints += record.points;
-        } else if(record.type === 'group') {
-          if(!groupStats.has(record.group)) {
-            groupStats.set(record.group, { points: 0, records: [] });
-          }
-          const stats = groupStats.get(record.group);
-          stats.points += record.points;
-          stats.records.push(record);
-          totalPoints += record.points;
-        } else if(record.type === 'purchase') {
-          // 购买记录不计入总积分变化
-          if(!studentStats.has(record.name)) {
-            studentStats.set(record.name, { points: 0, records: [] });
-          }
-          const stats = studentStats.get(record.name);
-          stats.points -= record.cost;
-          stats.records.push(record);
-          totalPoints -= record.cost;
+    // 按学生/小组统计
+    const studentStats = {};
+    const groupStats = {};
+    let totalPoints = 0;
+    
+    history.forEach(record => {
+      if(record.type === 'student') {
+        if(!studentStats[record.name]) {
+          studentStats[record.name] = { points: 0, records: [] };
         }
-      });
-      
-      // 统计概览卡片数据
-      const studentCount = studentStats.size;
-      const groupCount = groupStats.size;
-      const avgPointsPerStudent = studentCount > 0 ? Math.round(totalPoints / studentCount) : 0;
-      const avgRecordsPerStudent = studentCount > 0 ? Math.round(totalRecords / studentCount) : 0;
-      
-      let html = `
-        <div class="statistics-overview">
-          <div class="statistics-card">
-            <div class="card-value">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
-            <div class="card-label">总积分变化</div>
-          </div>
-          <div class="statistics-card">
-            <div class="card-value">${totalRecords}</div>
-            <div class="card-label">记录总数</div>
-          </div>
-          <div class="statistics-card">
-            <div class="card-value">${studentCount}</div>
-            <div class="card-label">涉及学生</div>
-          </div>
-          <div class="statistics-card">
-            <div class="card-value">${groupCount}</div>
-            <div class="card-label">涉及小组</div>
-          </div>
-        </div>
-        <div class="statistics-summary">
-          <h4>${title}</h4>
-          <p>平均每人积分: ${avgPointsPerStudent > 0 ? '+' : ''}${avgPointsPerStudent}</p>
-          <p>平均每人记录: ${avgRecordsPerStudent}</p>
-        </div>
-      `;
-      
-      // 存储统计信息用于后续排序和详情展示
-      this.currentStatistics = {
-        studentStats: Array.from(studentStats.entries()).map(([name, stats]) => ({ name, ...stats })),
-        groupStats: Array.from(groupStats.entries()).map(([group, stats]) => ({ group, ...stats })),
-        containerId: containerId
-      };
-      
-      // 渲染个人积分统计表格（带排序功能）
-      if(studentStats.size > 0) {
-        html += `
-          <h4>个人积分统计</h4>
-          <div class="statistics-table-container">
-            <table class="statistics-table" data-type="student" data-sort="points" data-sort-direction="desc">
-              <thead>
-                <tr>
-                  <th data-sort="name">姓名 <span class="sort-indicator">↕</span></th>
-                  <th data-sort="points">积分变化 <span class="sort-indicator">↓</span></th>
-                  <th data-sort="records">记录数 <span class="sort-indicator">↕</span></th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${this.currentStatistics.studentStats.sort((a, b) => b.points - a.points).map(stat => `
-                  <tr data-name="${stat.name}">
-                    <td>${stat.name}</td>
-                    <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
-                    <td>${stat.records.length}</td>
-                    <td><button class="btn btn-sm btn-info view-detail-btn" data-type="student" data-target="${stat.name}">查看详情</button></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
-      
-      // 渲染小组积分统计表格（带排序功能）
-      if(groupStats.size > 0) {
-        html += `
-          <h4>小组积分统计</h4>
-          <div class="statistics-table-container">
-            <table class="statistics-table" data-type="group" data-sort="points" data-sort-direction="desc">
-              <thead>
-                <tr>
-                  <th data-sort="group">小组 <span class="sort-indicator">↕</span></th>
-                  <th data-sort="points">积分变化 <span class="sort-indicator">↓</span></th>
-                  <th data-sort="records">记录数 <span class="sort-indicator">↕</span></th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${this.currentStatistics.groupStats.sort((a, b) => b.points - a.points).map(stat => `
-                  <tr data-group="${stat.group}">
-                    <td>${stat.group}</td>
-                    <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
-                    <td>${stat.records.length}</td>
-                    <td><button class="btn btn-sm btn-info view-detail-btn" data-type="group" data-target="${stat.group}">查看详情</button></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
-      
-      if(studentStats.size === 0 && groupStats.size === 0) {
-        html += '<p style="text-align: center; padding: 40px; color: #718096;">该时间段内无积分记录</p>';
-      }
-      
-      container.innerHTML = html;
-      
-      // 初始化表格交互功能
-      this.initStatisticsTableInteraction(container);
-    });
-  }
-  
-  initStatisticsTableInteraction(container) {
-    // 表格排序功能
-    const tables = container.querySelectorAll('.statistics-table');
-    tables.forEach(table => {
-      const headers = table.querySelectorAll('th[data-sort]');
-      headers.forEach(header => {
-        header.style.cursor = 'pointer';
-        header.addEventListener('click', () => {
-          const sortBy = header.getAttribute('data-sort');
-          const type = table.getAttribute('data-type');
-          this.handleTableSort(sortBy, type, table);
-        });
-      });
-    });
-    
-    // 详情查看功能
-    const detailBtns = container.querySelectorAll('.view-detail-btn');
-    detailBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const type = btn.getAttribute('data-type');
-        const target = btn.getAttribute('data-target');
-        this.showStatisticsDetail(type, target);
-      });
-    });
-    
-    // 行点击事件（查看详情）
-    const rows = container.querySelectorAll('.statistics-table tbody tr');
-    rows.forEach(row => {
-      row.addEventListener('click', (e) => {
-        if (!e.target.closest('.view-detail-btn')) {
-          const type = row.closest('table').getAttribute('data-type');
-          const target = type === 'student' ? row.getAttribute('data-name') : row.getAttribute('data-group');
-          this.showStatisticsDetail(type, target);
+        studentStats[record.name].points += record.points;
+        studentStats[record.name].records.push(record);
+        totalPoints += record.points;
+      } else if(record.type === 'group') {
+        if(!groupStats[record.group]) {
+          groupStats[record.group] = { points: 0, records: [] };
         }
-      });
-    });
-  }
-  
-  handleTableSort(sortBy, type, table) {
-    const stats = type === 'student' ? this.currentStatistics.studentStats : this.currentStatistics.groupStats;
-    const tbody = table.querySelector('tbody');
-    
-    // 切换排序方向
-    const currentSort = table.getAttribute('data-sort');
-    const currentDirection = table.getAttribute('data-sort-direction') || 'asc';
-    const newDirection = currentSort === sortBy && currentDirection === 'asc' ? 'desc' : 'asc';
-    
-    // 更新排序状态
-    table.setAttribute('data-sort', sortBy);
-    table.setAttribute('data-sort-direction', newDirection);
-    
-    // 更新表头指示器
-    const headers = table.querySelectorAll('th[data-sort]');
-    headers.forEach(header => {
-      const indicator = header.querySelector('.sort-indicator');
-      // 移除所有样式类
-      indicator.classList.remove('asc', 'desc');
-      
-      if (header.getAttribute('data-sort') === sortBy) {
-        // 当前排序列添加对应样式类
-        indicator.classList.add(newDirection === 'asc' ? 'asc' : 'desc');
-        indicator.textContent = newDirection === 'asc' ? '↑' : '↓';
-      } else {
-        // 非当前排序列显示默认指示器
-        indicator.textContent = '↕';
-      }
-    });
-    
-    // 排序数据
-    const sortedStats = [...stats].sort((a, b) => {
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-      
-      if (sortBy === 'name') {
-        // 按姓氏首字母排序（支持中文拼音排序）
-        const getSurnamePinyin = (name) => {
-          // 处理中文姓名：取第一个字符作为姓氏，并转换为拼音
-          if (/[\u4e00-\u9fff]/.test(name)) {
-            const surname = name.charAt(0);
-            // 简单的拼音映射表（常用姓氏）
-            const pinyinMap = {
-              '赵': 'zhao', '钱': 'qian', '孙': 'sun', '李': 'li', '周': 'zhou',
-              '吴': 'wu', '郑': 'zheng', '王': 'wang', '冯': 'feng', '陈': 'chen',
-              '褚': 'chu', '卫': 'wei', '蒋': 'jiang', '沈': 'shen', '韩': 'han',
-              '杨': 'yang', '朱': 'zhu', '秦': 'qin', '尤': 'you', '许': 'xu',
-              '何': 'he', '吕': 'lv', '施': 'shi', '张': 'zhang', '孔': 'kong',
-              '曹': 'cao', '严': 'yan', '华': 'hua', '金': 'jin', '魏': 'wei',
-              '陶': 'tao', '姜': 'jiang', '戚': 'qi', '谢': 'xie', '邹': 'zou',
-              '喻': 'yu', '柏': 'bai', '水': 'shui', '窦': 'dou', '章': 'zhang',
-              '云': 'yun', '苏': 'su', '潘': 'pan', '葛': 'ge', '奚': 'xi',
-              '范': 'fan', '彭': 'peng', '郎': 'lang', '鲁': 'lu', '韦': 'wei',
-              '昌': 'chang', '马': 'ma', '苗': 'miao', '凤': 'feng', '花': 'hua',
-              '方': 'fang', '俞': 'yu', '任': 'ren', '袁': 'yuan', '柳': 'liu',
-              '唐': 'tang', '罗': 'luo', '薛': 'xue', '贺': 'he', '常': 'chang',
-              '黄': 'huang', '萧': 'xiao', '姚': 'yao', '邵': 'shao', '汪': 'wang',
-              '毛': 'mao', '狄': 'di', '米': 'mi', '贝': 'bei', '明': 'ming',
-              '计': 'ji', '伏': 'fu', '成': 'cheng', '戴': 'dai', '谈': 'tan',
-              '宋': 'song', '茅': 'mao', '庞': 'pang', '熊': 'xiong', '纪': 'ji',
-              '舒': 'shu', '屈': 'qu', '项': 'xiang', '祝': 'zhu', '董': 'dong',
-              '梁': 'liang', '杜': 'du', '阮': 'ruan', '蓝': 'lan', '闵': 'min',
-              '席': 'xi', '季': 'ji', '麻': 'ma', '强': 'qiang', '贾': 'jia',
-              '路': 'lu', '娄': 'lou', '危': 'wei', '江': 'jiang', '童': 'tong',
-              '颜': 'yan', '郭': 'guo', '梅': 'mei', '盛': 'sheng', '林': 'lin',
-              '刁': 'diao', '钟': 'zhong', '徐': 'xu', '邱': 'qiu', '骆': 'luo',
-              '高': 'gao', '夏': 'xia', '蔡': 'cai', '田': 'tian', '樊': 'fan',
-              '胡': 'hu', '凌': 'ling', '霍': 'huo', '虞': 'yu', '万': 'wan',
-              '支': 'zhi', '柯': 'ke', '昝': 'zan', '管': 'guan', '卢': 'lu',
-              '莫': 'mo', '经': 'jing', '房': 'fang', '裘': 'qiu', '缪': 'miao',
-              '干': 'gan', '解': 'xie', '应': 'ying', '宗': 'zong', '丁': 'ding',
-              '宣': 'xuan', '贲': 'ben', '邓': 'deng', '郁': 'yu', '单': 'shan',
-              '杭': 'hang', '洪': 'hong', '包': 'bao', '诸': 'zhu', '左': 'zuo',
-              '石': 'shi', '崔': 'cui', '吉': 'ji', '钮': 'niu', '龚': 'gong',
-              '程': 'cheng', '嵇': 'ji', '邢': 'xing', '滑': 'hua', '裴': 'pei',
-              '陆': 'lu', '荣': 'rong', '翁': 'weng', '荀': 'xun', '羊': 'yang',
-              '於': 'yu', '惠': 'hui', '甄': 'zhen', '曲': 'qu', '家': 'jia',
-              '封': 'feng', '芮': 'rui', '羿': 'yi', '储': 'chu', '靳': 'jin',
-              '汲': 'ji', '邴': 'bing', '糜': 'mi', '松': 'song', '井': 'jing',
-              '段': 'duan', '富': 'fu', '巫': 'wu', '乌': 'wu', '焦': 'jiao',
-              '巴': 'ba', '弓': 'gong', '牧': 'mu', '隗': 'wei', '山': 'shan',
-              '谷': 'gu', '车': 'che', '侯': 'hou', '宓': 'mi', '蓬': 'peng',
-              '全': 'quan', '郗': 'xi', '班': 'ban', '仰': 'yang', '秋': 'qiu',
-              '仲': 'zhong', '伊': 'yi', '宫': 'gong', '宁': 'ning', '仇': 'qiu',
-              '栾': 'luan', '暴': 'bao', '甘': 'gan', '钭': 'tou', '厉': 'li',
-              '戎': 'rong', '祖': 'zu', '武': 'wu', '符': 'fu', '刘': 'liu',
-              '景': 'jing', '詹': 'zhan', '束': 'shu', '龙': 'long', '叶': 'ye',
-              '幸': 'xing', '司': 'si', '韶': 'shao', '郜': 'gao', '黎': 'li',
-              '蓟': 'ji', '薄': 'bo', '印': 'yin', '宿': 'su', '白': 'bai',
-              '怀': 'huai', '蒲': 'pu', '邰': 'tai', '从': 'cong', '鄂': 'e',
-              '索': 'suo', '咸': 'xian', '籍': 'ji', '赖': 'lai', '卓': 'zhuo',
-              '蔺': 'lin', '屠': 'tu', '蒙': 'meng', '池': 'chi', '乔': 'qiao',
-              '阴': 'yin', '鬱': 'yu', '胥': 'xu', '能': 'neng', '苍': 'cang',
-              '双': 'shuang', '闻': 'wen', '莘': 'shen', '党': 'dang', '翟': 'zhai',
-              '谭': 'tan', '贡': 'gong', '劳': 'lao', '逄': 'pang', '姬': 'ji',
-              '申': 'shen', '扶': 'fu', '堵': 'du', '冉': 'ran', '宰': 'zai',
-              '郦': 'li', '雍': 'yong', '郤': 'xi', '璩': 'qu', '桑': 'sang',
-              '桂': 'gui', '濮': 'pu', '牛': 'niu', '寿': 'shou', '通': 'tong',
-              '边': 'bian', '扈': 'hu', '燕': 'yan', '冀': 'ji', '郏': 'jia',
-              '浦': 'pu', '尚': 'shang', '农': 'nong', '温': 'wen', '别': 'bie',
-              '庄': 'zhuang', '晏': 'yan', '柴': 'chai', '瞿': 'qu', '阎': 'yan',
-              '充': 'chong', '慕': 'mu', '连': 'lian', '茹': 'ru', '习': 'xi',
-              '宦': 'huan', '艾': 'ai', '鱼': 'yu', '容': 'rong', '向': 'xiang',
-              '古': 'gu', '易': 'yi', '慎': 'shen', '戈': 'ge', '廖': 'liao',
-              '庾': 'yu', '终': 'zhong', '暨': 'ji', '居': 'ju', '衡': 'heng',
-              '步': 'bu', '都': 'du', '耿': 'geng', '满': 'man', '弘': 'hong',
-              '匡': 'kuang', '国': 'guo', '文': 'wen', '寇': 'kou', '广': 'guang',
-              '禄': 'lu', '阙': 'que', '东': 'dong', '欧': 'ou', '殳': 'shu',
-              '沃': 'wo', '利': 'li', '蔚': 'wei', '越': 'yue', '夔': 'kui',
-              '隆': 'long', '师': 'shi', '巩': 'gong', '厍': 'she', '聂': 'nie',
-              '晁': 'chao', '勾': 'gou', '敖': 'ao', '融': 'rong', '冷': 'leng',
-              '訾': 'zi', '辛': 'xin', '阚': 'kan', '那': 'na', '简': 'jian',
-              '饶': 'rao', '空': 'kong', '曾': 'zeng', '毋': 'wu', '沙': 'sha',
-              '乜': 'nie', '养': 'yang', '鞠': 'ju', '须': 'xu', '丰': 'feng',
-              '关': 'guan', '蒯': 'kuai', '相': 'xiang', '查': 'zha', '后': 'hou',
-              '荆': 'jing', '红': 'hong', '游': 'you', '竺': 'zhu', '权': 'quan',
-              '逯': 'lu', '盖': 'ge', '益': 'yi', '桓': 'huan', '公': 'gong',
-              '万俟': 'moqi', '司马': 'sima', '上官': 'shangguan', '欧阳': 'ouyang',
-              '夏侯': 'xiahou', '诸葛': 'zhuge', '闻人': 'wenren', '东方': 'dongfang',
-              '赫连': 'helian', '皇甫': 'huangfu', '尉迟': 'yuchi', '公羊': 'gongyang',
-              '澹台': 'tantai', '公冶': 'gongye', '宗政': 'zongzheng', '濮阳': 'puyang',
-              '淳于': 'chunyu', '单于': 'chanyu', '太叔': 'taishu', '申屠': 'shentu',
-              '公孙': 'gongsun', '仲孙': 'zhongsun', '轩辕': 'xuanyuan', '令狐': 'linghu',
-              '钟离': 'zhongli', '宇文': 'yuwen', '长孙': 'zhangsun', '慕容': 'murong',
-              '司徒': 'situ', '司空': 'sikong', '亓官': 'qiguan', '司寇': 'sikou',
-              '仉': 'zhang', '督': 'du', '子车': 'ziju', '颛孙': 'zhuansun',
-              '端木': 'duanmu', '巫马': 'wuma', '公西': 'gongxi', '漆雕': 'qidiao',
-              '乐正': 'yuezheng', '壤驷': 'rangsi', '公良': 'gongliang', '拓跋': 'tuoba',
-              '夹谷': 'jiagu', '宰父': 'zaifu', '谷梁': 'guliang', '晋': 'jin',
-              '楚': 'chu', '闫': 'yan', '法': 'fa', '汝': 'ru', '鄢': 'yan',
-              '涂': 'tu', '钦': 'qin', '段干': 'duangan', '百里': 'baili',
-              '东郭': 'dongguo', '南门': 'nanmen', '呼延': 'huyan', '归': 'gui',
-              '海': 'hai', '羊舌': 'yangshe', '微生': 'weisheng', '岳': 'yue',
-              '帅': 'shuai', '缑': 'gou', '亢': 'kang', '况': 'kuang', '后': 'hou',
-              '有': 'you', '琴': 'qin', '梁丘': 'liangqiu', '左丘': 'zuoqiu',
-              '东门': 'dongmen', '西门': 'ximen', '商': 'shang', '牟': 'mou',
-              '佘': 'she', '佴': 'nai', '伯': 'bo', '赏': 'shang', '南宫': 'nangong',
-              '墨': 'mo', '哈': 'ha', '谯': 'qiao', '笪': 'da', '年': 'nian',
-              '爱': 'ai', '阳': 'yang', '佟': 'tong', '第五': 'diwu', '言': 'yan',
-              '福': 'fu'
-            };
-            return pinyinMap[surname] || surname;
-          }
-          // 处理英文姓名：取第一个单词作为姓氏
-          return name.split(' ')[0].toLowerCase();
-        };
-        
-        const aSurnamePinyin = getSurnamePinyin(aValue);
-        const bSurnamePinyin = getSurnamePinyin(bValue);
-        
-        // 按姓氏拼音排序
-        if (aSurnamePinyin < bSurnamePinyin) return newDirection === 'asc' ? -1 : 1;
-        if (aSurnamePinyin > bSurnamePinyin) return newDirection === 'asc' ? 1 : -1;
-        
-        // 如果姓氏相同，按完整姓名排序
-        if (aValue < bValue) return newDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return newDirection === 'asc' ? 1 : -1;
-        return 0;
-      } else if (sortBy === 'group') {
-        // 小组名称排序
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-        
-        if (aValue < bValue) return newDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return newDirection === 'asc' ? 1 : -1;
-        return 0;
-      } else {
-        // 数字字段排序（积分、记录数）
-        if (aValue < bValue) return newDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return newDirection === 'asc' ? 1 : -1;
-        return 0;
-      }
-    });
-    
-    // 重新渲染表格
-    const rowsHtml = sortedStats.map(stat => {
-      if (type === 'student') {
-        return `
-          <tr data-name="${stat.name}">
-            <td>${stat.name}</td>
-            <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
-            <td>${stat.records.length}</td>
-            <td><button class="btn btn-sm btn-info view-detail-btn" data-type="student" data-target="${stat.name}">查看详情</button></td>
-          </tr>
-        `;
-      } else {
-        return `
-          <tr data-group="${stat.group}">
-            <td>${stat.group}</td>
-            <td>${stat.points > 0 ? '+' : ''}${stat.points}</td>
-            <td>${stat.records.length}</td>
-            <td><button class="btn btn-sm btn-info view-detail-btn" data-type="group" data-target="${stat.group}">查看详情</button></td>
-          </tr>
-        `;
-      }
-    }).join('');
-    
-    tbody.innerHTML = rowsHtml;
-    
-    // 重新绑定事件
-    this.initStatisticsTableInteraction(document.getElementById(this.currentStatistics.containerId));
-  }
-  
-  showStatisticsDetail(type, target) {
-    // 独立获取学生/小组的完整积分记录，不受统计页面时间筛选条件影响
-    
-    // 根据类型调用不同的API获取完整数据
-    if (type === 'student') {
-      // 先获取班级列表，找到当前班级对应的数字ID
-      fetch('/api/points/classes')
-        .then(response => response.json())
-        .then(classes => {
-          // 查找当前班级对应的数字ID
-          const currentClass = classes.find(c => c.class_name === this.currentClassName);
-          if (!currentClass) {
-            console.error('Current class not found in backend:', this.currentClassName);
-            this.showStatisticsDetailFallback(type, target);
-            return;
-          }
-          
-          const numericClassId = currentClass.id;
-          
-          // 获取学生列表，找到对应学生的ID
-          fetch(`/api/points/classes/${numericClassId}/students`)
-            .then(response => response.json())
-            .then(students => {
-              // 查找目标学生
-              const targetStudent = students.find(s => s.name === target);
-              if (!targetStudent) {
-                console.error('Student not found:', target);
-                this.showStatisticsDetailFallback(type, target);
-                return;
-              }
-              
-              // 存储当前详情信息，用于时间筛选
-              this.currentDetail = {
-                type: type,
-                target: target,
-                studentId: targetStudent.id,
-                className: this.currentClassName,
-                classId: numericClassId
-              };
-              
-              // 获取学生完整积分记录（不受统计页面筛选影响）
-              this.loadDetailRecords();
-            })
-            .catch(error => {
-              console.error('Error loading students list:', error);
-              this.showStatisticsDetailFallback(type, target);
-            });
-        })
-        .catch(error => {
-          console.error('Error loading classes list:', error);
-          this.showStatisticsDetailFallback(type, target);
-        });
-    } else {
-      // 获取小组完整积分记录（暂时使用回退方法，因为小组历史记录API可能不存在）
-      console.log('Group history API not available, using fallback');
-      this.showStatisticsDetailFallback(type, target);
-    }
-  }
-  
-  // 加载详情页面的记录数据
-  loadDetailRecords() {
-    if (!this.currentDetail) return;
-    
-    const { studentId } = this.currentDetail;
-    
-    // 构建查询参数
-    const url = `/api/points/students/${studentId}/records`;
-    
-    fetch(url)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch student records');
+        groupStats[record.group].points += record.points;
+        groupStats[record.group].records.push(record);
+        totalPoints += record.points;
+      } else if(record.type === 'purchase') {
+        // 购买记录不计入总积分变化
+        if(!studentStats[record.name]) {
+          studentStats[record.name] = { points: 0, records: [] };
         }
-        return response.json();
-      })
-      .then(records => {
-        // 转换后端数据格式为前端期望的格式
-        const formattedRecords = records.map(record => ({
-          ...record,
-          date: record.created_at ? record.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
-          rule: record.reason || record.rule || '-',
-          item: record.item || '-'
-        }));
-        
-        // 构建完整的统计信息
-        const targetStat = {
-          name: this.currentDetail.target,
-          points: formattedRecords.reduce((sum, record) => sum + (record.points || 0), 0),
-          records: formattedRecords
-        };
-        
-        // 创建或更新详情模态框
-        if (!document.getElementById('statisticsDetailModal')) {
-          this.createStatisticsDetailModal(targetStat, this.currentDetail.type);
-        } else {
-          this.updateDetailModal(targetStat);
-        }
-        
-        // 更新统计概览卡片
-        this.updateStatisticsOverview(targetStat);
-      })
-      .catch(error => {
-        console.error('Error fetching student records:', error);
-        this.showStatisticsDetailFallback(this.currentDetail.type, this.currentDetail.target);
-      });
-  }
-  
-  // 根据时间段筛选记录
-  filterRecordsByPeriod(records, period) {
-    const today = new Date();
+        studentStats[record.name].points -= record.cost;
+        studentStats[record.name].records.push(record);
+        totalPoints -= record.cost;
+      }
+    });
     
-    switch(period) {
-      case 'today':
-        const todayStr = today.toISOString().split('T')[0];
-        return records.filter(record => {
-          const recordDate = record.created_at ? record.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
-          return recordDate === todayStr;
-        });
-        
-      case 'yesterday':
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        return records.filter(record => {
-          const recordDate = record.created_at ? record.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
-          return recordDate === yesterdayStr;
-        });
-        
-      case 'thisWeek':
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        return records.filter(record => {
-          const recordDate = new Date(record.created_at || new Date());
-          return recordDate >= startOfWeek && recordDate <= endOfWeek;
-        });
-        
-      case 'lastWeek':
-        const startOfLastWeek = new Date(today);
-        startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
-        const endOfLastWeek = new Date(startOfLastWeek);
-        endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
-        return records.filter(record => {
-          const recordDate = new Date(record.created_at || new Date());
-          return recordDate >= startOfLastWeek && recordDate <= endOfLastWeek;
-        });
-        
-      case 'thisMonth':
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        return records.filter(record => {
-          const recordDate = new Date(record.created_at || new Date());
-          return recordDate >= startOfMonth && recordDate <= endOfMonth;
-        });
-        
-      case 'lastMonth':
-        const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-        return records.filter(record => {
-          const recordDate = new Date(record.created_at || new Date());
-          return recordDate >= startOfLastMonth && recordDate <= endOfLastMonth;
-        });
-        
-      default:
-        return records;
-    }
-  }
-  
-  // 回退方法：使用当前统计数据（保持原有逻辑作为备选）
-  showStatisticsDetailFallback(type, target) {
-    console.log('Using fallback method for statistics detail');
-    
-    // 查找包含统计数据的容器（todayStats, yesterdayStats等）
-    const container = document.getElementById(this.currentStatistics.containerId);
-    if (!container) {
-      console.error('Statistics container not found');
-      return;
-    }
-    
-    // 获取统计数据
-    const stats = type === 'student' ? this.currentStatistics.studentStats : this.currentStatistics.groupStats;
-    const targetStat = stats.find(stat => (type === 'student' ? stat.name === target : stat.group === target));
-    
-    if (!targetStat) {
-      console.error('Statistics data not found for:', target);
-      return;
-    }
-    
-    this.createStatisticsDetailModal(targetStat, type);
-  }
-  
-  createStatisticsDetailModal(stat, type) {
-    // 计算统计信息
-    const totalPoints = stat.points;
-    const totalRecords = stat.records.length;
-    const positiveRecords = stat.records.filter(r => r.points > 0).length;
-    const negativeRecords = stat.records.filter(r => r.points < 0 || r.type === 'purchase').length;
-    const avgPointsPerRecord = totalRecords > 0 ? Math.round(totalPoints / totalRecords) : 0;
-    
-    // 创建详情模态框HTML
-    const modalHtml = `
-      <div id="statisticsDetailModal" class="modal" style="display: flex;">
-        <div class="modal-content statistics-detail-modal" style="max-width: 900px;">
-          <div class="modal-header">
-            <h3>📊 ${type === 'student' ? '学生' : '小组'}积分详情 - ${type === 'student' ? stat.name : stat.group}</h3>
-            <button class="close-btn" onclick="app.closeStatisticsDetail()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <!-- 统计概览卡片 -->
-            <div class="statistics-overview">
-              <div class="statistics-card">
-                <div class="card-value">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
-                <div class="card-label">总积分变化</div>
-              </div>
-              <div class="statistics-card">
-                <div class="card-value">${totalRecords}</div>
-                <div class="card-label">记录总数</div>
-              </div>
-              <div class="statistics-card">
-                <div class="card-value">${positiveRecords}</div>
-                <div class="card-label">加分记录</div>
-              </div>
-              <div class="statistics-card">
-                <div class="card-value">${negativeRecords}</div>
-                <div class="card-label">减分记录</div>
-              </div>
-            </div>
-            
-            <!-- 积分记录详情区域 -->
-            <div class="detail-records">
-              <div class="records-header">
-                <h4>📋 积分记录详情</h4>
-                <div class="records-filter">
-                  <button class="filter-btn active" data-filter="all">全部</button>
-                  <button class="filter-btn" data-filter="positive">加分</button>
-                  <button class="filter-btn" data-filter="negative">扣分</button>
-                </div>
-              </div>
-              
-              <div class="records-table-container">
-                <table class="detail-table">
-                  <thead>
-                    <tr>
-                      <th>📅 日期</th>
-                      <th>📝 类型</th>
-                      <th>🏷️ 规则/商品</th>
-                      <th>💰 积分变化</th>
-                    </tr>
-                  </thead>
-                  <tbody id="detailRecordsBody">
-                    ${stat.records.map(record => {
-                      // 确定操作类型：加分、扣分、兑换
-                      let operationType = 'exchange';
-                      if (record.type === 'purchase') {
-                        operationType = 'exchange';
-                      } else if (record.points > 0) {
-                        operationType = 'add';
-                      } else if (record.points < 0) {
-                        operationType = 'deduct';
-                      }
-                      
-                      return `
-                        <tr class="record-${record.type} operation-${operationType}" data-type="${record.type}" data-operation="${operationType}" data-date="${record.date}">
-                          <td>${record.date}</td>
-                          <td>${operationType === 'add' ? '加分' : operationType === 'deduct' ? '扣分' : '兑换'}</td>
-                          <td>${record.rule || record.item || '-'}</td>
-                          <td class="${operationType === 'add' ? 'positive' : operationType === 'deduct' ? 'negative' : 'exchange'}">
-                            ${record.type === 'purchase' ? '-' : ''}${record.points > 0 ? '+' : ''}${record.points || record.cost}
-                          </td>
-                        </tr>
-                      `;
-                    }).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-        </div>
+    let html = `
+      <div class="statistics-summary">
+        <h4>${title}</h4>
+        <p>总积分变化: ${totalPoints > 0 ? '+' : ''}${totalPoints}</p>
+        <p>记录总数: ${history.length}</p>
       </div>
     `;
     
-    // 移除已存在的详情模态框
-    const existingModal = document.getElementById('statisticsDetailModal');
-    if (existingModal) {
-      existingModal.remove();
-    }
-    
-    // 添加新的详情模态框到页面
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    // 显示模态框
-    const modal = document.getElementById('statisticsDetailModal');
-    modal.style.display = 'flex';
-    
-    // 绑定关闭事件
-    modal.querySelector('.close-btn').onclick = () => this.closeStatisticsDetail();
-    
-    // 初始化筛选功能
-    this.initStatisticsDetailFilter();
-  }
-  
-  initStatisticsDetailFilter() {
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    if (!filterBtns.length) return;
-    
-    filterBtns.forEach(btn => {
-      btn.addEventListener('click', function() {
-        // 移除所有按钮的active类
-        filterBtns.forEach(b => b.classList.remove('active'));
-        // 为当前按钮添加active类
-        this.classList.add('active');
-        
-        const filter = this.dataset.filter;
-        const rows = document.querySelectorAll('#detailRecordsBody tr');
-        
-        // 性能优化：直接操作CSS类，避免DOM重排
-        rows.forEach(row => {
-          const operationType = row.dataset.operation;
-          
-          let show = false;
-          
-          switch(filter) {
-            case 'all':
-              show = true;
-              break;
-            case 'positive':
-              // 显示所有加分类型的记录
-              show = operationType === 'add';
-              break;
-            case 'negative':
-              // 显示所有扣分类型的记录
-              show = operationType === 'deduct';
-              break;
-          }
-          
-          // 使用CSS类控制显示/隐藏，避免重排
-          if (show) {
-            row.classList.remove('hidden');
-          } else {
-            row.classList.add('hidden');
-          }
-        });
+    if(Object.keys(studentStats).length > 0) {
+      html += '<h4>个人积分统计</h4><table class="statistics-table"><tr><th>姓名</th><th>积分变化</th><th>记录数</th></tr>';
+      Object.entries(studentStats).forEach(([name, stats]) => {
+        html += `<tr><td>${name}</td><td>${stats.points > 0 ? '+' : ''}${stats.points}</td><td>${stats.records.length}</td></tr>`;
       });
-    });
-  }
-  
-  // 更新详情模态框内容
-  updateDetailModal(stat) {
-    const modal = document.getElementById('statisticsDetailModal');
-    if (!modal) return;
-    
-    // 更新统计概览卡片
-    const totalPoints = stat.points;
-    const totalRecords = stat.records.length;
-    const positiveRecords = stat.records.filter(r => r.points > 0).length;
-    const negativeRecords = stat.records.filter(r => r.points < 0 || r.type === 'purchase').length;
-    
-    const statisticsCards = modal.querySelectorAll('.statistics-card');
-    if (statisticsCards.length >= 4) {
-      statisticsCards[0].querySelector('.card-value').textContent = totalPoints > 0 ? '+' + totalPoints : totalPoints;
-      statisticsCards[1].querySelector('.card-value').textContent = totalRecords;
-      statisticsCards[2].querySelector('.card-value').textContent = positiveRecords;
-      statisticsCards[3].querySelector('.card-value').textContent = negativeRecords;
+      html += '</table>';
     }
     
-    // 更新积分记录表格
-    const tbody = modal.querySelector('#detailRecordsBody');
-    if (tbody) {
-      const rowsHtml = stat.records.map(record => {
-        // 确定操作类型：加分、扣分、兑换
-        let operationType = 'exchange';
-        if (record.type === 'purchase') {
-          operationType = 'exchange';
-        } else if (record.points > 0) {
-          operationType = 'add';
-        } else if (record.points < 0) {
-          operationType = 'deduct';
-        }
-        
-        return `
-          <tr class="record-${record.type} operation-${operationType}" data-type="${record.type}" data-operation="${operationType}" data-date="${record.date}">
-            <td>${record.date}</td>
-            <td>${operationType === 'add' ? '加分' : operationType === 'deduct' ? '扣分' : '兑换'}</td>
-            <td>${record.rule || record.item || '-'}</td>
-            <td class="${operationType === 'add' ? 'positive' : operationType === 'deduct' ? 'negative' : 'exchange'}">
-              ${record.type === 'purchase' ? '-' : ''}${record.points > 0 ? '+' : ''}${record.points || record.cost}
-            </td>
-          </tr>
-        `;
-      }).join('');
-      
-      tbody.innerHTML = rowsHtml;
-    }
-  }
-  
-  // 更新统计概览卡片
-  updateStatisticsOverview() {
-    const visibleRows = document.querySelectorAll('#detailRecordsBody tr:not(.hidden)');
-    
-    let totalPoints = 0;
-    let totalRecords = visibleRows.length;
-    let positiveRecords = 0;
-    let negativeRecords = 0;
-    
-    visibleRows.forEach(row => {
-      const pointsText = row.querySelector('td:nth-child(4)').textContent;
-      const points = parseInt(pointsText.replace(/[+-]/g, '')) || 0;
-      
-      if (pointsText.includes('+')) {
-        totalPoints += points;
-        positiveRecords++;
-      } else if (pointsText.includes('-')) {
-        totalPoints -= points;
-        negativeRecords++;
-      }
-    });
-    
-    // 更新统计概览卡片
-    const overviewCards = document.querySelectorAll('.statistics-card');
-    if (overviewCards.length >= 4) {
-      overviewCards[0].querySelector('.card-value').textContent = 
-        totalPoints > 0 ? '+' + totalPoints : totalPoints;
-      overviewCards[1].querySelector('.card-value').textContent = totalRecords;
-      overviewCards[2].querySelector('.card-value').textContent = positiveRecords;
-      overviewCards[3].querySelector('.card-value').textContent = negativeRecords;
-    }
-  }
-
-  // 测试用例：验证筛选逻辑正确性
-  testFilterLogic(filter, rows) {
-    console.log(`=== 筛选测试: ${filter} ===`);
-    let addCount = 0;
-    let deductCount = 0;
-    let exchangeCount = 0;
-    let totalCount = 0;
-    
-    rows.forEach(row => {
-      const operationType = row.dataset.operation;
-      
-      if (operationType === 'add') addCount++;
-      if (operationType === 'deduct') deductCount++;
-      if (operationType === 'exchange') exchangeCount++;
-      totalCount++;
-    });
-    
-    console.log(`总记录数: ${totalCount}`);
-    console.log(`加分记录: ${addCount}`);
-    console.log(`扣分记录: ${deductCount}`);
-    console.log(`兑换记录: ${exchangeCount}`);
-    
-    // 验证筛选逻辑
-    let expectedCount = 0;
-    switch(filter) {
-      case 'all':
-        expectedCount = totalCount;
-        break;
-      case 'positive':
-        expectedCount = addCount;
-        break;
-      case 'negative':
-        expectedCount = deductCount;
-        break;
+    if(Object.keys(groupStats).length > 0) {
+      html += '<h4>小组积分统计</h4><table class="statistics-table"><tr><th>小组</th><th>积分变化</th><th>记录数</th></tr>';
+      Object.entries(groupStats).forEach(([group, stats]) => {
+        html += `<tr><td>${group}</td><td>${stats.points > 0 ? '+' : ''}${stats.points}</td><td>${stats.records.length}</td></tr>`;
+      });
+      html += '</table>';
     }
     
-    console.log(`预期显示记录数: ${expectedCount}`);
-    console.log('=== 测试完成 ===');
-  }
-  
-  closeStatisticsDetail() {
-    const modal = document.getElementById('statisticsDetailModal');
-    if (modal) {
-      modal.style.display = 'none';
-      setTimeout(() => {
-        if (modal && modal.parentNode) {
-          modal.remove();
-        }
-      }, 300);
-    }
-  }
-  
-  exportDetailStatistics(type, target) {
-    const stats = type === 'student' ? this.currentStatistics.studentStats : this.currentStatistics.groupStats;
-    const targetStat = stats.find(stat => (type === 'student' ? stat.name === target : stat.group === target));
-    
-    if (!targetStat) {
-      alert('统计数据不存在！');
-      return;
+    if(Object.keys(studentStats).length === 0 && Object.keys(groupStats).length === 0) {
+      html += '<p>该时间段内无积分记录</p>';
     }
     
-    const excelData = [
-      ['日期', '类型', '规则/商品', '积分变化', '备注']
-    ];
-    
-    targetStat.records.forEach(record => {
-      // 确定操作类型：加分、扣分、兑换
-      const operationType = record.type === 'purchase' ? 'exchange' : 
-                           (record.points > 0 ? 'add' : 'deduct');
-      
-      excelData.push([
-        record.date,
-        operationType === 'add' ? '加分' : operationType === 'deduct' ? '扣分' : '兑换',
-        record.rule || record.item || '-',
-        record.type === 'purchase' ? `-${record.cost}` : (record.points > 0 ? `+${record.points}` : record.points),
-        record.note || '-'
-      ]);
-    });
-    
-    const ws = XLSX.utils.aoa_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '积分详情');
-    
-    const filename = `${type === 'student' ? '学生' : '小组'}积分详情_${target}.xlsx`;
-    XLSX.writeFile(wb, filename);
-    alert('详情导出成功！');
+    container.innerHTML = html;
   }
   
   exportStatistics(){
@@ -9040,10 +7202,7 @@ refreshAllRulesDisplay() {
 		return;
 	  }
 	  
-	  // 根据操作类型调整积分值：减分操作时，正数表示扣除
-	  const adjustedPoints = this.currentOperation === 'subtract' ? -Math.abs(points) : points;
-	  
-	  this.applyRuleToStudent(this.currentStudent, ruleName, adjustedPoints);
+	  this.applyRuleToStudent(this.currentStudent, ruleName, points);
 	  this.closePointsModal();
 	}
 
@@ -9064,10 +7223,7 @@ refreshAllRulesDisplay() {
 		return;
 	  }
 	  
-	  // 根据操作类型调整积分值：减分操作时，正数表示扣除
-	  const adjustedPoints = this.currentOperation === 'subtract' ? -Math.abs(points) : points;
-	  
-	  this.applyRuleToGroup(this.currentGroup, ruleName, adjustedPoints);
+	  this.applyRuleToGroup(this.currentGroup, ruleName, points);
 	  this.closeGroupPointsModal();
 	}
 
@@ -9102,13 +7258,9 @@ refreshAllRulesDisplay() {
 		return;
 	  }
 	  
-	  // 批量操作中，临时规则输入正数表示加分，负数表示减分
-	  // 用户需要明确输入正数或负数来指定操作类型
-	  const adjustedPoints = points;
-	  
 	  // 应用规则到所有选中的学生
 	  selectedIndexes.forEach(index => {
-		this.applyRuleToStudent(index, ruleName, adjustedPoints);
+		this.applyRuleToStudent(index, ruleName, points);
 	  });
 	  
 	  this.closeBatchModal();
@@ -9146,13 +7298,9 @@ applyTempBatchGroupRule() {
     return;
   }
   
-  // 批量操作中，临时规则输入正数表示加分，负数表示减分
-  // 用户需要明确输入正数或负数来指定操作类型
-  const adjustedPoints = points;
-  
   // 应用规则到所有选中的小组
   selectedIndexes.forEach(index => {
-    this.applyRuleToGroup(index, ruleName, adjustedPoints);
+    this.applyRuleToGroup(index, ruleName, points);
   });
   
   this.closeBatchModal();
@@ -10002,19 +8150,17 @@ deleteGroup(index){
     
     for(let i = stagesToUse.length - 1; i >= 0; i--){
       if(points >= stagesToUse[i].minPoints){
-        // 根据显示模式返回不同的等级名称和emoji
+        // 根据显示模式返回不同的等级名称
         const stage = {...stagesToUse[i]};
         if (this.displayMode === 'emoji') {
-          // emoji模式下使用默认等级名称和emoji
+          // emoji模式下使用默认等级名称
           const defaultStages = this.getDefaultPetStages();
           if (defaultStages[i]) {
             stage.name = defaultStages[i].name;
-            stage.emoji = defaultStages[i].emoji;
           }
         } else {
-          // 自定义模式下使用自定义等级名称，保持原有emoji
+          // 自定义模式下使用自定义等级名称
           stage.name = stagesToUse[i].name;
-          stage.emoji = stagesToUse[i].emoji;
         }
         return stage;
       }
@@ -10025,12 +8171,10 @@ deleteGroup(index){
       const defaultStages = this.getDefaultPetStages();
       if (defaultStages[0]) {
         stage.name = defaultStages[0].name;
-        stage.emoji = defaultStages[0].emoji;
       }
     } else {
-      // 自定义模式下使用自定义等级名称，保持原有emoji
+      // 自定义模式下使用自定义等级名称
       stage.name = stagesToUse[0].name;
-      stage.emoji = stagesToUse[0].emoji;
     }
     return stage;
   }
@@ -10061,37 +8205,14 @@ getStudentPetStage(student) {
   const totalPoints = this.getStudentTotalPoints(student);
   return this.getPetStage(totalPoints, student.name);
 }
-
-// 获取学生宠物名称
-getStudentPetName(student) {
-  // 检查学生是否已分配宠物
-  if (student.name && this.studentPets && this.studentPets[student.name] && this.studentPets[student.name].petType) {
-    const petTypeId = this.studentPets[student.name].petType;
-    // 在宠物类型配置中查找对应的宠物名称
-    const petConfig = this.petTypes.find(pet => pet.id === petTypeId);
-    if (petConfig) {
-      return petConfig.name; // 返回宠物名称，如"小猫"、"小狗"等
-    }
-  }
-  return '未分配'; // 如果没有分配宠物
-}
   
   getStageProgress(points, studentName = null){
-    const stage = this.getPetStage(points, studentName);
+    const stage=this.getPetStage(points, studentName);
+    if(stage.maxPoints===Infinity) return 100;
     
-    // 处理特殊情况：最高等级（无限大）直接返回100%
-    if (stage.maxPoints === Infinity) return 100;
-    
-    // 处理负分情况：当分数小于当前阶段的最小分数时，进度条显示为0%
-    if (points < stage.minPoints) return 0;
-    
-    // 计算当前等级内的进度百分比
-    const current = points - stage.minPoints;
-    const total = stage.maxPoints - stage.minPoints;
-    
-    // 确保百分比在0-100范围内
-    const progress = (current / total) * 100;
-    return Math.max(0, Math.min(100, progress));
+    const current=points-stage.minPoints;
+    const total=stage.maxPoints-stage.minPoints;
+    return Math.min(100,(current/total)*100);
   }
   
   getLevel(points, studentName = null){
@@ -10184,20 +8305,11 @@ getStudentPetName(student) {
   
   getGroupStageProgress(points, groupName = null){
     const stage = this.getGroupStage(points, groupName);
+    if(stage.maxPoints===Infinity) return 100;
     
-    // 处理特殊情况：最高等级（无限大）直接返回100%
-    if (stage.maxPoints === Infinity) return 100;
-    
-    // 处理负分情况：当分数小于当前阶段的最小分数时，进度条显示为0%
-    if (points < stage.minPoints) return 0;
-    
-    // 计算当前等级内的进度百分比
-    const current = points - stage.minPoints;
-    const total = stage.maxPoints - stage.minPoints;
-    
-    // 确保百分比在0-100范围内
-    const progress = (current / total) * 100;
-    return Math.max(0, Math.min(100, progress));
+    const current=points-stage.minPoints;
+    const total=stage.maxPoints-stage.minPoints;
+    return Math.min(100,(current/total)*100);
   }
   
   getGroupLevel(points, groupName = null){
@@ -10473,17 +8585,7 @@ exportBackup(){
     
     // 🔧 修复：添加等级积分设置
     scoreToPointsRatio: this.scoreToPointsRatio,
-    
-    // 🐾 新增：完整的宠物配置信息
-    petTypes: this.petTypes || [],
     petStages: this.petStages,
-    petStagesByType: this.petStagesByType || {},
-    petImages: this.petImages || {},
-    groupPetImages: this.groupPetImages || {},
-    studentPets: this.studentPets || {},
-    groupPets: this.groupPets || {},
-    displayMode: this.displayMode || 'local',
-    
     // 导出小组等级时只包含积分范围，不包含自定义名称
     groupStages: this.groupStages.map(stage => ({
       minPoints: stage.minPoints,
@@ -10545,14 +8647,6 @@ exportBackup(){
   exportMessage += `\n- 小组等级配置（${this.groupStages.length}个等级）`;
   exportMessage += `\n- 成绩积分比例：${this.scoreToPointsRatio}:1`;
   exportMessage += `\n- 使用${this.currentConfigScope}配置`;
-  
-  // 🐾 新增：宠物配置信息统计
-  exportMessage += `\n- 宠物类型配置（${this.petTypes.length}种宠物）`;
-  exportMessage += `\n- 个人宠物图片配置（${Object.keys(this.petImages).length}种类型）`;
-  exportMessage += `\n- 小组宠物图片配置（${Object.keys(this.groupPetImages).length}种类型）`;
-  exportMessage += `\n- 学生宠物选择记录（${Object.keys(this.studentPets).length}名学生）`;
-  exportMessage += `\n- 小组宠物选择记录（${Object.keys(this.groupPets).length}个小组）`;
-  exportMessage += `\n- 显示模式：${this.displayMode}`;
   
   alert(exportMessage);
 }
@@ -11138,7 +9232,7 @@ loadTaskRecordFromRenwu(recordIndex) {
     recordIndex: recordIndex
   });
 
-  window.location.href = `/static/renwu.html?${query.toString()}`;
+  window.location.href = `renwu.html?${query.toString()}`;
 }
 
 deleteTaskRecord(recordIndex) {
@@ -11148,570 +9242,8 @@ deleteTaskRecord(recordIndex) {
   this.renderTaskRecords();
   alert('记录已删除');
 }
-
-// 显示批量应用宠物模态框
-showBatchApplyPetModal(petTypeId) {
-  const modal = document.getElementById('batchApplyPetModal');
-  const petNameElement = document.getElementById('batchApplyPetName');
-  
-  if (!modal || !petNameElement) {
-    console.error('批量应用宠物模态框元素未找到');
-    return;
-  }
-  
-  // 获取宠物类型信息
-  const petType = this.petTypes.find(t => t.id === petTypeId);
-  if (!petType) {
-    console.error('未找到宠物类型:', petTypeId);
-    return;
-  }
-  
-  // 更新宠物名称显示
-  petNameElement.textContent = `选择要应用"${petType.name}"宠物形象的学生`;
-  
-  // 保存当前选择的宠物类型（修复变量名一致性问题）
-  this.currentBatchApplyPetTypeId = petTypeId;
-  
-  // 渲染学生卡片
-  this.renderBatchApplyStudentsList();
-  
-  // 显示模态框并确保居中显示
-  modal.style.display = 'flex';
-  modal.style.justifyContent = 'center';
-  modal.style.alignItems = 'center';
-  modal.style.zIndex = '1000';
 }
 
-// 隐藏批量应用宠物模态框
-hideBatchApplyPetModal() {
-  const modal = document.getElementById('batchApplyPetModal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-  
-  // 注意：不要清除currentBatchApplyPetTypeId，以便下次点击时仍然有效
-  // 只有在用户明确取消或关闭模态框时才需要清除
-}
-
-// 渲染批量应用学生列表 - 优化版本
-renderBatchApplyStudentsList() {
-  const container = document.getElementById('batchApplyStudentsList');
-  if (!container) {
-    console.error('批量应用学生列表容器未找到');
-    return;
-  }
-  
-  // 检查是否有学生数据
-  if (!this.students || this.students.length === 0) {
-    container.innerHTML = '<div class="no-data-message">暂无学生数据</div>';
-    return;
-  }
-  
-  // 使用文档片段提高性能
-  const fragment = document.createDocumentFragment();
-  
-  // 渲染每个学生卡片
-  this.students.forEach((student, index) => {
-    const studentCard = this.createBatchApplyStudentCard(student, index);
-    fragment.appendChild(studentCard);
-  });
-  
-  // 一次性添加到容器
-  container.innerHTML = '';
-  container.appendChild(fragment);
-  
-  // 更新已选择学生数量显示
-  this.updateSelectedCount();
-}
-
-// 创建批量应用学生卡片 - 优化版本
-createBatchApplyStudentCard(student, index) {
-  const card = document.createElement('div');
-  card.className = 'student-card';
-  
-  // 获取学生宠物信息
-  const petName = this.getStudentPetName(student);
-  const hasPet = petName !== '未分配';
-  
-  // 创建卡片内容 - 所有元素在同一行水平排列
-  card.innerHTML = `
-    <div class="student-checkbox">
-      <input type="checkbox" class="batch-apply-student-checkbox" data-student-index="${index}" id="student-${index}">
-      <label for="student-${index}"></label>
-    </div>
-    
-    <div class="student-name">${student.name}</div>
-    <div class="student-points">积分: ${student.points || 0}</div>
-    <div class="pet-section ${hasPet ? 'has-pet' : 'no-pet'}">
-      <div class="pet-name">${petName}</div>
-    </div>
-  `;
-  
-  // 如果没有宠物，隐藏宠物信息区域
-  if (!hasPet) {
-    const petSection = card.querySelector('.pet-section');
-    petSection.style.display = 'none';
-  }
-  
-  // 添加点击事件（点击卡片切换复选框）
-  card.addEventListener('click', (e) => {
-    if (!e.target.matches('input[type="checkbox"], label')) {
-      const checkbox = card.querySelector('input[type="checkbox"]');
-      checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  });
-  
-  // 添加复选框变化事件
-  const checkbox = card.querySelector('input[type="checkbox"]');
-  checkbox.addEventListener('change', () => {
-    this.updateBatchApplySelection();
-  });
-  
-  return card;
-}
-
-// 更新批量应用选择状态
-updateBatchApplySelection() {
-  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox');
-  const selectAllCheckbox = document.getElementById('selectAllStudents');
-  
-  if (!selectAllCheckbox) return;
-  
-  const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-  const totalCount = checkboxes.length;
-  
-  // 更新全选复选框状态
-  selectAllCheckbox.checked = checkedCount === totalCount;
-  selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
-  
-  // 更新确认按钮状态
-  const confirmBtn = document.getElementById('confirmBatchApplyPetBtn');
-  if (confirmBtn) {
-    confirmBtn.disabled = checkedCount === 0;
-  }
-  
-  // 更新已选择学生数量显示
-  this.updateSelectedCount();
-}
-
-// 更新已选择学生数量显示
-updateSelectedCount() {
-  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox');
-  const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-  const totalCount = checkboxes.length;
-  
-  const selectedCountElement = document.getElementById('selectedCount');
-  if (selectedCountElement) {
-    selectedCountElement.textContent = `已选择 ${checkedCount}/${totalCount} 名学生`;
-  }
-}
-
-// 全选/取消全选学生
-toggleSelectAllStudents(selectAll) {
-  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox');
-  
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAll;
-    // 触发change事件以更新UI状态
-    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  
-  // 更新确认按钮状态
-  const confirmBtn = document.getElementById('confirmBatchApplyPetBtn');
-  if (confirmBtn) {
-    confirmBtn.disabled = !selectAll && checkboxes.length > 0;
-  }
-  
-  // 更新已选择学生数量显示
-  this.updateSelectedCount();
-}
-
-// 获取宠物配置数据
-getPetConfigs() {
-  // 确保宠物类型数据存在
-  if (!this.petTypes || this.petTypes.length === 0) {
-    // 如果没有宠物类型，返回默认配置
-    return [
-      {
-        id: 'default',
-        name: '默认宠物',
-        emoji: '🐱',
-        color: '#3b82f6'
-      }
-    ];
-  }
-  
-  return this.petTypes;
-}
-
-// 应用宠物到单个学生
-applyPetToStudent(studentName, petConfig) {
-  // 确保学生宠物数据结构存在
-  if (!this.studentPets) {
-    this.studentPets = {};
-  }
-  
-  // 如果学生还没有宠物数据，创建一个
-  if (!this.studentPets[studentName]) {
-    this.studentPets[studentName] = {};
-  }
-  
-  // 更新宠物类型
-  this.studentPets[studentName].petType = petConfig.id;
-  
-  // 记录应用时间
-  this.studentPets[studentName].appliedAt = new Date().toISOString();
-  
-  console.log(`应用宠物到学生: ${studentName}, 宠物类型: ${petConfig.name}`);
-}
-
-// 确认批量应用宠物
-confirmBatchApplyPet() {
-  const selectedStudents = this.getSelectedBatchApplyStudents();
-  const petTypeId = this.currentBatchApplyPetTypeId;
-  
-  if (selectedStudents.length === 0) {
-    this.showNotification('请至少选择一个学生！', 'error');
-    return;
-  }
-  
-  if (!petTypeId) {
-    this.showNotification('请先选择要应用的宠物类型！', 'error');
-    return;
-  }
-  
-  // 获取宠物配置数据
-  const petConfigs = this.getPetConfigs();
-  const petConfig = petConfigs.find(pet => pet.id === petTypeId);
-  
-  if (!petConfig) {
-    this.showNotification('未找到对应的宠物配置！', 'error');
-    return;
-  }
-  
-  if (confirm(`确定要将"${petConfig.name}"宠物形象应用到 ${selectedStudents.length} 个学生吗？`)) {
-    // 批量应用宠物形象
-    selectedStudents.forEach(studentName => {
-      // 应用宠物到学生
-      this.applyPetToStudent(studentName, petConfig);
-    });
-    
-    // 保存数据
-    this.saveAll();
-    
-    // 更新界面
-    this.renderStudents();
-    this.renderRankings();
-    
-    // 隐藏模态框
-    this.hideBatchApplyPetModal();
-    
-    this.showNotification(`成功为 ${selectedStudents.length} 个学生应用宠物形象！`, 'success');
-  }
-}
-
-// 获取选中的批量应用学生
-getSelectedBatchApplyStudents() {
-  const checkboxes = document.querySelectorAll('.batch-apply-student-checkbox:checked');
-  const selectedStudents = [];
-  
-  checkboxes.forEach(checkbox => {
-    const studentIndex = parseInt(checkbox.dataset.studentIndex);
-    if (this.students[studentIndex]) {
-      selectedStudents.push(this.students[studentIndex].name);
-    }
-  });
-  
-  return selectedStudents;
-}
-
-// 获取姓氏拼音首字母
-getSurnamePinyin(name) {
-  if (!name || typeof name !== 'string') return '';
-  
-  // 提取姓氏（第一个字符）
-  const surname = name.charAt(0);
-  
-  // 常见姓氏拼音映射（包含多音字处理）
-  const surnamePinyinMap = {
-    '赵': 'Z', '钱': 'Q', '孙': 'S', '李': 'L', '周': 'Z', '吴': 'W', '郑': 'Z', '王': 'W',
-    '冯': 'F', '陈': 'C', '褚': 'C', '卫': 'W', '蒋': 'J', '沈': 'S', '韩': 'H', '杨': 'Y',
-    '朱': 'Z', '秦': 'Q', '尤': 'Y', '许': 'X', '何': 'H', '吕': 'L', '施': 'S', '张': 'Z',
-    '孔': 'K', '曹': 'C', '严': 'Y', '华': 'H', '金': 'J', '魏': 'W', '陶': 'T', '姜': 'J',
-    '戚': 'Q', '谢': 'X', '邹': 'Z', '喻': 'Y', '柏': 'B', '水': 'S', '窦': 'D', '章': 'Z',
-    '云': 'Y', '苏': 'S', '潘': 'P', '葛': 'G', '奚': 'X', '范': 'F', '彭': 'P', '郎': 'L',
-    '鲁': 'L', '韦': 'W', '昌': 'C', '马': 'M', '苗': 'M', '凤': 'F', '花': 'H', '方': 'F',
-    '俞': 'Y', '任': 'R', '袁': 'Y', '柳': 'L', '酆': 'F', '鲍': 'B', '史': 'S', '唐': 'T',
-    '费': 'F', '廉': 'L', '岑': 'C', '薛': 'X', '雷': 'L', '贺': 'H', '倪': 'N', '汤': 'T',
-    '滕': 'T', '殷': 'Y', '罗': 'L', '毕': 'B', '郝': 'H', '邬': 'W', '安': 'A', '常': 'C',
-    '乐': 'L', '于': 'Y', '时': 'S', '傅': 'F', '皮': 'P', '卞': 'B', '齐': 'Q', '康': 'K',
-    '伍': 'W', '余': 'Y', '元': 'Y', '卜': 'B', '顾': 'G', '孟': 'M', '平': 'P', '黄': 'H',
-    '和': 'H', '穆': 'M', '萧': 'X', '尹': 'Y', '姚': 'Y', '邵': 'S', '湛': 'Z', '汪': 'W',
-    '祁': 'Q', '毛': 'M', '禹': 'Y', '狄': 'D', '米': 'M', '贝': 'B', '明': 'M', '臧': 'Z',
-    '计': 'J', '伏': 'F', '成': 'C', '戴': 'D', '谈': 'T', '宋': 'S', '茅': 'M', '庞': 'P',
-    '熊': 'X', '纪': 'J', '舒': 'S', '屈': 'Q', '项': 'X', '祝': 'Z', '董': 'D', '梁': 'L',
-    '杜': 'D', '阮': 'R', '蓝': 'L', '闵': 'M', '席': 'X', '季': 'J', '麻': 'M', '强': 'Q',
-    '贾': 'J', '路': 'L', '娄': 'L', '危': 'W', '江': 'J', '童': 'T', '颜': 'Y', '郭': 'G',
-    '梅': 'M', '盛': 'S', '林': 'L', '刁': 'D', '钟': 'Z', '徐': 'X', '邱': 'Q', '骆': 'L',
-    '高': 'G', '夏': 'X', '蔡': 'C', '田': 'T', '樊': 'F', '胡': 'H', '凌': 'L', '霍': 'H',
-    '虞': 'Y', '万': 'W', '支': 'Z', '柯': 'K', '昝': 'Z', '管': 'G', '卢': 'L', '莫': 'M',
-    '经': 'J', '房': 'F', '裘': 'Q', '缪': 'M', '干': 'G', '解': 'X', '应': 'Y', '宗': 'Z',
-    '丁': 'D', '宣': 'X', '贲': 'B', '邓': 'D', '郁': 'Y', '单': 'S', '杭': 'H', '洪': 'H',
-    '包': 'B', '诸': 'Z', '左': 'Z', '石': 'S', '崔': 'C', '吉': 'J', '钮': 'N', '龚': 'G',
-    '程': 'C', '嵇': 'J', '邢': 'X', '滑': 'H', '裴': 'P', '陆': 'L', '荣': 'R', '翁': 'W',
-    '荀': 'X', '羊': 'Y', '於': 'Y', '惠': 'H', '甄': 'Z', '曲': 'Q', '家': 'J', '封': 'F',
-    '芮': 'R', '羿': 'Y', '储': 'C', '靳': 'J', '汲': 'J', '邴': 'B', '糜': 'M', '松': 'S',
-    '井': 'J', '段': 'D', '富': 'F', '巫': 'W', '乌': 'W', '焦': 'J', '巴': 'B', '弓': 'G',
-    '牧': 'M', '隗': 'W', '山': 'S', '谷': 'G', '车': 'C', '侯': 'H', '宓': 'M', '蓬': 'P',
-    '全': 'Q', '郗': 'X', '班': 'B', '仰': 'Y', '秋': 'Q', '仲': 'Z', '伊': 'Y', '宫': 'G',
-    '宁': 'N', '仇': 'Q', '栾': 'L', '暴': 'B', '甘': 'G', '钭': 'T', '厉': 'L', '戎': 'R',
-    '祖': 'Z', '武': 'W', '符': 'F', '刘': 'L', '景': 'J', '詹': 'Z', '束': 'S', '龙': 'L',
-    '叶': 'Y', '幸': 'X', '司': 'S', '韶': 'S', '郜': 'G', '黎': 'L', '蓟': 'J', '薄': 'B',
-    '印': 'Y', '宿': 'S', '白': 'B', '怀': 'H', '蒲': 'P', '邰': 'T', '从': 'C', '鄂': 'E',
-    '索': 'S', '咸': 'X', '籍': 'J', '赖': 'L', '卓': 'Z', '蔺': 'L', '屠': 'T', '蒙': 'M',
-    '池': 'C', '乔': 'Q', '阴': 'Y', '鬱': 'Y', '胥': 'X', '能': 'N', '苍': 'C', '双': 'S',
-    '闻': 'W', '莘': 'S', '党': 'D', '翟': 'Z', '谭': 'T', '贡': 'G', '劳': 'L', '逢': 'F',
-    '姬': 'J', '申': 'S', '扶': 'F', '堵': 'D', '冉': 'R', '宰': 'Z', '郦': 'L', '雍': 'Y',
-    '卻': 'Q', '璩': 'Q', '桑': 'S', '桂': 'G', '濮': 'P', '牛': 'N', '寿': 'S', '通': 'T',
-    '边': 'B', '扈': 'H', '燕': 'Y', '冀': 'J', '郏': 'J', '浦': 'P', '尚': 'S', '农': 'N',
-    '温': 'W', '别': 'B', '庄': 'Z', '晏': 'Y', '柴': 'C', '瞿': 'Q', '阎': 'Y', '充': 'C',
-    '慕': 'M', '连': 'L', '茹': 'R', '习': 'X', '宦': 'H', '艾': 'A', '鱼': 'Y', '容': 'R',
-    '向': 'X', '古': 'G', '易': 'Y', '慎': 'S', '戈': 'G', '廖': 'L', '庾': 'Y', '终': 'Z',
-    '暨': 'J', '居': 'J', '衡': 'H', '步': 'B', '都': 'D', '耿': 'G', '满': 'M', '弘': 'H',
-    '匡': 'K', '国': 'G', '文': 'W', '寇': 'K', '广': 'G', '禄': 'L', '阙': 'Q', '东': 'D',
-    '欧': 'O', '殳': 'S', '沃': 'W', '利': 'L', '蔚': 'W', '越': 'Y', '夔': 'K', '隆': 'L',
-    '师': 'S', '巩': 'G', '厍': 'S', '聂': 'N', '晁': 'C', '勾': 'G', '敖': 'A', '融': 'R',
-    '冷': 'L', '訾': 'Z', '辛': 'X', '阚': 'K', '那': 'N', '简': 'J', '饶': 'R', '空': 'K',
-    '曾': 'Z', '毋': 'W', '沙': 'S', '乜': 'N', '养': 'Y', '鞠': 'J', '须': 'X', '丰': 'F',
-    '巢': 'C', '关': 'G', '蒯': 'K', '相': 'X', '查': 'Z', '后': 'H', '荆': 'J', '红': 'H',
-    '游': 'Y', '竺': 'Z', '权': 'Q', '逯': 'L', '盖': 'G', '益': 'Y', '桓': 'H', '公': 'G',
-    // 扩展更多常见姓氏
-    '阿': 'A', '阿': 'A', '艾': 'A', '安': 'A', '敖': 'A', '巴': 'B', '白': 'B', '柏': 'B',
-    '班': 'B', '包': 'B', '鲍': 'B', '贝': 'B', '毕': 'B', '边': 'B', '卞': 'B', '卜': 'B',
-    '步': 'B', '蔡': 'C', '曹': 'C', '岑': 'C', '柴': 'C', '常': 'C', '车': 'C', '陈': 'C',
-    '成': 'C', '程': 'C', '池': 'C', '迟': 'C', '褚': 'C', '丛': 'C', '崔': 'C', '戴': 'D',
-    '党': 'D', '邓': 'D', '狄': 'D', '邸': 'D', '刁': 'D', '丁': 'D', '董': 'D', '窦': 'D',
-    '杜': 'D', '段': 'D', '多': 'D', '鄂': 'E', '樊': 'F', '范': 'F', '方': 'F', '房': 'F',
-    '费': 'F', '冯': 'F', '凤': 'F', '符': 'F', '傅': 'F', '甘': 'G', '高': 'G', '郜': 'G',
-    '戈': 'G', '葛': 'G', '耿': 'G', '宫': 'G', '龚': 'G', '巩': 'G', '古': 'G', '谷': 'G',
-    '顾': 'G', '关': 'G', '管': 'G', '桂': 'G', '郭': 'G', '国': 'G', '海': 'H', '韩': 'H',
-    '杭': 'H', '郝': 'H', '何': 'H', '和': 'H', '贺': 'H', '赫': 'H', '黑': 'H', '洪': 'H',
-    '侯': 'H', '后': 'H', '胡': 'H', '花': 'H', '华': 'H', '怀': 'H', '宦': 'H', '黄': 'H',
-    '惠': 'H', '霍': 'H', '姬': 'J', '嵇': 'J', '吉': 'J', '纪': 'J', '季': 'J', '计': 'J',
-    '冀': 'J', '暨': 'J', '贾': 'J', '简': 'J', '江': 'J', '姜': 'J', '蒋': 'J', '焦': 'J',
-    '金': 'J', '靳': 'J', '荆': 'J', '景': 'J', '鞠': 'J', '康': 'K', '柯': 'K', '孔': 'K',
-    '寇': 'K', '蒯': 'K', '匡': 'K', '邝': 'K', '赖': 'L', '蓝': 'L', '郎': 'L', '劳': 'L',
-    '乐': 'L', '雷': 'L', '冷': 'L', '黎': 'L', '李': 'L', '厉': 'L', '连': 'L', '廉': 'L',
-    '梁': 'L', '廖': 'L', '林': 'L', '蔺': 'L', '凌': 'L', '刘': 'L', '柳': 'L', '龙': 'L',
-    '娄': 'L', '卢': 'L', '鲁': 'L', '陆': 'L', '逯': 'L', '路': 'L', '吕': 'L', '栾': 'L',
-    '罗': 'L', '骆': 'L', '麻': 'M', '马': 'M', '麦': 'M', '满': 'M', '毛': 'M', '茅': 'M',
-    '梅': 'M', '蒙': 'M', '孟': 'M', '糜': 'M', '米': 'M', '宓': 'M', '苗': 'M', '闵': 'M',
-    '明': 'M', '莫': 'M', '墨': 'M', '牟': 'M', '慕': 'M', '穆': 'M', '那': 'N', '倪': 'N',
-    '聂': 'N', '宁': 'N', '牛': 'N', '农': 'N', '欧': 'O', '欧阳': 'O', '潘': 'P', '庞': 'P',
-    '裴': 'P', '彭': 'P', '皮': 'P', '平': 'P', '蒲': 'P', '濮': 'P', '浦': 'P', '戚': 'Q',
-    '齐': 'Q', '祁': 'Q', '钱': 'Q', '强': 'Q', '乔': 'Q', '秦': 'Q', '邱': 'Q', '裘': 'Q',
-    '仇': 'Q', '曲': 'Q', '屈': 'Q', '麴': 'Q', '全': 'Q', '权': 'Q', '冉': 'R', '饶': 'R',
-    '任': 'R', '荣': 'R', '容': 'R', '茹': 'R', '阮': 'R', '芮': 'R', '桑': 'S', '沙': 'S',
-    '山': 'S', '单': 'S', '商': 'S', '尚': 'S', '邵': 'S', '申': 'S', '沈': 'S', '盛': 'S',
-    '施': 'S', '石': 'S', '时': 'S', '史': 'S', '寿': 'S', '舒': 'S', '束': 'S', '双': 'S',
-    '水': 'S', '司': 'S', '司马': 'S', '司徒': 'S', '司空': 'S', '宋': 'S', '苏': 'S', '宿': 'S',
-    '粟': 'S', '孙': 'S', '索': 'S', '台': 'T', '邰': 'T', '谈': 'T', '谭': 'T', '汤': 'T',
-    '唐': 'T', '陶': 'T', '滕': 'T', '田': 'T', '童': 'T', '涂': 'T', '屠': 'T', '万': 'W',
-    '万俟': 'M', '汪': 'W', '王': 'W', '危': 'W', '韦': 'W', '卫': 'W', '魏': 'W', '温': 'W',
-    '文': 'W', '闻': 'W', '闻人': 'W', '翁': 'W', '乌': 'W', '邬': 'W', '巫': 'W', '吴': 'W',
-    '伍': 'W', '武': 'W', '奚': 'X', '郤': 'X', '席': 'X', '习': 'X', '夏': 'X', '夏侯': 'X',
-    '鲜': 'X', '鲜于': 'X', '咸': 'X', '冼': 'X', '向': 'X', '项': 'X', '萧': 'X', '谢': 'X',
-    '辛': 'X', '邢': 'X', '熊': 'X', '胥': 'X', '徐': 'X', '许': 'X', '续': 'X', '轩辕': 'X',
-    '薛': 'X', '荀': 'X', '鄢': 'Y', '严': 'Y', '阎': 'Y', '颜': 'Y', '晏': 'Y', '燕': 'Y',
-    '羊': 'Y', '阳': 'Y', '杨': 'Y', '仰': 'Y', '姚': 'Y', '叶': 'Y', '伊': 'Y', '衣': 'Y',
-    '易': 'Y', '殷': 'Y', '尹': 'Y', '应': 'Y', '雍': 'Y', '尤': 'Y', '游': 'Y', '于': 'Y',
-    '余': 'Y', '於': 'Y', '鱼': 'Y', '俞': 'Y', '虞': 'Y', '庾': 'Y', '郁': 'Y', '喻': 'Y',
-    '元': 'Y', '袁': 'Y', '苑': 'Y', '岳': 'Y', '云': 'Y', '恽': 'Y', '郓': 'Y', '宰': 'Z',
-    '臧': 'Z', '曾': 'Z', '查': 'Z', '翟': 'Z', '詹': 'Z', '湛': 'Z', '张': 'Z', '章': 'Z',
-    '长孙': 'Z', '仉': 'Z', '赵': 'Z', '甄': 'Z', '郑': 'Z', '支': 'Z', '钟': 'Z', '钟离': 'Z',
-    '仲': 'Z', '仲孙': 'Z', '周': 'Z', '朱': 'Z', '诸葛': 'Z', '竺': 'Z', '祝': 'Z', '庄': 'Z',
-    '卓': 'Z', '宗': 'Z', '宗政': 'Z', '邹': 'Z', '祖': 'Z', '左': 'Z', '佐': 'Z', '上官': 'S',
-    '东方': 'D', '赫连': 'H', '皇甫': 'H', '尉迟': 'Y', '公羊': 'G', '澹台': 'T', '公冶': 'G',
-    '濮阳': 'P', '淳于': 'C', '单于': 'S', '太叔': 'T', '申屠': 'S', '公孙': 'G', '令狐': 'L',
-    '宇文': 'Y', '慕容': 'M'
-  };
-  
-  // 检查复合姓氏（双字姓）
-  if (name.length >= 2) {
-    const doubleSurname = name.substring(0, 2);
-    if (surnamePinyinMap[doubleSurname]) {
-      return surnamePinyinMap[doubleSurname];
-    }
-  }
-  
-  // 单字姓氏处理
-  return surnamePinyinMap[surname] || surname.toUpperCase();
-}
-
-// 按姓氏拼音排序学生
-sortStudentsBySurname() {
-  if (!this.students || this.students.length === 0) return;
-  
-  // 复制学生数组以避免修改原数组
-  const studentsCopy = [...this.students];
-  
-  // 按姓氏拼音排序
-  studentsCopy.sort((a, b) => {
-    const surnameA = this.getSurnamePinyin(a.name);
-    const surnameB = this.getSurnamePinyin(b.name);
-    
-    // 比较拼音首字母
-    if (surnameA < surnameB) return this.sortDirection === 'asc' ? -1 : 1;
-    if (surnameA > surnameB) return this.sortDirection === 'asc' ? 1 : -1;
-    
-    // 如果拼音首字母相同，按姓名全拼比较
-    const nameA = a.name.toLowerCase();
-    const nameB = b.name.toLowerCase();
-    if (nameA < nameB) return this.sortDirection === 'asc' ? -1 : 1;
-    if (nameA > nameB) return this.sortDirection === 'asc' ? 1 : -1;
-    
-    return 0;
-  });
-  
-  // 更新学生数组
-  this.students = studentsCopy;
-  
-  // 更新排序状态
-  this.currentSortMode = 'surname';
-  
-  // 重新渲染学生列表
-  this.renderStudents();
-  
-  // 更新排序状态显示
-  this.updateSortStatus();
-}
-
-
-
-// 应用排序
-applySort() {
-  const sortSelect = document.getElementById('sortMode');
-  if (!sortSelect) return;
-  
-  const sortMode = sortSelect.value;
-  
-  switch (sortMode) {
-    case 'surname-asc':
-      this.sortDirection = 'asc';
-      this.sortStudentsBySurname();
-      break;
-    case 'surname-desc':
-      this.sortDirection = 'desc';
-      this.sortStudentsBySurname();
-      break;
-    default:
-      // 重置为原始顺序
-      this.loadFromLocalStorage();
-      this.currentSortMode = 'none';
-      this.renderStudents();
-      this.updateSortStatus();
-      break;
-  }
-}
-
-// 根据排序类型应用排序
-applySortByType(sortType) {
-  switch (sortType) {
-    case 'name-asc':
-      this.sortDirection = 'asc';
-      this.sortStudentsBySurname();
-      break;
-    case 'name-desc':
-      this.sortDirection = 'desc';
-      this.sortStudentsBySurname();
-      break;
-    default:
-      // 重置为原始顺序
-      this.loadFromLocalStorage();
-      this.currentSortMode = 'none';
-      this.renderStudents();
-      this.updateSortStatus();
-      break;
-  }
-}
-
-// 更新排序状态显示
-updateSortStatus() {
-  const sortStatusElement = document.getElementById('currentSortStatus');
-  if (!sortStatusElement) return;
-  
-  let statusText = '';
-  
-  switch (this.currentSortMode) {
-    case 'surname':
-      statusText = this.sortDirection === 'asc' ? '当前：按姓氏拼音 A-Z' : '当前：按姓氏拼音 Z-A';
-      break;
-    default:
-      statusText = '当前：默认排序';
-      break;
-  }
-  
-  sortStatusElement.textContent = statusText;
-}
-
-// 切换排序方向
-toggleSortDirection() {
-  this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-  
-  // 如果当前有排序模式，重新应用排序
-  if (this.currentSortMode === 'surname') {
-    this.sortStudentsBySurname();
-  }
-}
-
-// 初始化排序事件监听器
-setupSortListeners() {
-  // 主排序按钮事件 - 改为直接切换排序方向
-  const sortByNameBtn = document.getElementById('sortByNameBtn');
-  if (sortByNameBtn) {
-    sortByNameBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      
-      // 如果当前没有按姓氏排序，则设置为升序
-      if (this.currentSortMode !== 'surname') {
-        this.sortDirection = 'asc';
-        this.sortStudentsBySurname();
-      } else {
-        // 如果已经在按姓氏排序，则切换方向
-        this.toggleSortDirection();
-      }
-    });
-  }
-}
-  
-  // 打开技术支持模态框
-  openTechSupportModal() {
-    const modal = document.getElementById('techSupportModal');
-    if (modal) {
-      // 确保页面滚动被锁定
-      document.body.style.overflow = 'hidden';
-      // 添加动画效果
-      setTimeout(() => {
-        modal.classList.add('show');
-      }, 10);
-    }
-  }
-  
-  // 关闭技术支持模态框
-  closeTechSupportModal() {
-    const modal = document.getElementById('techSupportModal');
-    if (modal) {
-      modal.classList.remove('show');
-      // 恢复页面滚动
-      document.body.style.overflow = '';
-      // 延迟隐藏以确保动画完成
-      setTimeout(() => {
-        modal.style.display = 'none';
-      }, 300);
-    }
-  }
-}
 
 
 // 初始化系统
@@ -11719,7 +9251,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const system = new ClassPointsSystem();
   system.loadFromLocalStorage();          // 加载数据
   system.setupTimeFilterListeners();      // 👈 关键！绑定时间按钮事件
-  system.setupSortListeners();            // 👈 绑定排序事件监听器
   system.renderRankings();                // 初始渲染排行榜
 
   // 挂到全局方便调试（可选）

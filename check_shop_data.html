@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>检查商店数据</title>
+</head>
+<body>
+    <h1>商店数据检查工具</h1>
+    <div id="results"></div>
+    
+    <script>
+        // 检查所有可能的商店数据键名
+        const possibleKeys = [
+            'classPointsGlobalShopItems',
+            'globalShopItems',
+            'shopItems',
+            'classPointsShopItems'
+        ];
+        
+        const results = document.getElementById('results');
+        
+        possibleKeys.forEach(key => {
+            const data = localStorage.getItem(key);
+            if (data) {
+                const div = document.createElement('div');
+                div.innerHTML = `<h3>找到数据键: ${key}</h3>`;
+                div.innerHTML += `<pre>${JSON.stringify(JSON.parse(data), null, 2)}</pre>`;
+                results.appendChild(div);
+            } else {
+                const div = document.createElement('div');
+                div.innerHTML = `<p>未找到数据键: ${key}</p>`;
+                results.appendChild(div);
+            }
+        });
+        
+        // 列出所有localStorage键
+        const allKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            allKeys.push(localStorage.key(i));
+        }
+        
+        const keysDiv = document.createElement('div');
+        keysDiv.innerHTML = '<h3>所有localStorage键:</h3>';
+        keysDiv.innerHTML += `<pre>${allKeys.join('\n')}</pre>`;
+        results.appendChild(keysDiv);
+    </script>
+</body>
+</html>
