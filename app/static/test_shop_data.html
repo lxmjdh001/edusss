@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试商店数据</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        button { margin: 5px; padding: 8px 15px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>商店数据测试工具</h1>
+        
+        <div class="section">
+            <h2>1. 检查当前数据</h2>
+            <button onclick="checkData()">检查数据</button>
+            <div id="currentData"></div>
+        </div>
+        
+        <div class="section">
+            <h2>2. 初始化默认数据</h2>
+            <button onclick="initDefaultData()">初始化默认商店数据</button>
+            <div id="initResult"></div>
+        </div>
+        
+        <div class="section">
+            <h2>3. 添加测试商品</h2>
+            <button onclick="addTestItem()">添加测试商品</button>
+            <div id="addResult"></div>
+        </div>
+        
+        <div class="section">
+            <h2>4. 测试抽奖页面数据获取</h2>
+            <button onclick="testZhuanpanLogic()">测试抽奖逻辑</button>
+            <div id="testResult"></div>
+        </div>
+        
+        <div class="section">
+            <h2>5. 所有localStorage键</h2>
+            <div id="allKeys"></div>
+        </div>
+    </div>
+
+    <script>
+        // 默认商店数据
+        const defaultShopItems = [
+            {name:'小奖品', cost:10, stock:null},
+            {name:'免作业券', cost:20, stock:5},
+            {name:'座位选择权', cost:15, stock:null}
+        ];
+
+        function checkData() {
+            const raw = localStorage.getItem('classPointsGlobalShopItems');
+            const result = document.getElementById('currentData');
+            
+            if (!raw) {
+                result.innerHTML = '<p class="error">❌ 未找到 classPointsGlobalShopItems 数据</p>';
+                return;
+            }
+            
+            try {
+                const data = JSON.parse(raw);
+                result.innerHTML = `
+                    <p class="success">✅ 找到数据！</p>
+                    <p>数据类型: ${typeof data}</p>
+                    <p>是否为数组: ${Array.isArray(data)}</p>
+                    <p>数据长度: ${Array.isArray(data) ? data.length : 'N/A'}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (e) {
+                result.innerHTML = `<p class="error">❌ 数据解析错误: ${e.message}</p>`;
+            }
+        }
+
+        function initDefaultData() {
+            localStorage.setItem('classPointsGlobalShopItems', JSON.stringify(defaultShopItems));
+            const result = document.getElementById('initResult');
+            result.innerHTML = '<p class="success">✅ 已初始化默认商店数据！</p>';
+            checkData();
+        }
+
+        function addTestItem() {
+            const raw = localStorage.getItem('classPointsGlobalShopItems');
+            let data = [];
+            
+            if (raw) {
+                try {
+                    data = JSON.parse(raw);
+                } catch (e) {
+                    console.error('解析错误:', e);
+                }
+            }
+            
+            // 添加测试商品
+            data.push({
+                name: '测试商品_' + new Date().getTime(),
+                cost: Math.floor(Math.random() * 50) + 1,
+                stock: Math.floor(Math.random() * 10)
+            });
+            
+            localStorage.setItem('classPointsGlobalShopItems', JSON.stringify(data));
+            const result = document.getElementById('addResult');
+            result.innerHTML = '<p class="success">✅ 已添加测试商品！</p>';
+            checkData();
+        }
+
+        function testZhuanpanLogic() {
+            // 模拟抽奖页面的 getShopPrizes 函数
+            function getShopPrizes() {
+                const raw = localStorage.getItem('classPointsGlobalShopItems');
+                console.log('【测试】原始数据:', raw);
+                
+                if (!raw) {
+                    console.log('【测试】全局商店内容 = null');
+                    return [];
+                }
+                
+                try {
+                    const data = JSON.parse(raw);
+                    console.log('【测试】解析后数据:', data);
+                    
+                    let items = data;
+                    
+                    // 如果是对象，尝试提取 items 属性
+                    if (typeof data === 'object' && !Array.isArray(data) && data.items) {
+                        items = data.items;
+                        console.log('【测试】从对象中提取 items:', items);
+                    }
+                    
+                    if (!Array.isArray(items)) {
+                        console.log('【测试】数据不是数组格式');
+                        return [];
+                    }
+                    
+                    // 提取奖品名称
+                    const prizes = items.map(item => {
+                        if (typeof item === 'string') {
+                            return item;
+                        } else if (typeof item === 'object' && item !== null) {
+                            return item.name || item.title || item.item || item.text || item.label || '未知奖品';
+                        }
+                        return '未知奖品';
+                    }).filter(name => name && name !== '未知奖品');
+                    
+                    console.log('【测试】提取的奖品:', prizes);
+                    return prizes;
+                    
+                } catch (error) {
+                    console.log('【测试】解析错误:', error);
+                    return [];
+                }
+            }
+            
+            const prizes = getShopPrizes();
+            const result = document.getElementById('testResult');
+            result.innerHTML = `
+                <p>测试结果:</p>
+                <p>提取到 ${prizes.length} 个奖品</p>
+                <pre>${JSON.stringify(prizes, null, 2)}</pre>
+                <p>请查看浏览器控制台查看详细日志</p>
+            `;
+        }
+
+        // 显示所有localStorage键
+        function showAllKeys() {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                keys.push(localStorage.key(i));
+            }
+            
+            const container = document.getElementById('allKeys');
+            container.innerHTML = `
+                <p>共 ${keys.length} 个键:</p>
+                <ul>
+                    ${keys.map(key => `<li>${key}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        // 页面加载时显示所有键
+        showAllKeys();
+    </script>
+</body>
+</html>

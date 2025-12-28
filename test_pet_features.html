@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宠物功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+        }
+        .test-result {
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0069d9;
+        }
+        .note {
+            font-style: italic;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>宠物功能测试</h1>
+    
+    <div class="test-section">
+        <h2>批量导入功能测试</h2>
+        
+        <div class="test-case">
+            <h3>测试1: 多文件夹拖选功能</h3>
+            <p>测试是否可以同时拖入多个宠物文件夹进行批量导入</p>
+            <button onclick="testMultiFolderDrag()">测试</button>
+            <div id="test1-result" class="test-result pending">待测试</div>
+        </div>
+        
+        <div class="test-case">
+            <h3>测试2: 文件名格式兼容性</h3>
+            <p>测试系统是否能正确识别不同格式的等级名称文件</p>
+            <button onclick="testFileNameFormats()">测试</button>
+            <div id="test2-result" class="test-result pending">待测试</div>
+        </div>
+        
+        <div class="test-case">
+            <h3>测试3: 错误处理和重试机制</h3>
+            <p>测试系统是否能正确处理导入错误并提供重试功能</p>
+            <button onclick="testErrorHandling()">测试</button>
+            <div id="test3-result" class="test-result pending">待测试</div>
+        </div>
+        
+        <div class="test-case">
+            <h3>测试4: 进度反馈和报告</h3>
+            <p>测试系统是否能正确显示导入进度和详细的导入报告</p>
+            <button onclick="testProgressFeedback()">测试</button>
+            <div id="test4-result" class="test-result pending">待测试</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>批量删除功能测试</h2>
+        
+        <div class="test-case">
+            <h3>测试5: 批量选择机制</h3>
+            <p>测试是否可以正确选择多个宠物进行批量删除</p>
+            <button onclick="testBatchSelection()">测试</button>
+            <div id="test5-result" class="test-result pending">待测试</div>
+        </div>
+        
+        <div class="test-case">
+            <h3>测试6: 删除确认对话框</h3>
+            <p>测试系统是否显示正确的删除确认对话框</p>
+            <button onclick="testDeleteConfirmation()">测试</button>
+            <div id="test6-result" class="test-result pending">待测试</div>
+        </div>
+        
+        <div class="test-case">
+            <h3>测试7: 删除后界面更新</h3>
+            <p>测试删除宠物后界面是否正确更新</p>
+            <button onclick="testUIUpdateAfterDelete()">测试</button>
+            <div id="test7-result" class="test-result pending">待测试</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>响应式设计测试</h2>
+        
+        <div class="test-case">
+            <h3>测试8: 不同屏幕尺寸适配</h3>
+            <p>测试界面在不同屏幕尺寸下的显示效果</p>
+            <button onclick="testResponsiveDesign()">测试</button>
+            <div id="test8-result" class="test-result pending">待测试</div>
+            <div class="note">请手动调整浏览器窗口大小进行测试</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>边界情况测试</h2>
+        
+        <div class="test-case">
+            <h3>测试9: 空数据处理</h3>
+            <p>测试系统在没有宠物数据时的行为</p>
+            <button onclick="testEmptyDataHandling()">测试</button>
+            <div id="test9-result" class="test-result pending">待测试</div>
+        </div>
+        
+        <div class="test-case">
+            <h3>测试10: 大量数据处理</h3>
+            <p>测试系统在处理大量宠物数据时的性能</p>
+            <button onclick="testLargeDataHandling()">测试</button>
+            <div id="test10-result" class="test-result pending">待测试</div>
+        </div>
+    </div>
+    
+    <script>
+        // 打开主应用窗口
+        function openMainWindow() {
+            window.open('http://127.0.0.1:8080/points.html', '_blank');
+        }
+        
+        // 测试结果更新函数
+        function updateTestResult(testId, result, details) {
+            const resultElement = document.getElementById(testId);
+            resultElement.className = `test-result ${result}`;
+            resultElement.textContent = details;
+        }
+        
+        // 测试1: 多文件夹拖选功能
+        function testMultiFolderDrag() {
+            openMainWindow();
+            updateTestResult('test1-result', 'pending', '请在主应用中测试多文件夹拖选功能');
+            alert('请在主应用中测试多文件夹拖选功能：\n1. 点击"批量导入"按钮\n2. 尝试同时拖入多个宠物文件夹\n3. 检查是否所有文件夹都被正确识别和处理');
+        }
+        
+        // 测试2: 文件名格式兼容性
+        function testFileNameFormats() {
+            openMainWindow();
+            updateTestResult('test2-result', 'pending', '请在主应用中测试文件名格式兼容性');
+            alert('请在主应用中测试文件名格式兼容性：\n1. 创建包含不同格式等级名称文件的文件夹（如"宠物等级名称.txt"、"levelnames.txt"等）\n2. 测试导入功能\n3. 检查系统是否能正确识别所有格式');
+        }
+        
+        // 测试3: 错误处理和重试机制
+        function testErrorHandling() {
+            openMainWindow();
+            updateTestResult('test3-result', 'pending', '请在主应用中测试错误处理和重试机制');
+            alert('请在主应用中测试错误处理和重试机制：\n1. 故意创建不符合要求的文件夹结构\n2. 尝试导入\n3. 检查是否显示正确的错误信息\n4. 测试重试功能是否正常工作');
+        }
+        
+        // 测试4: 进度反馈和报告
+        function testProgressFeedback() {
+            openMainWindow();
+            updateTestResult('test4-result', 'pending', '请在主应用中测试进度反馈和报告');
+            alert('请在主应用中测试进度反馈和报告：\n1. 导入多个宠物文件夹\n2. 检查进度条和百分比显示\n3. 检查导入报告是否包含成功/失败统计\n4. 测试错误详情查看功能');
+        }
+        
+        // 测试5: 批量选择机制
+        function testBatchSelection() {
+            openMainWindow();
+            updateTestResult('test5-result', 'pending', '请在主应用中测试批量选择机制');
+            alert('请在主应用中测试批量选择机制：\n1. 确保有多个宠物类型\n2. 点击"批量删除"按钮\n3. 测试单个选择、全选/取消全选功能\n4. 检查选中数量是否正确更新');
+        }
+        
+        // 测试6: 删除确认对话框
+        function testDeleteConfirmation() {
+            openMainWindow();
+            updateTestResult('test6-result', 'pending', '请在主应用中测试删除确认对话框');
+            alert('请在主应用中测试删除确认对话框：\n1. 选择多个宠物进行删除\n2. 点击"删除选中的宠物"按钮\n3. 检查确认对话框是否显示正确的删除数量\n4. 测试确认和取消按钮');
+        }
+        
+        // 测试7: 删除后界面更新
+        function testUIUpdateAfterDelete() {
+            openMainWindow();
+            updateTestResult('test7-result', 'pending', '请在主应用中测试删除后界面更新');
+            alert('请在主应用中测试删除后界面更新：\n1. 删除一个或多个宠物\n2. 检查宠物配置界面是否正确更新\n3. 检查批量删除按钮是否根据宠物数量正确显示/隐藏\n4. 刷新页面确认数据已保存');
+        }
+        
+        // 测试8: 响应式设计
+        function testResponsiveDesign() {
+            openMainWindow();
+            updateTestResult('test8-result', 'pending', '请手动测试响应式设计');
+            alert('请手动测试响应式设计：\n1. 调整浏览器窗口大小\n2. 检查宠物配置界面在不同尺寸下的显示\n3. 测试批量导入和删除模态框在小屏幕上的显示\n4. 确保所有元素在移动设备上可用');
+        }
+        
+        // 测试9: 空数据处理
+        function testEmptyDataHandling() {
+            openMainWindow();
+            updateTestResult('test9-result', 'pending', '请在主应用中测试空数据处理');
+            alert('请在主应用中测试空数据处理：\n1. 删除所有宠物类型\n2. 检查界面是否显示适当的空状态提示\n3. 检查批量删除按钮是否隐藏\n4. 测试添加新宠物功能是否正常');
+        }
+        
+        // 测试10: 大量数据处理
+        function testLargeDataHandling() {
+            openMainWindow();
+            updateTestResult('test10-result', 'pending', '请在主应用中测试大量数据处理');
+            alert('请在主应用中测试大量数据处理：\n1. 添加多个宠物类型（建议10+个）\n2. 测试批量导入大量宠物\n3. 检查界面性能是否良好\n4. 测试滚动和交互是否流畅');
+        }
+        
+        // 页面加载完成后的初始化
+        window.onload = function() {
+            document.body.innerHTML += '<div style="margin-top: 30px; text-align: center;"><button onclick="openMainWindow()">打开主应用</button></div>';
+        };
+    </script>
+</body>
+</html>

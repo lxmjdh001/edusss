@@ -1,2 +1,9 @@
 # Ignore generated SQLite database file
 data/grade_manager.db
+
+# Python bytecode / cache
+__pycache__/
+*.pyc
+
+# Local runtime artifacts
+app.db

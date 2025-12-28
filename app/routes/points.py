@@ -313,12 +313,22 @@ def update_student_points(
 def get_student_records(
     student_id: int,
     limit: int = Query(100, le=500),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """获取学生积分记录"""
-    records = db.query(PointRecord).filter(
+    query = db.query(PointRecord).filter(
         PointRecord.student_id == student_id
-    ).order_by(desc(PointRecord.created_at)).limit(limit).all()
+    )
+    
+    # 添加日期筛选条件
+    if start_date:
+        query = query.filter(PointRecord.created_at >= start_date)
+    if end_date:
+        query = query.filter(PointRecord.created_at <= end_date)
+    
+    records = query.order_by(desc(PointRecord.created_at)).limit(limit).all()
 
     return [
         {

@@ -825,10 +825,10 @@
 		
 		.btn-load,.btn-detail,.btn-del{
 			  padding:4px 8px;font-size:12px;border:none;border-radius:4px;color:#fff;cursor:pointer;
-			}
-			.btn-load{background:#48bb78;}
-			.btn-detail{background:#4299e1;}
-			.btn-del{background:#f56565;}
+		}
+		.btn-load{background:linear-gradient(135deg, #4a86e8 0%, #5b6abf 100%);}
+		.btn-detail{background:linear-gradient(135deg, #4a86e8 0%, #5b6abf 100%);}
+		.btn-del{background:linear-gradient(135deg, #4a86e8 0%, #5b6abf 100%);}
     </style>
 </head>
 
@@ -870,10 +870,7 @@
                     <i class="fas fa-save"></i>
                     生成记录
                 </button>
-                <button class="data-btn" id="clearDataBtn" title="清除所有数据">
-                    <i class="fas fa-trash"></i>
-                    清除
-                </button>
+
                 <button class="sync-points-btn" id="syncPointsBtn" title="同步积分到主系统">
                     <i class="fas fa-sync"></i>
                     同步积分
@@ -882,7 +879,7 @@
 				<script>
 				  document.getElementById('homeBtn').addEventListener('click', () => {
 					if (confirm('确定要返回主页吗？')) {
-					  window.location.href = '积分成长系统.html';
+					  window.location.href = 'points.html';
 					}
 				  });
 				</script>
@@ -992,7 +989,7 @@
         let completedStudents = 0;
         let currentStyle = 'ball';
         let studentsData = [];
-        let taskRecords = [];
+        let taskRecords = null; // 初始化为null，在loadDataFromLocalStorage中初始化
         let currentTaskName = '';
         let processedStudents = new Set(); // 记录已同步积分的学生
         
@@ -1011,7 +1008,6 @@
         const textColorPicker = document.getElementById('textColorPicker');
         const sizeSlider = document.getElementById('sizeSlider');
         const saveDataBtn = document.getElementById('saveDataBtn');
-        const clearDataBtn = document.getElementById('clearDataBtn');
         const saveMessage = document.getElementById('saveMessage');
         const syncPointsBtn = document.getElementById('syncPointsBtn');
         const homeBtn = document.getElementById('homeBtn');
@@ -1552,16 +1548,24 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
                 try {
                     const data = JSON.parse(savedData);
                     
-                    // 恢复学生数据
+                    // 恢复任务记录（无论是否有学生数据都要恢复）
+                    if (data.taskRecords) {
+                        taskRecords = data.taskRecords;
+                    } else {
+                        // 如果没有任务记录数据，初始化为空数组
+                        taskRecords = [];
+                    }
+                    
+                    // 恢复已处理学生列表
+                    if (data.processedStudents) {
+                        processedStudents = new Set(data.processedStudents);
+                    }
+                    
+                    // 恢复学生数据（如果有的话）
                     if (data.students && data.students.length > 0) {
                         studentsData = data.students;
                         totalStudents = data.totalStudents || studentsData.length;
                         completedStudents = data.completedStudents || 0;
-                        
-                        // 恢复已处理学生列表
-                        if (data.processedStudents) {
-                            processedStudents = new Set(data.processedStudents);
-                        }
                         
                         // 恢复计时器状态
                         if (data.timerState && data.timerState.isTimerRunning && data.timerState.startTime) {
@@ -1595,18 +1599,77 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
                             sizeSlider.value = data.size;
                         }
                         
-                        // 恢复任务记录
-                        if (data.taskRecords) {
-                            taskRecords = data.taskRecords;
+                        if (data.currentTaskName) {
+                            currentTaskName = data.currentTaskName;
+                        }
+                        
+                        // 页面标题同步更新：如果有任务记录，使用最新任务记录的名称更新页面标题
+                        if (taskRecords && taskRecords.length > 0) {
+                            const latestRecord = taskRecords[taskRecords.length - 1];
+                            if (latestRecord.taskName && latestRecord.taskName.trim() !== '') {
+                                const pageTitle = `${latestRecord.taskName} - 任务打卡`;
+                                document.title = pageTitle;
+                                titleText.textContent = latestRecord.taskName;
+                            }
+                        }
+                        
+                        renderStudents();
+                        renderTaskRecords();
+                        showCelebration('已恢复上次的数据！', '📂');
+                    } else {
+                        // 如果没有学生数据，恢复其他状态并只恢复任务记录
+                        // 恢复其他状态设置
+                        if (data.timerState) {
+                            timerDisplay.textContent = data.timerState?.elapsedTime || '00:00:00';
+                        }
+                        
+                        if (data.currentStyle) {
+                            currentStyle = data.currentStyle;
+                            styleSelector.value = currentStyle;
+                        }
+                        
+                        if (data.title && data.title !== '任务打卡') {
+                            titleText.textContent = data.title;
+                            document.title = data.title;
+                        }
+                        
+                        if (data.fontSize) {
+                            fontSizeSlider.value = data.fontSize;
+                        }
+                        
+                        if (data.textColor) {
+                            textColorPicker.value = data.textColor;
+                        }
+                        
+                        if (data.size) {
+                            sizeSlider.value = data.size;
                         }
                         
                         if (data.currentTaskName) {
                             currentTaskName = data.currentTaskName;
                         }
                         
-                        renderStudents();
+                        // 关键修复：即使没有学生数据，也要确保studentsData不为空数组
+                        // 避免触发initializeStudents()导致任务记录丢失
+                        if (data.students && data.students.length === 0) {
+                            studentsData = []; // 明确设置为空数组
+                        }
+                        
+                        // 页面标题同步更新：如果有任务记录，使用最新任务记录的名称更新页面标题
+                        if (taskRecords && taskRecords.length > 0) {
+                            const latestRecord = taskRecords[taskRecords.length - 1];
+                            if (latestRecord.taskName && latestRecord.taskName.trim() !== '') {
+                                const pageTitle = `${latestRecord.taskName} - 任务打卡`;
+                                document.title = pageTitle;
+                                titleText.textContent = latestRecord.taskName;
+                            }
+                        }
+                        
+                        // 只恢复任务记录
                         renderTaskRecords();
-                        showCelebration('已恢复上次的数据！', '📂');
+                        if (taskRecords.length > 0) {
+                            showCelebration('任务记录已恢复！', '📂');
+                        }
                     }
                 } catch (e) {
                     console.error('加载保存的数据时出错:', e);
@@ -1626,10 +1689,13 @@ function renderTaskRecords() {
     return;
   }
 
-  taskRecords.slice().reverse().forEach((rec, idx) => {
+  // 修复：使用正确的原始索引，而不是反向后的索引
+  taskRecords.slice().reverse().forEach((rec, displayIndex) => {
+    // 计算原始数组中的正确索引
+    const originalIndex = taskRecords.length - 1 - displayIndex;
     const div = document.createElement('div');
     div.className = 'task-record-item';
-    div.dataset.index = idx;
+    div.dataset.index = originalIndex;
     div.innerHTML = `
       <div class="record-header">${rec.taskName || '未命名任务'}</div>
       <div class="record-details">📅 ${rec.date}</div>
@@ -1637,9 +1703,9 @@ function renderTaskRecords() {
       <div class="record-details">✅ ${rec.completedStudents.length}人完成</div>
       <div class="record-details">⏳ ${rec.pendingStudents.length}人未完成</div>
       <div style="margin-top:6px;display:flex;gap:6px;">
-        <button class="btn-load" onclick="loadThisRecord(${idx})">加载</button>
-        <button class="btn-detail" onclick="showDetail(${idx})">详情</button>
-        <button class="btn-del" onclick="deleteThisRecord(${idx})">删除</button>
+        <button class="btn-load" onclick="loadThisRecord(${originalIndex})">加载</button>
+        <button class="btn-detail" onclick="showDetail(${originalIndex})">详情</button>
+        <button class="btn-del" onclick="deleteThisRecord(${originalIndex})">删除</button>
       </div>
     `;
     container.appendChild(div);
@@ -1652,7 +1718,13 @@ function loadThisRecord(idx) {
   studentsData = rec.students.map(s => ({...s}));
   totalStudents = studentsData.length;
   completedStudents = studentsData.filter(s => s.completed).length;
+  
+  // 关键修复：正确更新当前任务名称和页面标题
   currentTaskName = rec.taskName || '未命名任务';
+  const pageTitle = `${currentTaskName} - 任务打卡`;
+  document.title = pageTitle;
+  titleText.textContent = currentTaskName; // 修复：只显示任务名称，不包含" - 任务打卡"
+  
   if (isTimerRunning) { clearInterval(timerInterval); isTimerRunning = false; }
   startTime = null; timerDisplay.textContent = '00:00:00';
   document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
@@ -1675,6 +1747,7 @@ function closeDetail() {
 
 function deleteThisRecord(idx) {
   if (!confirm('确定删除这条记录？')) return;
+  // 修复：使用正确的索引删除记录
   taskRecords.splice(idx, 1);
   saveDataToLocalStorage();
   renderTaskRecords();
@@ -1682,23 +1755,60 @@ function deleteThisRecord(idx) {
 
         // 返回主页按钮事件
         homeBtn.addEventListener('click', function() {
-            if (confirm('确定要返回主页吗？当前任务进度将会保存。')) {
-                window.location.href = '积分成长系统.html';
+            if (confirm('确定要返回主页吗？当前任务进度将会清除，但任务记录会保留。')) {
+                // 停止计时器
+                if (isTimerRunning) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
+                }
+                
+                // 保存当前任务记录（确保不会丢失）
+                const currentTaskRecords = [...taskRecords];
+                const currentProcessedStudents = new Set(processedStudents);
+                
+                // 重置数据（仅清除当前显示的名字卡片数据，保留任务记录）
+                studentsData = [];
+                totalStudents = 0;
+                completedStudents = 0;
+                startTime = null;
+                timerDisplay.textContent = '00:00:00';
+                counterDisplay.textContent = '0/0';
+                
+                // 恢复任务记录和已处理学生列表
+                taskRecords = currentTaskRecords;
+                processedStudents = currentProcessedStudents;
+                
+                // 清空显示
+                document.getElementById('studentsContainer').innerHTML = '';
+                document.getElementById('leaderboardList').innerHTML = '';
+                document.getElementById('pendingItems').innerHTML = '';
+                
+                // 保存数据（包含完整的任务记录）
+                saveDataToLocalStorage();
+                
+                // 跳转到主页
+                window.location.href = 'points.html';
             }
         });
 
         // 同步积分按钮事件
         syncPointsBtn.addEventListener('click', function() {
-            if (taskRecords.length === 0) {
-                showCelebration('没有任务记录！', '⚠️');
-                return;
+            try {
+                if (taskRecords.length === 0) {
+                    showCelebration('没有任务记录！', '⚠️');
+                    return;
+                }
+                
+                // 渲染记录选择器
+                renderRecordSelector();
+                
+                // 显示同步积分设置模态框
+                document.getElementById('syncPointsModal').style.display = 'flex';
+            } catch (error) {
+                console.error('打开积分同步模态框时发生错误:', error);
+                showCelebration('打开积分同步失败，请重试！', '❌');
             }
-            
-            // 渲染记录选择器
-            renderRecordSelector();
-            
-            // 显示同步积分设置模态框
-            document.getElementById('syncPointsModal').style.display = 'flex';
         });
 
         // 渲染记录选择器
@@ -1760,9 +1870,31 @@ function deleteThisRecord(idx) {
                 return;
             }
             
-            // 检查是否有同学已经处理过
-            const alreadyProcessed = record.completedStudents.filter(name => processedStudents.has(name));
-            const availableStudents = record.completedStudents.filter(name => !processedStudents.has(name));
+            // 积分同步判定逻辑优化：基于任务名称建立关联
+            // 检查该任务是否已经同步过积分
+            const taskSyncHistory = JSON.parse(localStorage.getItem('taskSyncHistory') || '{}');
+            // 关键修复：直接使用currentTaskName变量，确保在loadThisRecord中已正确更新
+            const taskKey = record.taskName || '未命名任务';
+            
+            // 关键修复：基于当前任务名称进行筛选，避免错误跳过旧任务中已完成同学
+            // 只有当记录的任务名称与当前任务名称相同时，才检查任务同步历史
+            const alreadyProcessed = record.completedStudents.filter(name => {
+                // 如果任务名称不同，说明是不同任务，不检查同步历史
+                if (taskKey !== currentTaskName) {
+                    return false; // 不同任务，不跳过任何同学
+                }
+                
+                // 相同任务：检查该学生是否在该任务中已同步
+                if (taskSyncHistory[taskKey] && taskSyncHistory[taskKey].includes(name)) {
+                    return true;
+                }
+                
+                // 关键修复：移除全局已处理学生集合检查
+                // 只检查当前任务的同步历史，避免跨任务污染
+                return false;
+            });
+            
+            const availableStudents = record.completedStudents.filter(name => !alreadyProcessed.includes(name));
             
             if (availableStudents.length === 0) {
                 alert('该记录中所有已完成的同学都已经同步过积分，不能重复添加！');
@@ -1787,8 +1919,20 @@ function deleteThisRecord(idx) {
                 // 保存到本地存储
                 localStorage.setItem('tempTaskRule', JSON.stringify(tempRuleData));
                 
-                // 将处理过的学生加入已处理集合
-                availableStudents.forEach(name => processedStudents.add(name));
+                // 将处理过的学生加入任务同步历史记录
+                availableStudents.forEach(name => {
+                    // 关键修复：不再添加到全局已处理学生集合
+                    // 只更新当前任务的同步历史，避免跨任务污染
+                    if (!taskSyncHistory[taskKey]) {
+                        taskSyncHistory[taskKey] = [];
+                    }
+                    if (!taskSyncHistory[taskKey].includes(name)) {
+                        taskSyncHistory[taskKey].push(name);
+                    }
+                });
+                
+                // 保存任务同步历史记录
+                localStorage.setItem('taskSyncHistory', JSON.stringify(taskSyncHistory));
                 
                 // 关闭模态框
                 document.getElementById('syncPointsModal').style.display = 'none';
@@ -1808,83 +1952,108 @@ function deleteThisRecord(idx) {
 
         // 生成记录按钮事件
         saveDataBtn.addEventListener('click', function() {
-            if (studentsData.length === 0) {
-                showCelebration('当前没有任务数据！', '⚠️');
-                return;
-            }
-            
-            // 获取任务名称
-            const taskName = titleText.textContent.replace(' - 任务打卡', '') || '未命名任务';
-            const duration = timerDisplay.textContent;
-            const completedStudentsList = studentsData.filter(student => student.completed);
-            const pendingStudentsList = studentsData.filter(student => !student.completed);
-            
-            // 创建任务记录
-            const record = {
-                taskName: taskName,
-                date: new Date().toLocaleString('zh-CN'),
-                duration: duration,
-                students: studentsData.map(student => ({
-                    name: student.name,
-                    note: student.note,
-                    completed: student.completed,
-                    time: student.time
-                })),
-                completedStudents: completedStudentsList.map(s => s.name),
-                pendingStudents: pendingStudentsList.map(s => s.name),
-                totalStudents: totalStudents,
-                completedCount: completedStudents
-            };
-            
-            // 添加到任务记录
-            taskRecords.push(record);
-            
-            // 限制记录数量（最多保留20条）
-            if (taskRecords.length > 20) {
-                taskRecords.shift();
-            }
-            
-            // 保存数据
-            saveDataToLocalStorage();
-            
-            // 重新渲染任务记录
-			
-            renderTaskRecords();
-            showCelebration('任务记录已生成！', '📝');
-        });
-
-        // 清除数据按钮事件
-        clearDataBtn.addEventListener('click', function() {
-            if (confirm('确定要清除当前任务的所有数据吗？此操作不可撤销！')) {
-                // 停止计时器
-                if (isTimerRunning) {
-                    clearInterval(timerInterval);
-                    isTimerRunning = false;
-                    document.getElementById('startTaskBtn').innerHTML = '<i class="fas fa-play"></i> 开始任务';
+            try {
+                if (studentsData.length === 0) {
+                    showCelebration('当前没有任务数据！', '⚠️');
+                    return;
                 }
                 
-                // 重置数据
-                studentsData = [];
-                totalStudents = 0;
-                completedStudents = 0;
-                startTime = null;
-                timerDisplay.textContent = '00:00:00';
-                counterDisplay.textContent = '0/0';
+                // 获取任务名称
+                const taskName = titleText.textContent.replace(' - 任务打卡', '') || '未命名任务';
+                const duration = timerDisplay.textContent;
+                const completedStudentsList = studentsData.filter(student => student.completed);
+                const pendingStudentsList = studentsData.filter(student => !student.completed);
                 
-                // 清空显示
-                document.getElementById('studentsContainer').innerHTML = '';
-                document.getElementById('leaderboardList').innerHTML = '';
-                document.getElementById('pendingItems').innerHTML = '';
+                // 关键修复：每次生成记录时，如果任务名称与现有记录不同，则视为新任务
+                // 同时更新currentTaskName变量，确保积分同步逻辑使用正确的任务名称
+                const isNewTask = !taskRecords.some(rec => rec.taskName === taskName);
+                currentTaskName = taskName; // 确保当前任务名称正确更新
                 
+                // 创建任务记录
+                const record = {
+                    taskName: taskName,
+                    date: new Date().toLocaleString('zh-CN'),
+                    duration: duration,
+                    students: studentsData.map(student => ({
+                        name: student.name,
+                        note: student.note,
+                        completed: student.completed,
+                        time: student.time
+                    })),
+                    completedStudents: completedStudentsList.map(s => s.name),
+                    pendingStudents: pendingStudentsList.map(s => s.name),
+                    totalStudents: totalStudents,
+                    completedCount: completedStudents,
+                    isNewTask: isNewTask, // 标记是否为新任务
+                    recordId: Date.now() + Math.random().toString(36).substr(2, 9) // 唯一标识符
+                };
+                
+                // 添加到任务记录
+                taskRecords.push(record);
+                
+                // 限制记录数量（最多保留20条）
+                if (taskRecords.length > 20) {
+                    taskRecords.shift();
+                }
+                
+                // 保存数据
                 saveDataToLocalStorage();
-                showCelebration('数据已清除！', '🗑️');
+                
+                // 重新渲染任务记录
+				
+                renderTaskRecords();
+                
+                // 根据是否为新任务显示不同的提示信息
+                if (isNewTask) {
+                    showCelebration('新任务记录已生成！', '🆕');
+                } else {
+                    showCelebration('任务记录已更新！', '📝');
+                }
+            } catch (error) {
+                console.error('生成记录时发生错误:', error);
+                showCelebration('生成记录失败，请重试！', '❌');
             }
         });
+
+
 
         // 页面加载时初始化
         window.addEventListener('load', function() {
-            initializeStudents();
-            loadDataFromLocalStorage();
+            // 检查URL参数，如果有timestamp参数，则启动全新任务
+            const urlParams = new URLSearchParams(window.location.search);
+            const timestamp = urlParams.get('timestamp');
+            
+            if (timestamp) {
+                // 全新任务：清除本地存储数据，重新初始化
+                localStorage.removeItem('taskCheckinData');
+                showCelebration('开始全新任务！', '🆕');
+                
+                // 初始化任务记录为空数组（全新任务）
+                taskRecords = [];
+                
+                // 初始化学生数据（全新任务）
+                initializeStudents();
+            } else {
+                // 非全新任务：加载现有数据（包括任务记录）
+                loadDataFromLocalStorage();
+                
+                // 确保taskRecords被正确初始化（如果loadDataFromLocalStorage没有初始化）
+                if (taskRecords === null) {
+                    taskRecords = [];
+                }
+                
+                // 修复：只有在完全没有本地存储数据时才初始化学生数据
+                // 检查本地存储中是否有数据
+                const savedData = localStorage.getItem('taskCheckinData');
+                if (!savedData && studentsData.length === 0) {
+                    // 完全没有本地存储数据且没有学生数据，才初始化
+                    initializeStudents();
+                } else if (savedData && studentsData.length === 0) {
+                    // 有本地存储数据但学生数据为空，说明是只恢复任务记录的情况
+                    // 不需要初始化学生数据，避免任务记录丢失
+                    console.log('仅恢复任务记录，不初始化学生数据');
+                }
+            }
             
             // 添加自动保存定时器（每30秒自动保存一次）
             setInterval(saveDataToLocalStorage, 30000);
@@ -1921,6 +2090,12 @@ function loadThisRecord(idx){
     totalStudents = studentsData.length;
     completedStudents = studentsData.filter(s=>s.completed).length;
     currentTaskName = rec.taskName || '未命名任务';
+    
+    // 关键修复：更新页面标题元素，确保任务名称同步显示
+    const pageTitle = currentTaskName + ' - 任务打卡';
+    document.title = pageTitle;
+    titleText.textContent = currentTaskName; // 只显示任务名称，不含后缀
+    
     // 重置计时
     if(isTimerRunning){clearInterval(timerInterval);isTimerRunning=false;}
     startTime = null;
@@ -1933,13 +2108,25 @@ function loadThisRecord(idx){
 }
 
 document.getElementById('newTaskBtn').addEventListener('click', function(){
-  if(confirm('开始新任务将清空当前进度，确定？')){
-    localStorage.removeItem('taskCheckinData');
+  if(confirm('开始新任务将清空当前进度并重新读取班级数据，但会保留任务记录，确定？')){
+    // 保存当前任务记录（确保不会丢失）
+    const currentTaskRecords = [...taskRecords];
+    const currentProcessedStudents = new Set(processedStudents);
+    
+    // 重置当前任务数据（不清除localStorage，只重置内存中的数据）
     studentsData.forEach(s=>{s.completed=false;s.time=null;});
     completedStudents=0;
     if(isTimerRunning){clearInterval(timerInterval);isTimerRunning=false;}
     startTime=null; timerDisplay.textContent='00:00:00';
     document.getElementById('startTaskBtn').innerHTML='<i class="fas fa-play"></i> 开始任务';
+    
+    // 恢复任务记录和已处理学生列表
+    taskRecords = currentTaskRecords;
+    processedStudents = currentProcessedStudents;
+    
+    // 🆕 新增：重新读取班级数据
+    initializeStudents();
+    
     renderStudents(); renderTaskRecords();
     saveDataToLocalStorage();
   }

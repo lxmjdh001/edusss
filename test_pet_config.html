@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宠物配置测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+        }
+        .test-result {
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0069d9;
+        }
+        .log-container {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>宠物配置测试</h1>
+    
+    <div class="test-section">
+        <h2>测试宠物配置保存和加载功能</h2>
+        
+        <div class="test-case">
+            <h3>测试宠物配置系统</h3>
+            <p>测试宠物配置的保存和加载功能是否正常工作</p>
+            <button onclick="testPetConfig()">测试</button>
+            <div id="test-result" class="test-result pending">待测试</div>
+            <div id="log-container" class="log-container"></div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>操作</h2>
+        <button onclick="openMainWindow()">打开主应用</button>
+        <button onclick="clearLogs()">清空日志</button>
+    </div>
+    
+    <script>
+        // 打开主应用窗口
+        function openMainWindow() {
+            window.open('http://127.0.0.1:8080/points.html', '_blank');
+        }
+        
+        // 清空日志
+        function clearLogs() {
+            document.getElementById('log-container').innerHTML = '';
+        }
+        
+        // 添加日志
+        function addLog(message) {
+            const logContainer = document.getElementById('log-container');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // 更新测试结果
+        function updateTestResult(result, details) {
+            const resultElement = document.getElementById('test-result');
+            resultElement.className = `test-result ${result}`;
+            resultElement.textContent = details;
+        }
+        
+        // 测试宠物配置
+        async function testPetConfig() {
+            addLog('开始测试宠物配置...');
+            updateTestResult('pending', '测试进行中...');
+            
+            try {
+                // 获取主应用窗口
+                const mainWindow = window.open('http://127.0.0.1:8080/points.html', '_blank');
+                
+                // 等待窗口加载完成
+                await new Promise(resolve => {
+                    const checkLoaded = () => {
+                        if (mainWindow.app && mainWindow.app.currentClassId) {
+                            resolve();
+                        } else {
+                            setTimeout(checkLoaded, 100);
+                        }
+                    };
+                    checkLoaded();
+                });
+                
+                addLog('主应用已加载，开始测试...');
+                
+                // 获取主应用的app对象
+                const app = mainWindow.app;
+                
+                // 执行测试
+                const testResult = app.testPetConfigSystem();
+                
+                if (testResult) {
+                    addLog('测试通过！');
+                    updateTestResult('pass', '宠物配置保存加载测试通过');
+                } else {
+                    addLog('测试失败！');
+                    updateTestResult('fail', '宠物配置保存加载测试失败');
+                }
+                
+                // 关闭测试窗口
+                setTimeout(() => {
+                    mainWindow.close();
+                }, 2000);
+                
+            } catch (error) {
+                addLog('测试异常: ' + error.message);
+                updateTestResult('fail', '测试异常: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
