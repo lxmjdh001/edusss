@@ -2246,7 +2246,9 @@ h1 {
 
 .rule-option label {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
   flex: 1;
 }
@@ -2254,7 +2256,6 @@ h1 {
 .rule-name {
   font-weight: 600;
   color: #2d3748;
-  margin-bottom: 4px;
 }
 
 .rule-points {
