@@ -1,16 +1,33 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-DEFAULT_DB_PATH = DATA_DIR / "grade_manager.db"
+# 获取数据存储目录
+def get_data_dir():
+    """获取数据存储目录（支持打包后的应用）"""
+    if getattr(sys, 'frozen', False):
+        # 打包后的应用：使用用户主目录
+        if sys.platform == 'darwin':  # macOS
+            data_dir = Path.home() / 'Library' / 'Application Support' / '学校成绩管理系统'
+        elif sys.platform == 'win32':  # Windows
+            data_dir = Path.home() / 'AppData' / 'Local' / '学校成绩管理系统'
+        else:  # Linux
+            data_dir = Path.home() / '.学校成绩管理系统'
+    else:
+        # 开发环境：使用项目目录
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        data_dir = BASE_DIR / "data"
 
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
+DATA_DIR = get_data_dir()
+DEFAULT_DB_PATH = DATA_DIR / "grade_manager.db"
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
 
