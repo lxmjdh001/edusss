@@ -3059,7 +3059,17 @@
       async function loadStudents() {
         try {
           const res = await fetch(API_BASE);
-          let allStudents = (await res.json()).map(enrichStudent);
+          const data = await res.json();
+
+          // 验证数据格式
+          if (!Array.isArray(data)) {
+            console.error('API 返回的数据不是数组:', data);
+            students = [];
+            renderTable();
+            return;
+          }
+
+          let allStudents = data.map(enrichStudent);
 
           // 应用班级筛选
           if (selectedClasses.length > 0) {

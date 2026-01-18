@@ -69,10 +69,40 @@ class AuthGuard {
     }
 
     /**
+     * 检查是否为桌面模式
+     */
+    async isDesktopMode() {
+        try {
+            const response = await fetch('/api/desktop-mode', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return data.desktop_mode === true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
      * 检查认证状态
      */
     async checkAuth() {
         try {
+            // 检查是否为桌面模式
+            const desktopMode = await this.isDesktopMode();
+            if (desktopMode) {
+                // 桌面模式：返回默认用户，跳过认证
+                return {
+                    account: 'desktop_user',
+                    vip_level: 10,
+                    is_desktop: true
+                };
+            }
+
             const response = await fetch('/api/auth/me', {
                 method: 'GET',
                 credentials: 'include',

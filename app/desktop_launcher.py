@@ -18,6 +18,9 @@ def get_resource_path():
 def start_server():
     """后台启动FastAPI服务器"""
     try:
+        # 设置桌面模式环境变量（跳过登录验证）
+        os.environ['DESKTOP_MODE'] = 'true'
+
         # 设置工作目录
         base_path = get_resource_path()
         os.chdir(base_path)

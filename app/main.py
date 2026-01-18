@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -64,3 +65,10 @@ def serve_points():
 @app.get("/healthz", response_class=JSONResponse, tags=["system"])
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/api/desktop-mode", response_class=JSONResponse, tags=["system"])
+def check_desktop_mode():
+    """检查是否为桌面模式"""
+    desktop_mode = os.getenv('DESKTOP_MODE', 'false').lower() == 'true'
+    return {"desktop_mode": desktop_mode}
