@@ -2,26 +2,50 @@ from __future__ import annotations
 
 import os
 import sys
+import shutil
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # 获取数据存储目录
-def get_data_dir():
+def get_legacy_data_dir() -> Path:
+    if sys.platform == 'darwin':  # macOS
+        return Path.home() / 'Library' / 'Application Support' / '学校成绩管理系统'
+    if sys.platform == 'win32':  # Windows
+        return Path.home() / 'AppData' / 'Local' / '学校成绩管理系统'
+    return Path.home() / '.学校成绩管理系统'
+
+
+def migrate_legacy_db(target_dir: Path) -> None:
+    legacy_db = get_legacy_data_dir() / "grade_manager.db"
+    target_db = target_dir / "grade_manager.db"
+    if target_db.exists() or not legacy_db.exists():
+        return
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(legacy_db, target_db)
+    except OSError:
+        pass
+
+
+def get_data_dir() -> Path:
     """获取数据存储目录（支持打包后的应用）"""
     if getattr(sys, 'frozen', False):
-        # 打包后的应用：使用用户主目录
-        if sys.platform == 'darwin':  # macOS
-            data_dir = Path.home() / 'Library' / 'Application Support' / '学校成绩管理系统'
-        elif sys.platform == 'win32':  # Windows
-            data_dir = Path.home() / 'AppData' / 'Local' / '学校成绩管理系统'
-        else:  # Linux
-            data_dir = Path.home() / '.学校成绩管理系统'
-    else:
-        # 开发环境：使用项目目录
-        BASE_DIR = Path(__file__).resolve().parent.parent
-        data_dir = BASE_DIR / "data"
+        if sys.platform == 'win32':
+            # 打包后的应用：使用可执行文件同目录
+            data_dir = Path(sys.executable).resolve().parent
+            data_dir.mkdir(parents=True, exist_ok=True)
+            migrate_legacy_db(data_dir)
+            return data_dir
+
+        data_dir = get_legacy_data_dir()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return data_dir
+
+    # 开发环境：使用项目目录
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    data_dir = BASE_DIR / "data"
 
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir

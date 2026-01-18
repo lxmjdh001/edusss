@@ -46,9 +46,11 @@ def main():
         # 获取资源路径
         base_path = get_resource_path()
 
-        # 确保数据目录存在
-        data_dir = Path(base_path) / "data"
-        data_dir.mkdir(exist_ok=True)
+        if base_path not in sys.path:
+            sys.path.insert(0, base_path)
+
+        from app.database import get_data_dir
+        data_dir = get_data_dir()
 
         print(f"应用路径: {base_path}")
         print(f"数据目录: {data_dir}")
