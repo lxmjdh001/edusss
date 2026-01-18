@@ -33,7 +33,7 @@ def start_server():
         uvicorn.run(
             app,
             host="127.0.0.1",
-            port=8765,
+            port=18765,
             log_level="warning"
         )
     except Exception as e:
@@ -65,7 +65,7 @@ def main():
         print("创建桌面窗口...")
         webview.create_window(
             "学校成绩管理系统",
-            "http://127.0.0.1:8765/static/points.html",  # 直接打开主页，跳过登录
+            "http://127.0.0.1:18765/static/points.html",  # 直接打开主页，跳过登录
             width=1400,
             height=900,
             resizable=True,
