@@ -51,6 +51,8 @@ def main():
 
         from app.database import get_data_dir
         data_dir = get_data_dir()
+        storage_dir = data_dir / "webview_storage"
+        storage_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"应用路径: {base_path}")
         print(f"数据目录: {data_dir}")
@@ -73,7 +75,7 @@ def main():
             resizable=True,
             fullscreen=False
         )
-        webview.start()
+        webview.start(private_mode=False, storage_path=str(storage_dir))
     except Exception as e:
         print(f"应用启动失败: {e}")
         import traceback
