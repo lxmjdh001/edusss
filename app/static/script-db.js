@@ -419,11 +419,7 @@ class ClassPointsSystem {
 
   initializePetConfig() {
     // 默认宠物配置
-    this.petTypes = [
-      { id: 'bird', name: '小鸟', emoji: '🐦' },
-      { id: 'cat', name: '小猫', emoji: '🐱' },
-      { id: 'dog', name: '小狗', emoji: '🐶' }
-    ];
+    this.petTypes = [];
 
     this.petStages = [
       { name: '蛋', emoji: '🥚', minPoints: 0 },

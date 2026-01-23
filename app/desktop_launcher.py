@@ -1,3 +1,5 @@
+import base64
+from typing import Optional
 import webview
 import threading
 import uvicorn
@@ -14,6 +16,88 @@ def get_resource_path():
     else:
         # 开发环境
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+
+def _build_file_types(filename: str):
+    ext = Path(filename).suffix
+    if not ext:
+        return [('All Files', '*.*')]
+    label = f'{ext[1:].upper()} files'
+    return [(label, f'*{ext}'), ('All Files', '*.*')]
+
+
+class DesktopApi:
+    def __init__(self, data_dir: Optional[Path] = None):
+        self._window = None
+        self._data_dir = data_dir
+
+    def _task_checkin_path(self) -> Optional[Path]:
+        if not self._data_dir:
+            return None
+        return self._data_dir / "task_checkin.json"
+
+    def set_window(self, window):
+        self._window = window
+
+    def save_file(self, filename: str, data_url: str) -> bool:
+        if not self._window or not data_url:
+            return False
+
+    def get_task_checkin_data(self):
+        path = self._task_checkin_path()
+        if not path or not path.exists():
+            return None
+        try:
+            return path.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"Read task checkin data failed: {exc}")
+            return None
+
+    def save_task_checkin_data(self, payload: str) -> bool:
+        path = self._task_checkin_path()
+        if not path:
+            return False
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(payload or "", encoding="utf-8")
+            return True
+        except OSError as exc:
+            print(f"Save task checkin data failed: {exc}")
+            return False
+
+    def clear_task_checkin_data(self) -> bool:
+        path = self._task_checkin_path()
+        if not path:
+            return False
+        try:
+            if path.exists():
+                path.unlink()
+            return True
+        except OSError as exc:
+            print(f"Clear task checkin data failed: {exc}")
+            return False
+        try:
+            _header, _sep, b64 = data_url.partition(',')
+            if not b64:
+                return False
+            save_path = self._window.create_file_dialog(
+                webview.SAVE_DIALOG,
+                save_filename=filename,
+                file_types=_build_file_types(filename),
+            )
+            if not save_path:
+                return False
+            if isinstance(save_path, list):
+                save_path = save_path[0]
+            data = base64.b64decode(b64)
+            with open(save_path, 'wb') as f:
+                f.write(data)
+            return True
+        except Exception as exc:
+            print(f"??????: {exc}")
+            return False
+
 
 def start_server():
     """后台启动FastAPI服务器"""
@@ -67,14 +151,17 @@ def main():
 
         # 创建桌面窗口
         print("创建桌面窗口...")
-        webview.create_window(
-            "学校成绩管理系统",
-            "http://127.0.0.1:18765/static/points.html",  # 直接打开主页，跳过登录
+        api = DesktopApi(data_dir)
+        window = webview.create_window(
+            "????????",
+            "http://127.0.0.1:18765/static/points.html",  # ???????????
             width=1400,
             height=900,
             resizable=True,
-            fullscreen=False
+            fullscreen=False,
+            js_api=api,
         )
+        api.set_window(window)
         webview.start(private_mode=False, storage_path=str(storage_dir))
     except Exception as e:
         print(f"应用启动失败: {e}")

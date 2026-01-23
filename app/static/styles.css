@@ -971,18 +971,26 @@ h1 {
 }
 
 .student-card, .group-card {
-  background: white;
-  border-radius: 15px;
+  background: #ffffff;
+  border-radius: 16px;
   padding: 15px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(236, 72, 153, 0.25);
+  box-shadow:
+    0 6px 16px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(236, 72, 153, 0.12),
+    0 0 18px rgba(236, 72, 153, 0.35);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   text-align: center;
   position: relative;
 }
 
 .student-card:hover, .group-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-color: rgba(236, 72, 153, 0.4);
+  box-shadow:
+    0 12px 24px rgba(15, 23, 42, 0.15),
+    0 0 0 1px rgba(236, 72, 153, 0.25),
+    0 0 28px rgba(236, 72, 153, 0.55);
 }
 
 .student-name, .group-name {

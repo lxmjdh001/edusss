@@ -1505,6 +1505,55 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
         });
 
         // 保存数据到本地存储
+        function hasDesktopStorageApi() {
+            return window.pywebview
+                && window.pywebview.api
+                && typeof window.pywebview.api.get_task_checkin_data === 'function';
+        }
+
+        async function readTaskCheckinData() {
+            if (hasDesktopStorageApi()) {
+                try {
+                    return await window.pywebview.api.get_task_checkin_data();
+                } catch (e) {
+                    console.error('Read task checkin data failed:', e);
+                    return null;
+                }
+            }
+            return localStorage.getItem('taskCheckinData');
+        }
+
+        async function writeTaskCheckinData(payload) {
+            if (hasDesktopStorageApi()) {
+                try {
+                    return await window.pywebview.api.save_task_checkin_data(payload);
+                } catch (e) {
+                    console.error('Save task checkin data failed:', e);
+                    return false;
+                }
+            }
+            try {
+                localStorage.setItem('taskCheckinData', payload);
+                return true;
+            } catch (e) {
+                console.error('Save task checkin data failed:', e);
+                return false;
+            }
+        }
+
+        async function removeTaskCheckinData() {
+            if (hasDesktopStorageApi()) {
+                try {
+                    return await window.pywebview.api.clear_task_checkin_data();
+                } catch (e) {
+                    console.error('Clear task checkin data failed:', e);
+                    return false;
+                }
+            }
+            localStorage.removeItem('taskCheckinData');
+            return true;
+        }
+
         function saveDataToLocalStorage() {
             const data = {
                 students: studentsData,
@@ -1526,7 +1575,8 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
                 timestamp: new Date().toISOString()
             };
             
-            localStorage.setItem('taskCheckinData', JSON.stringify(data));
+            const payload = JSON.stringify(data);
+            void writeTaskCheckinData(payload);
             
             // 显示保存成功的消息
             showSaveMessage();
@@ -1541,8 +1591,8 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
         }
 
         // 从本地存储加载数据
-        function loadDataFromLocalStorage() {
-            const savedData = localStorage.getItem('taskCheckinData');
+        async function loadDataFromLocalStorage() {
+            const savedData = await readTaskCheckinData();
             
             if (savedData) {
                 try {
@@ -1675,6 +1725,7 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
                     console.error('加载保存的数据时出错:', e);
                 }
             }
+            return savedData;
         }
 
 // ========== 任务记录相关 ==========
@@ -2018,14 +2069,14 @@ function deleteThisRecord(idx) {
 
 
         // 页面加载时初始化
-        window.addEventListener('load', function() {
-            // 检查URL参数，如果有timestamp参数，则启动全新任务
+        window.addEventListener('load', async function() {
+            // 检查URL参数，只有显式要求全新任务时才清空数据
             const urlParams = new URLSearchParams(window.location.search);
-            const timestamp = urlParams.get('timestamp');
+            const newTask = urlParams.get('newTask') === '1';
             
-            if (timestamp) {
+            if (newTask) {
                 // 全新任务：清除本地存储数据，重新初始化
-                localStorage.removeItem('taskCheckinData');
+                await removeTaskCheckinData();
                 showCelebration('开始全新任务！', '🆕');
                 
                 // 初始化任务记录为空数组（全新任务）
@@ -2035,7 +2086,7 @@ function deleteThisRecord(idx) {
                 initializeStudents();
             } else {
                 // 非全新任务：加载现有数据（包括任务记录）
-                loadDataFromLocalStorage();
+                const savedData = await loadDataFromLocalStorage();
                 
                 // 确保taskRecords被正确初始化（如果loadDataFromLocalStorage没有初始化）
                 if (taskRecords === null) {
@@ -2044,7 +2095,6 @@ function deleteThisRecord(idx) {
                 
                 // 修复：只有在完全没有本地存储数据时才初始化学生数据
                 // 检查本地存储中是否有数据
-                const savedData = localStorage.getItem('taskCheckinData');
                 if (!savedData && studentsData.length === 0) {
                     // 完全没有本地存储数据且没有学生数据，才初始化
                     initializeStudents();

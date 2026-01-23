@@ -40,7 +40,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='学校成绩管理系统_20260122',
+    name='学校成绩管理系统_20260123',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -62,5 +62,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='学校成绩管理系统_20260122',
+    name='学校成绩管理系统_20260123',
 )

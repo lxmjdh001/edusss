@@ -2529,22 +2529,30 @@ renderPetSelection(student) {
   const petLevelPreviews = document.getElementById('petLevelPreviews');
   
   if (!studentNameEl || !currentPetPreview || !petTypeGrid || !petLevelPreviews) return;
+
+  if (!this.petTypes || this.petTypes.length === 0) {
+    currentPetPreview.innerHTML = '<div style="color: #94a3b8;">暂无宠物类型，请先在宠物配置中添加</div>';
+    petTypeGrid.className = 'pet-type-grid';
+    petTypeGrid.innerHTML = '<div style="padding: 12px; color: #94a3b8; text-align: center;">暂无可选宠物类型</div>';
+    petLevelPreviews.innerHTML = '';
+    return;
+  }
   
   // 设置学生姓名和欢迎信息
   studentNameEl.innerHTML = `<span style="color: #3b82f6; font-weight: 600;">${student.name}</span>`;
   
   // 获取学生当前宠物选择
   const studentPet = this.studentPets[student.name] || {};
-  const currentPetType = studentPet.petType || 'cat'; // 默认小猫
+  const currentPetType = this.getValidPetTypeId(studentPet.petType);
   
   // 显示当前宠物（带样式和信息）
   const petType = this.petTypes.find(type => type.id === currentPetType);
   currentPetPreview.innerHTML = `
     <div style="position: relative; display: inline-block;">
-      <div style="font-size: 2.5em; padding: 20px; background: ${petType?.color}20; border-radius: 50%;">${petType?.emoji || '🐱'}</div>
+      <div style="font-size: 2.5em; padding: 20px; background: ${petType?.color}20; border-radius: 50%;">${petType?.emoji || '🐾'}</div>
       <div style="position: absolute; bottom: 5px; right: 5px; background: ${petType?.color || '#3b82f6'}; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
     </div>
-    <div style="margin-top: 10px; font-size: 1.2em; font-weight: 500; color: ${petType?.color || '#3b82f6'};">${petType?.name || '小猫'}</div>
+    <div style="margin-top: 10px; font-size: 1.2em; font-weight: 500; color: ${petType?.color || '#3b82f6'};">${petType?.name || '未设置'}</div>
   `;
   
   // 渲染宠物类型选择网格
@@ -2602,6 +2610,10 @@ renderPetLevelPreviews(petType) {
   // 统一查找预览容器，支持个人和小组预览
   const petLevelPreviews = document.getElementById('petLevelPreviews') || document.getElementById('groupPetLevelPreviews');
   if (!petLevelPreviews) return;
+  if (!petType || !this.petTypes || this.petTypes.length === 0) {
+    petLevelPreviews.innerHTML = '';
+    return;
+  }
   
   // 设置预览区域样式
   petLevelPreviews.style.display = 'flex';
@@ -2658,7 +2670,7 @@ renderPetLevelPreviews(petType) {
       `;
     } else {
       // 使用对应的宠物等级emoji，根据宠物类型调整
-      const baseEmoji = typeInfo?.emoji || '🐱';
+      const baseEmoji = typeInfo?.emoji || '🐾';
       // 根据等级稍微调整emoji大小，显示成长效果
       const size = 2 + (i * 0.15); // 从2em到2.9em递增
       displayContent = `
@@ -2812,7 +2824,10 @@ selectPetType(student, petType) {
 // 获取学生当前宠物形象
 getStudentPetImage(student) {
   const studentPet = this.studentPets[student.name] || {};
-  const petType = studentPet.petType || 'cat'; // 默认小猫
+  const petType = this.getValidPetTypeId(studentPet.petType);
+  if (!petType) {
+    return '🐾';
+  }
   
   // 计算学生当前等级 - 使用总积分以保持与等级显示一致
   const totalPoints = this.getStudentTotalPoints(student);
@@ -2857,7 +2872,10 @@ getGroupPetImage(group) {
   }
   
   const groupPet = this.groupPets[group.name] || {};
-  const petType = groupPet.petType || 'cat'; // 默认小猫
+  const petType = this.getValidPetTypeId(groupPet.petType);
+  if (!petType) {
+    return '🐾';
+  }
   console.log(`🐱 小组 ${group.name} 宠物类型: ${petType}`);
   
   // 根据小组积分计算当前等级（考虑小组选择的宠物类型）
@@ -2971,38 +2989,17 @@ init(){
       if (Array.isArray(parsedTypes) && parsedTypes.length > 0) {
         this.petTypes = parsedTypes;
       } else {
-        // 如果解析失败或数组为空，使用默认宠物类型
-        this.petTypes = [
-          { id: 'cat', name: '小猫', emoji: '🐱', color: '#FFD93D' },
-          { id: 'dog', name: '小狗', emoji: '🐶', color: '#FFA726' },
-          { id: 'rabbit', name: '小兔', emoji: '🐰', color: '#E1BEE7' },
-          { id: 'panda', name: '熊猫', emoji: '🐼', color: '#212121' },
-          { id: 'fox', name: '狐狸', emoji: '🦊', color: '#FF9800' },
-          { id: 'bear', name: '小熊', emoji: '🐻', color: '#795548' }
-        ];
+        // 如果解析失败或数组为空，保持为空配置
+        this.petTypes = [];
       }
     } catch (error) {
       console.error('加载宠物类型配置失败:', error);
-      // 如果解析失败，使用默认宠物类型
-      this.petTypes = [
-        { id: 'cat', name: '小猫', emoji: '🐱', color: '#FFD93D' },
-        { id: 'dog', name: '小狗', emoji: '🐶', color: '#FFA726' },
-        { id: 'rabbit', name: '小兔', emoji: '🐰', color: '#E1BEE7' },
-        { id: 'panda', name: '熊猫', emoji: '🐼', color: '#212121' },
-        { id: 'fox', name: '狐狸', emoji: '🦊', color: '#FF9800' },
-        { id: 'bear', name: '小熊', emoji: '🐻', color: '#795548' }
-      ];
+      // 如果解析失败，保持为空配置
+      this.petTypes = [];
     }
   } else {
-    // 如果没有保存的宠物类型配置，使用默认宠物类型
-    this.petTypes = [
-      { id: 'cat', name: '小猫', emoji: '🐱', color: '#FFD93D' },
-      { id: 'dog', name: '小狗', emoji: '🐶', color: '#FFA726' },
-      { id: 'rabbit', name: '小兔', emoji: '🐰', color: '#E1BEE7' },
-      { id: 'panda', name: '熊猫', emoji: '🐼', color: '#212121' },
-      { id: 'fox', name: '狐狸', emoji: '🦊', color: '#FF9800' },
-      { id: 'bear', name: '小熊', emoji: '🐻', color: '#795548' }
-    ];
+    // 如果没有保存的宠物类型配置，保持为空配置
+    this.petTypes = [];
   }
   
   // 加载宠物阶段配置（在currentClassId正确设置后）
@@ -3557,6 +3554,41 @@ saveImageFile(file, path) {
     reader.readAsDataURL(file);
   });
 }
+  downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async exportFile(filename, data, mime = 'application/octet-stream') {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+    const api = window.pywebview && window.pywebview.api;
+    if (api && typeof api.save_file === 'function') {
+      try {
+        const dataUrl = await this.blobToDataUrl(blob);
+        const saved = await api.save_file(filename, dataUrl);
+        if (saved) {
+          return;
+        }
+      } catch (error) {
+        console.error('Desktop save failed:', error);
+      }
+    }
+    this.downloadBlob(blob, filename);
+  }
+
   
   // 修改原有的保存方法，按班级ID存储数据
 saveAll(){
@@ -3639,13 +3671,19 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     if (savedPetTypes) {
       try {
         const parsedTypes = JSON.parse(savedPetTypes);
-        // 合并保存的宠物类型数据，保留默认类型的结构
-        parsedTypes.forEach(savedType => {
-          const existingType = this.petTypes.find(t => t.id === savedType.id);
-          if (existingType) {
-            Object.assign(existingType, savedType);
+        if (Array.isArray(parsedTypes)) {
+          if (!this.petTypes || this.petTypes.length === 0) {
+            this.petTypes = parsedTypes;
+          } else {
+            // 合并保存的宠物类型数据，保留默认类型的结构
+            parsedTypes.forEach(savedType => {
+              const existingType = this.petTypes.find(t => t.id === savedType.id);
+              if (existingType) {
+                Object.assign(existingType, savedType);
+              }
+            });
           }
-        });
+        }
       } catch (error) {
         console.error('加载宠物类型配置失败:', error);
         this.showNotification('宠物类型配置加载失败', 'warning');
@@ -4836,13 +4874,8 @@ document.getElementById('ruleTxtExport')?.addEventListener('click', () => {
   const target = this.currentConfigScope === 'global' ? this.globalRules : this.rules;
   if (!target.length) return alert('当前没有个人规则可导出');
   const content = target.map(r => `${r.name}|${r.points}`).join('\n');
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `个人积分规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const filename = `个人积分规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.txt`;
+  this.exportFile(filename, content, 'text/plain;charset=utf-8');
 });
 	
 // 小组规则 txt 导入
@@ -4880,13 +4913,8 @@ document.getElementById('groupRuleTxtExport')?.addEventListener('click', () => {
   const target = this.currentConfigScope === 'global' ? this.globalGroupRules : this.groupRules;
   if (!target.length) return alert('当前没有小组规则可导出');
   const content = target.map(r => `${r.name}|${r.points}`).join('\n');
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `小组积分规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const filename = `小组积分规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.txt`;
+  this.exportFile(filename, content, 'text/plain;charset=utf-8');
 });
 
 // 商店规则导入
@@ -4945,13 +4973,8 @@ document.getElementById('shopRuleExport')?.addEventListener('click', () => {
   if (!target.length) return alert('当前没有商品可导出');
   
   const data = JSON.stringify(target, null, 2);
-  const blob = new Blob([data], { type: 'application/json;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `商店商品规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const filename = `商店商品规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
+  this.exportFile(filename, data, 'application/json;charset=utf-8');
 });
 
 // 个人规则清空
@@ -6338,10 +6361,18 @@ if (historyTabBtn && petTabBtn) {
     const petLevelPreviews = document.getElementById('groupPetLevelPreviews');
     
     if (!currentPetPreview || !petTypeGrid || !petLevelPreviews) return;
+
+    if (!this.petTypes || this.petTypes.length === 0) {
+      currentPetPreview.innerHTML = '<div style="color: #94a3b8;">暂无宠物类型，请先在宠物配置中添加</div>';
+      petTypeGrid.className = 'pet-type-grid';
+      petTypeGrid.innerHTML = '<div style="padding: 12px; color: #94a3b8; text-align: center;">暂无可选宠物类型</div>';
+      petLevelPreviews.innerHTML = '';
+      return;
+    }
     
     // 获取小组当前宠物选择
     const groupPet = this.groupPets[group.name] || {};
-    const currentPetType = groupPet.petType || 'cat'; // 默认小猫
+    const currentPetType = this.getValidPetTypeId(groupPet.petType);
     
     // 为当前宠物预览添加与个人中心一致的容器样式
     currentPetPreview.parentNode.style.margin = '20px 0';
@@ -6364,10 +6395,10 @@ if (historyTabBtn && petTabBtn) {
     const petType = this.petTypes.find(type => type.id === currentPetType);
     currentPetPreview.innerHTML = `
       <div style="position: relative; display: inline-block;">
-        <div style="font-size: 2.5em; padding: 20px; background: ${petType?.color}20; border-radius: 50%;">${petType?.emoji || '🐱'}</div>
+        <div style="font-size: 2.5em; padding: 20px; background: ${petType?.color}20; border-radius: 50%;">${petType?.emoji || '🐾'}</div>
         <div style="position: absolute; bottom: 5px; right: 5px; background: ${petType?.color || '#3b82f6'}; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
       </div>
-      <div style="margin-top: 10px; font-size: 1.2em; font-weight: 500; color: ${petType?.color || '#3b82f6'};">${petType?.name || '小猫'}</div>
+      <div style="margin-top: 10px; font-size: 1.2em; font-weight: 500; color: ${petType?.color || '#3b82f6'};">${petType?.name || '未设置'}</div>
     `;
     
     // 渲染宠物类型选择网格
@@ -6457,10 +6488,10 @@ if (historyTabBtn && petTabBtn) {
         if (currentPetPreview && petTypeInfo) {
           currentPetPreview.innerHTML = `
             <div style="position: relative; display: inline-block;">
-              <div style="font-size: 2.5em; padding: 20px; background: ${petTypeInfo?.color}20; border-radius: 50%;">${petTypeInfo?.emoji || '🐱'}</div>
+              <div style="font-size: 2.5em; padding: 20px; background: ${petTypeInfo?.color}20; border-radius: 50%;">${petTypeInfo?.emoji || '🐾'}</div>
               <div style="position: absolute; bottom: 5px; right: 5px; background: ${petTypeInfo?.color || '#3b82f6'}; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
             </div>
-            <div style="margin-top: 10px; font-size: 1.2em; font-weight: 500; color: ${petTypeInfo?.color || '#3b82f6'};">${petTypeInfo?.name || '小猫'}</div>
+            <div style="margin-top: 10px; font-size: 1.2em; font-weight: 500; color: ${petTypeInfo?.color || '#3b82f6'};">${petTypeInfo?.name || '未设置'}</div>
           `;
         }
         
@@ -6509,7 +6540,7 @@ if (historyTabBtn && petTabBtn) {
     // 关闭模态框
     document.getElementById('groupHistoryModal').style.display = 'none';
     
-    alert(`小组宠物已成功设置为${this.petTypes.find(type => type.id === petType)?.name || '小猫'}！`);
+    alert(`小组宠物已成功设置为${this.petTypes.find(type => type.id === petType)?.name || '未设置'}！`);
   }
   
   undoStudentHistory(historyIndex){
@@ -7167,13 +7198,8 @@ if (historyTabBtn && petTabBtn) {
 	  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
 	  const filename = `班级积分系统_全局配置备份_${timestamp}.json`;
 	  
-	  const blob = new Blob([JSON.stringify(globalData, null, 2)], {type: 'application/json'});
-	  const url = URL.createObjectURL(blob);
-	  const a = document.createElement('a');
-	  a.href = url;
-	  a.download = filename;
-	  a.click();
-	  URL.revokeObjectURL(url);
+	  const content = JSON.stringify(globalData, null, 2);
+  this.exportFile(filename, content, 'application/json');
 	  
 	  alert('全局配置导出成功！');
 	}
@@ -10532,13 +10558,8 @@ exportBackup(){
   const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
   const filename = `${this.currentClassName}_班级完整数据备份_${timestamp}.json`;
   
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  const content = JSON.stringify(data, null, 2);
+  this.exportFile(filename, content, 'application/json');
   
   let exportMessage = `备份导出成功！\n包含：\n- ${this.students.length} 名学生\n- ${this.groups.length} 个小组\n- ${this.rules.length} 条个人规则\n- ${this.groupRules.length} 条小组规则\n- ${this.shopItems.length} 个商店商品`;
   exportMessage += `\n- 个人等级配置（${this.petStages.length}个等级）`;
@@ -11084,13 +11105,9 @@ exportGlobalConfig(){
     exportTime: new Date().toLocaleString('zh-CN')
   };
   
-  const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `系统配置_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const content = JSON.stringify(config, null, 2);
+  const filename = `系统配置_${new Date().toISOString().split('T')[0]}.json`;
+  this.exportFile(filename, content, 'application/json');
   
   alert('全局配置导出成功！');
 }
@@ -11331,18 +11348,20 @@ toggleSelectAllStudents(selectAll) {
 getPetConfigs() {
   // 确保宠物类型数据存在
   if (!this.petTypes || this.petTypes.length === 0) {
-    // 如果没有宠物类型，返回默认配置
-    return [
-      {
-        id: 'default',
-        name: '默认宠物',
-        emoji: '🐱',
-        color: '#3b82f6'
-      }
-    ];
+    return [];
   }
   
   return this.petTypes;
+}
+
+getValidPetTypeId(preferredId) {
+  if (preferredId && this.petTypes && this.petTypes.some(t => t.id === preferredId)) {
+    return preferredId;
+  }
+  if (this.petTypes && this.petTypes.length > 0) {
+    return this.petTypes[0].id;
+  }
+  return '';
 }
 
 // 应用宠物到单个学生
