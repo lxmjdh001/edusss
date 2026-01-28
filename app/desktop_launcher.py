@@ -43,6 +43,46 @@ class DesktopApi:
     def save_file(self, filename: str, data_url: str) -> bool:
         if not self._window or not data_url:
             return False
+        try:
+            _header, _sep, b64 = data_url.partition(',')
+            if not b64:
+                return False
+            save_path = self._window.create_file_dialog(
+                webview.SAVE_DIALOG,
+                save_filename=filename,
+                file_types=_build_file_types(filename),
+            )
+            if not save_path:
+                return False
+            if isinstance(save_path, list):
+                save_path = save_path[0]
+            data = base64.b64decode(b64)
+            with open(save_path, 'wb') as f:
+                f.write(data)
+            return True
+        except Exception as exc:
+            print(f"Save file failed: {exc}")
+            return False
+
+    def save_text_file(self, filename: str, content: str) -> bool:
+        if not self._window:
+            return False
+        try:
+            save_path = self._window.create_file_dialog(
+                webview.SAVE_DIALOG,
+                save_filename=filename,
+                file_types=_build_file_types(filename),
+            )
+            if not save_path:
+                return False
+            if isinstance(save_path, list):
+                save_path = save_path[0]
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(content or "")
+            return True
+        except Exception as exc:
+            print(f"Save text file failed: {exc}")
+            return False
 
     def get_task_checkin_data(self):
         path = self._task_checkin_path()
@@ -76,26 +116,6 @@ class DesktopApi:
             return True
         except OSError as exc:
             print(f"Clear task checkin data failed: {exc}")
-            return False
-        try:
-            _header, _sep, b64 = data_url.partition(',')
-            if not b64:
-                return False
-            save_path = self._window.create_file_dialog(
-                webview.SAVE_DIALOG,
-                save_filename=filename,
-                file_types=_build_file_types(filename),
-            )
-            if not save_path:
-                return False
-            if isinstance(save_path, list):
-                save_path = save_path[0]
-            data = base64.b64decode(b64)
-            with open(save_path, 'wb') as f:
-                f.write(data)
-            return True
-        except Exception as exc:
-            print(f"??????: {exc}")
             return False
 
 
@@ -153,8 +173,8 @@ def main():
         print("创建桌面窗口...")
         api = DesktopApi(data_dir)
         window = webview.create_window(
-            "????????",
-            "http://127.0.0.1:18765/static/points.html",  # ???????????
+            "班级积分宠物成长系统",
+            "http://127.0.0.1:18765/static/points.html",
             width=1400,
             height=900,
             resizable=True,

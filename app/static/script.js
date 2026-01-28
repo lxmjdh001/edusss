@@ -3575,15 +3575,27 @@ saveImageFile(file, path) {
   async exportFile(filename, data, mime = 'application/octet-stream') {
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
     const api = window.pywebview && window.pywebview.api;
-    if (api && typeof api.save_file === 'function') {
-      try {
-        const dataUrl = await this.blobToDataUrl(blob);
-        const saved = await api.save_file(filename, dataUrl);
-        if (saved) {
-          return;
+    if (api) {
+      if (typeof data === 'string' && typeof api.save_text_file === 'function') {
+        try {
+          const saved = await api.save_text_file(filename, data);
+          if (saved) {
+            return;
+          }
+        } catch (error) {
+          console.error('Desktop text save failed:', error);
         }
-      } catch (error) {
-        console.error('Desktop save failed:', error);
+      }
+      if (typeof api.save_file === 'function') {
+        try {
+          const dataUrl = await this.blobToDataUrl(blob);
+          const saved = await api.save_file(filename, dataUrl);
+          if (saved) {
+            return;
+          }
+        } catch (error) {
+          console.error('Desktop save failed:', error);
+        }
       }
     }
     this.downloadBlob(blob, filename);
@@ -8666,15 +8678,8 @@ exportRandomRecords(){
     csvContent += `${index + 1},${record.name},${record.time}\n`;
   });
   
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `随机点名记录_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const filename = `随机点名记录_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`;
+  this.exportFile(filename, csvContent, 'text/csv;charset=utf-8');
 }
 
 clearRandomRecords(){
