@@ -3575,12 +3575,26 @@ saveImageFile(file, path) {
   async exportFile(filename, data, mime = 'application/octet-stream') {
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
     const api = window.pywebview && window.pywebview.api;
+    const notifySaved = (result, fallbackName) => {
+      if (!result || typeof result !== 'object') return;
+      if (!result.saved) return;
+      const path = result.path || fallbackName;
+      if (typeof this.showNotification === 'function') {
+        this.showNotification(`已保存到: ${path}`, 'success');
+      } else {
+        alert(`已保存到: ${path}`);
+      }
+    };
     if (api) {
       if (typeof data === 'string' && typeof api.save_text_file === 'function') {
         try {
           const saved = await api.save_text_file(filename, data);
-          if (saved) {
-            return;
+          if (saved === true) return;
+          if (saved && typeof saved === 'object') {
+            if (saved.saved) {
+              notifySaved(saved, filename);
+              return;
+            }
           }
         } catch (error) {
           console.error('Desktop text save failed:', error);
@@ -3590,8 +3604,12 @@ saveImageFile(file, path) {
         try {
           const dataUrl = await this.blobToDataUrl(blob);
           const saved = await api.save_file(filename, dataUrl);
-          if (saved) {
-            return;
+          if (saved === true) return;
+          if (saved && typeof saved === 'object') {
+            if (saved.saved) {
+              notifySaved(saved, filename);
+              return;
+            }
           }
         } catch (error) {
           console.error('Desktop save failed:', error);

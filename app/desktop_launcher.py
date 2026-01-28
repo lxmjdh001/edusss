@@ -1,3 +1,4 @@
+﻿# -*- coding: utf-8 -*-
 import base64
 from typing import Optional
 import webview
@@ -40,49 +41,91 @@ class DesktopApi:
     def set_window(self, window):
         self._window = window
 
+    def _log(self, message: str) -> None:
+        if not self._data_dir:
+            return
+        try:
+            log_path = self._data_dir / "desktop_api.log"
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            with log_path.open("a", encoding="utf-8") as f:
+                f.write(f"[{timestamp}] {message}\n")
+        except OSError:
+            pass
+
+    def _fallback_export_path(self, filename: str) -> Optional[Path]:
+        if not self._data_dir:
+            return None
+        exports_dir = self._data_dir / "exports"
+        try:
+            exports_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            return None
+        target = exports_dir / filename
+        if not target.exists():
+            return target
+        stem = target.stem
+        suffix = target.suffix
+        for i in range(1, 1000):
+            candidate = exports_dir / f"{stem}_{i}{suffix}"
+            if not candidate.exists():
+                return candidate
+        return exports_dir / f"{stem}_{int(time.time())}{suffix}"
+
     def save_file(self, filename: str, data_url: str) -> bool:
         if not self._window or not data_url:
-            return False
+            return {"saved": False}
         try:
             _header, _sep, b64 = data_url.partition(',')
             if not b64:
-                return False
+                return {"saved": False}
             save_path = self._window.create_file_dialog(
                 webview.SAVE_DIALOG,
                 save_filename=filename,
                 file_types=_build_file_types(filename),
             )
+            auto_saved = False
             if not save_path:
-                return False
+                save_path = self._fallback_export_path(filename)
+                auto_saved = True
+                if not save_path:
+                    return {"saved": False}
             if isinstance(save_path, list):
                 save_path = save_path[0]
             data = base64.b64decode(b64)
             with open(save_path, 'wb') as f:
                 f.write(data)
-            return True
+            self._log(f"save_file ok: {save_path}")
+            return {"saved": True, "path": str(save_path), "auto": auto_saved}
         except Exception as exc:
+            self._log(f"save_file failed: {exc}")
             print(f"Save file failed: {exc}")
-            return False
+            return {"saved": False, "error": str(exc)}
 
     def save_text_file(self, filename: str, content: str) -> bool:
         if not self._window:
-            return False
+            return {"saved": False}
         try:
             save_path = self._window.create_file_dialog(
                 webview.SAVE_DIALOG,
                 save_filename=filename,
                 file_types=_build_file_types(filename),
             )
+            auto_saved = False
             if not save_path:
-                return False
+                save_path = self._fallback_export_path(filename)
+                auto_saved = True
+                if not save_path:
+                    return {"saved": False}
             if isinstance(save_path, list):
                 save_path = save_path[0]
             with open(save_path, 'w', encoding='utf-8') as f:
                 f.write(content or "")
-            return True
+            self._log(f"save_text_file ok: {save_path}")
+            return {"saved": True, "path": str(save_path), "auto": auto_saved}
         except Exception as exc:
+            self._log(f"save_text_file failed: {exc}")
             print(f"Save text file failed: {exc}")
-            return False
+            return {"saved": False, "error": str(exc)}
 
     def get_task_checkin_data(self):
         path = self._task_checkin_path()
