@@ -8,7 +8,6 @@ a = Analysis(
     binaries=[],
     datas=[
         ('app/static', 'app/static'),
-        ('data', 'data'),
     ],
     hiddenimports=[
         'uvicorn.logging',
@@ -40,7 +39,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='学校成绩管理系统_20260128_2',
+    name='学校成绩管理系统_20260128_7',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -62,5 +61,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='学校成绩管理系统_20260128_2',
+    name='学校成绩管理系统_20260128_7',
 )

@@ -3572,7 +3572,67 @@ saveImageFile(file, path) {
     });
   }
 
+  updateExportProgress(message, percent = 0) {
+    let overlay = document.getElementById('export-progress-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'export-progress-overlay';
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.right = '0';
+      overlay.style.bottom = '0';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.background = 'rgba(0, 0, 0, 0.45)';
+      overlay.style.zIndex = '10001';
+
+      const box = document.createElement('div');
+      box.style.width = '320px';
+      box.style.background = '#ffffff';
+      box.style.borderRadius = '12px';
+      box.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+      box.style.padding = '18px 20px';
+      box.innerHTML = `
+        <div id="export-progress-title" style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 10px;">正在导出...</div>
+        <div style="width: 100%; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden;">
+          <div id="export-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #10b981, #34d399); transition: width 0.2s ease;"></div>
+        </div>
+        <div id="export-progress-text" style="margin-top: 8px; font-size: 12px; color: #6b7280;">准备中...</div>
+      `;
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+    }
+
+    overlay.style.display = 'flex';
+    const titleEl = document.getElementById('export-progress-title');
+    const textEl = document.getElementById('export-progress-text');
+    const barEl = document.getElementById('export-progress-bar');
+    if (titleEl) titleEl.textContent = '导出进度';
+    if (textEl) textEl.textContent = message || '处理中...';
+    if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+  }
+
+  hideExportProgress(delay = 3000) {
+    const overlay = document.getElementById('export-progress-overlay');
+    if (!overlay) return;
+    setTimeout(() => {
+      overlay.style.display = 'none';
+    }, delay);
+  }
+
+  sanitizeFilename(filename) {
+    if (!filename || typeof filename !== 'string') return 'export';
+    const cleaned = filename
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleaned || 'export';
+  }
+
   async exportFile(filename, data, mime = 'application/octet-stream') {
+    const safeFilename = this.sanitizeFilename(filename);
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
     const api = window.pywebview && window.pywebview.api;
     const notifySaved = (result, fallbackName) => {
@@ -3585,14 +3645,45 @@ saveImageFile(file, path) {
         alert(`已保存到: ${path}`);
       }
     };
+    const saveViaBackend = async () => {
+      try {
+        let payload = { filename: safeFilename };
+        if (typeof data === 'string') {
+          payload.content = data;
+          payload.encoding = 'utf-8';
+        } else {
+          const dataUrl = await this.blobToDataUrl(blob);
+          const base64 = dataUrl.split(',')[1] || '';
+          payload.data_base64 = base64;
+        }
+        const res = await fetch('/api/desktop/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) return false;
+        const result = await res.json();
+        if (result && result.saved) {
+          notifySaved(result, safeFilename);
+          return true;
+        }
+      } catch (error) {
+        console.error('Backend export failed:', error);
+      }
+      return false;
+    };
+    this.updateExportProgress('准备导出文件...', 10);
     if (api) {
+      this.updateExportProgress('打开保存对话框...', 35);
       if (typeof data === 'string' && typeof api.save_text_file === 'function') {
         try {
-          const saved = await api.save_text_file(filename, data);
+          const saved = await api.save_text_file(safeFilename, data);
           if (saved === true) return;
           if (saved && typeof saved === 'object') {
             if (saved.saved) {
-              notifySaved(saved, filename);
+              notifySaved(saved, safeFilename);
+              this.updateExportProgress('导出完成', 100);
+              this.hideExportProgress();
               return;
             }
           }
@@ -3603,11 +3694,13 @@ saveImageFile(file, path) {
       if (typeof api.save_file === 'function') {
         try {
           const dataUrl = await this.blobToDataUrl(blob);
-          const saved = await api.save_file(filename, dataUrl);
+          const saved = await api.save_file(safeFilename, dataUrl);
           if (saved === true) return;
           if (saved && typeof saved === 'object') {
             if (saved.saved) {
-              notifySaved(saved, filename);
+              notifySaved(saved, safeFilename);
+              this.updateExportProgress('导出完成', 100);
+              this.hideExportProgress();
               return;
             }
           }
@@ -3616,7 +3709,19 @@ saveImageFile(file, path) {
         }
       }
     }
-    this.downloadBlob(blob, filename);
+    this.updateExportProgress('正在写入本地文件...', 70);
+    if (await saveViaBackend()) {
+      this.updateExportProgress('导出完成', 100);
+      this.hideExportProgress();
+      return;
+    }
+    this.updateExportProgress('正在生成下载文件...', 85);
+    this.downloadBlob(blob, safeFilename);
+    this.updateExportProgress('导出完成', 100);
+    this.hideExportProgress();
+    if (api && typeof this.showNotification === 'function') {
+      this.showNotification('导出未弹窗，请检查导出目录或日志', 'warning');
+    }
   }
 
   
@@ -10513,92 +10618,105 @@ getStudentPetName(student) {
   
 	// 修改导出备份方法，包含班级信息
 exportBackup(){
-  const data = {
-    classId: this.currentClassId,
-    className: this.currentClassName,
-    students: this.students,
-    groups: this.groups,
-    history: this.history,
+  try {
+    const safeGroupStages = Array.isArray(this.groupStages) ? this.groupStages : [];
+    const safePetStages = Array.isArray(this.petStages) ? this.petStages : [];
+    const safePetTypes = Array.isArray(this.petTypes) ? this.petTypes : [];
+    const className = this.currentClassName || '班级';
+    const data = {
+      classId: this.currentClassId,
+      className,
+      students: this.students || [],
+      groups: this.groups || [],
+      history: this.history || [],
+      
+      // 🔧 修复：添加等级积分设置
+      scoreToPointsRatio: this.scoreToPointsRatio,
+      
+      // 🐾 新增：完整的宠物配置信息
+      petTypes: safePetTypes,
+      petStages: safePetStages,
+      petStagesByType: this.petStagesByType || {},
+      petImages: this.petImages || {},
+      groupPetImages: this.groupPetImages || {},
+      studentPets: this.studentPets || {},
+      groupPets: this.groupPets || {},
+      displayMode: this.displayMode || 'local',
+      
+      // 导出小组等级时只包含积分范围，不包含自定义名称
+      groupStages: safeGroupStages.map(stage => ({
+        minPoints: stage.minPoints,
+        maxPoints: stage.maxPoints,
+        img: stage.img,
+        emoji: stage.emoji
+        // 不包含name字段，因为名称已固定
+      })),
+      
+      // 配置范围信息
+      configScope: this.currentConfigScope,
+      currentConfigScope: this.currentConfigScope,
+      
+      // 当前使用的规则和商品配置（无论是全局还是班级配置）
+      rules: this.rules || [],
+      shopItems: this.shopItems || [],
+      groupRules: this.groupRules || [],
+      
+      // 如果是班级配置，也保存班级的自定义配置
+      usesCustomRules: this.currentConfigScope === 'class',
+      usesCustomShopItems: this.currentConfigScope === 'class',
+      usesCustomGroupRules: this.currentConfigScope === 'class',
+      
+      // 如果是班级配置且使用了自定义配置，保存班级的配置数据
+      classRules: this.currentConfigScope === 'class' ? (this.rules || []) : [],
+      classShopItems: this.currentConfigScope === 'class' ? (this.shopItems || []) : [],
+      classGroupRules: this.currentConfigScope === 'class' ? (this.groupRules || []) : [],
+      
+      // 🔧 修复：导出完整的全局配置信息
+      globalRules: this.globalRules || [],
+      globalShopItems: this.globalShopItems || [],
+      globalGroupRules: this.globalGroupRules || [],
+      
+      // 其他数据
+      randomNameRecords: this.randomNameRecords || [],
+      lockPassword: this.lockPassword,
+      isLocked: this.isLocked,
+      
+      // 系统信息
+      exportTime: new Date().toLocaleString('zh-CN'),
+      systemVersion: '2.0',
+      dataType: 'class_backup'
+    };
     
-    // 🔧 修复：添加等级积分设置
-    scoreToPointsRatio: this.scoreToPointsRatio,
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
+    const filename = `${className}_班级完整数据备份_${timestamp}.json`;
     
-    // 🐾 新增：完整的宠物配置信息
-    petTypes: this.petTypes || [],
-    petStages: this.petStages,
-    petStagesByType: this.petStagesByType || {},
-    petImages: this.petImages || {},
-    groupPetImages: this.groupPetImages || {},
-    studentPets: this.studentPets || {},
-    groupPets: this.groupPets || {},
-    displayMode: this.displayMode || 'local',
+    const content = JSON.stringify(data, null, 2);
+    this.exportFile(filename, content, 'application/json');
     
-    // 导出小组等级时只包含积分范围，不包含自定义名称
-    groupStages: this.groupStages.map(stage => ({
-      minPoints: stage.minPoints,
-      maxPoints: stage.maxPoints,
-      img: stage.img,
-      emoji: stage.emoji
-      // 不包含name字段，因为名称已固定
-    })),
+    let exportMessage = `备份导出成功！\n包含：\n- ${(this.students || []).length} 名学生\n- ${(this.groups || []).length} 个小组\n- ${(this.rules || []).length} 条个人规则\n- ${(this.groupRules || []).length} 条小组规则\n- ${(this.shopItems || []).length} 个商店商品`;
+    exportMessage += `\n- 个人等级配置（${safePetStages.length}个等级）`;
+    exportMessage += `\n- 小组等级配置（${safeGroupStages.length}个等级）`;
+    exportMessage += `\n- 成绩积分比例：${this.scoreToPointsRatio}:1`;
+    exportMessage += `\n- 使用${this.currentConfigScope}配置`;
     
-    // 配置范围信息
-    configScope: this.currentConfigScope,
-    currentConfigScope: this.currentConfigScope,
+    // 🐾 新增：宠物配置信息统计
+    exportMessage += `\n- 宠物类型配置（${safePetTypes.length}种宠物）`;
+    exportMessage += `\n- 个人宠物图片配置（${Object.keys(this.petImages || {}).length}种类型）`;
+    exportMessage += `\n- 小组宠物图片配置（${Object.keys(this.groupPetImages || {}).length}种类型）`;
+    exportMessage += `\n- 学生宠物选择记录（${Object.keys(this.studentPets || {}).length}名学生）`;
+    exportMessage += `\n- 小组宠物选择记录（${Object.keys(this.groupPets || {}).length}个小组）`;
+    exportMessage += `\n- 显示模式：${this.displayMode}`;
     
-    // 当前使用的规则和商品配置（无论是全局还是班级配置）
-    rules: this.rules,
-    shopItems: this.shopItems,
-    groupRules: this.groupRules,
-    
-    // 如果是班级配置，也保存班级的自定义配置
-    usesCustomRules: this.currentConfigScope === 'class',
-    usesCustomShopItems: this.currentConfigScope === 'class',
-    usesCustomGroupRules: this.currentConfigScope === 'class',
-    
-    // 如果是班级配置且使用了自定义配置，保存班级的配置数据
-    classRules: this.currentConfigScope === 'class' ? this.rules : [],
-    classShopItems: this.currentConfigScope === 'class' ? this.shopItems : [],
-    classGroupRules: this.currentConfigScope === 'class' ? this.groupRules : [],
-    
-    // 🔧 修复：导出完整的全局配置信息
-    globalRules: this.globalRules,
-    globalShopItems: this.globalShopItems,
-    globalGroupRules: this.globalGroupRules,
-    
-    // 其他数据
-    randomNameRecords: this.randomNameRecords || [],
-    lockPassword: this.lockPassword,
-    isLocked: this.isLocked,
-    
-    // 系统信息
-    exportTime: new Date().toLocaleString('zh-CN'),
-    systemVersion: '2.0',
-    dataType: 'class_backup'
-  };
-  
-  const now = new Date();
-  const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
-  const filename = `${this.currentClassName}_班级完整数据备份_${timestamp}.json`;
-  
-  const content = JSON.stringify(data, null, 2);
-  this.exportFile(filename, content, 'application/json');
-  
-  let exportMessage = `备份导出成功！\n包含：\n- ${this.students.length} 名学生\n- ${this.groups.length} 个小组\n- ${this.rules.length} 条个人规则\n- ${this.groupRules.length} 条小组规则\n- ${this.shopItems.length} 个商店商品`;
-  exportMessage += `\n- 个人等级配置（${this.petStages.length}个等级）`;
-  exportMessage += `\n- 小组等级配置（${this.groupStages.length}个等级）`;
-  exportMessage += `\n- 成绩积分比例：${this.scoreToPointsRatio}:1`;
-  exportMessage += `\n- 使用${this.currentConfigScope}配置`;
-  
-  // 🐾 新增：宠物配置信息统计
-  exportMessage += `\n- 宠物类型配置（${this.petTypes.length}种宠物）`;
-  exportMessage += `\n- 个人宠物图片配置（${Object.keys(this.petImages).length}种类型）`;
-  exportMessage += `\n- 小组宠物图片配置（${Object.keys(this.groupPetImages).length}种类型）`;
-  exportMessage += `\n- 学生宠物选择记录（${Object.keys(this.studentPets).length}名学生）`;
-  exportMessage += `\n- 小组宠物选择记录（${Object.keys(this.groupPets).length}个小组）`;
-  exportMessage += `\n- 显示模式：${this.displayMode}`;
-  
-  alert(exportMessage);
+    alert(exportMessage);
+  } catch (error) {
+    console.error('导出备份失败:', error);
+    if (typeof this.showNotification === 'function') {
+      this.showNotification(`导出备份失败：${error.message || error}`, 'error');
+    } else {
+      alert(`导出备份失败：${error.message || error}`);
+    }
+  }
 }
   
 	// 修改导入备份方法，支持导入到新班级或当前班级

@@ -74,10 +74,10 @@ class DesktopApi:
     def save_file(self, filename: str, data_url: str) -> bool:
         if not self._window or not data_url:
             return {"saved": False}
+        _header, _sep, b64 = data_url.partition(',')
+        if not b64:
+            return {"saved": False}
         try:
-            _header, _sep, b64 = data_url.partition(',')
-            if not b64:
-                return {"saved": False}
             save_path = self._window.create_file_dialog(
                 webview.SAVE_DIALOG,
                 save_filename=filename,
@@ -89,8 +89,10 @@ class DesktopApi:
                 auto_saved = True
                 if not save_path:
                     return {"saved": False}
-            if isinstance(save_path, list):
-                save_path = save_path[0]
+            if isinstance(save_path, (list, tuple)):
+                save_path = save_path[0] if save_path else None
+            if not save_path:
+                return {"saved": False}
             data = base64.b64decode(b64)
             with open(save_path, 'wb') as f:
                 f.write(data)
@@ -99,6 +101,16 @@ class DesktopApi:
         except Exception as exc:
             self._log(f"save_file failed: {exc}")
             print(f"Save file failed: {exc}")
+            try:
+                save_path = self._fallback_export_path(filename)
+                if save_path:
+                    data = base64.b64decode(b64)
+                    with open(save_path, 'wb') as f:
+                        f.write(data)
+                    self._log(f"save_file ok (fallback): {save_path}")
+                    return {"saved": True, "path": str(save_path), "auto": True}
+            except Exception as fallback_exc:
+                self._log(f"save_file fallback failed: {fallback_exc}")
             return {"saved": False, "error": str(exc)}
 
     def save_text_file(self, filename: str, content: str) -> bool:
@@ -116,8 +128,10 @@ class DesktopApi:
                 auto_saved = True
                 if not save_path:
                     return {"saved": False}
-            if isinstance(save_path, list):
-                save_path = save_path[0]
+            if isinstance(save_path, (list, tuple)):
+                save_path = save_path[0] if save_path else None
+            if not save_path:
+                return {"saved": False}
             with open(save_path, 'w', encoding='utf-8') as f:
                 f.write(content or "")
             self._log(f"save_text_file ok: {save_path}")
@@ -125,6 +139,15 @@ class DesktopApi:
         except Exception as exc:
             self._log(f"save_text_file failed: {exc}")
             print(f"Save text file failed: {exc}")
+            try:
+                save_path = self._fallback_export_path(filename)
+                if save_path:
+                    with open(save_path, 'w', encoding='utf-8') as f:
+                        f.write(content or "")
+                    self._log(f"save_text_file ok (fallback): {save_path}")
+                    return {"saved": True, "path": str(save_path), "auto": True}
+            except Exception as fallback_exc:
+                self._log(f"save_text_file fallback failed: {fallback_exc}")
             return {"saved": False, "error": str(exc)}
 
     def get_task_checkin_data(self):
