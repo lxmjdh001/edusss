@@ -19,6 +19,12 @@ def get_resource_path():
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def get_app_dir() -> Path:
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+
 
 def _build_file_types(filename: str):
     ext = Path(filename).suffix
@@ -53,9 +59,7 @@ class DesktopApi:
             pass
 
     def _fallback_export_path(self, filename: str) -> Optional[Path]:
-        if not self._data_dir:
-            return None
-        exports_dir = self._data_dir / "exports"
+        exports_dir = get_app_dir()
         try:
             exports_dir.mkdir(parents=True, exist_ok=True)
         except OSError:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import base64
 import re
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -98,6 +99,12 @@ def _unique_export_path(directory: Path, filename: str) -> Path:
     return directory / f"{stem}_{int(__import__('time').time())}{suffix}"
 
 
+def _get_app_dir() -> Path:
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+
 class DesktopExportPayload(BaseModel):
     filename: str
     content: str | None = None
@@ -112,14 +119,11 @@ def desktop_export(payload: DesktopExportPayload):
     if not desktop_mode:
         raise HTTPException(status_code=403, detail="仅桌面模式可用")
 
-    data_dir = get_data_dir()
-    exports_dir = data_dir / "exports"
-    exports_dir.mkdir(parents=True, exist_ok=True)
-
     safe_name = _sanitize_filename(payload.filename)
-    target_path = _unique_export_path(exports_dir, safe_name)
 
-    try:
+    def _write_to_dir(directory: Path) -> Path:
+        directory.mkdir(parents=True, exist_ok=True)
+        target_path = _unique_export_path(directory, safe_name)
         if payload.data_base64:
             raw = base64.b64decode(payload.data_base64)
             target_path.write_bytes(raw)
@@ -128,7 +132,16 @@ def desktop_export(payload: DesktopExportPayload):
             target_path.write_text(payload.content, encoding=encoding)
         else:
             raise HTTPException(status_code=400, detail="缺少导出内容")
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"写入失败: {exc}") from exc
+        return target_path
 
-    return {"saved": True, "path": str(target_path)}
+    try:
+        target_path = _write_to_dir(_get_app_dir())
+        return {"saved": True, "path": str(target_path), "location": "app"}
+    except Exception:
+        data_dir = get_data_dir()
+        exports_dir = data_dir / "exports"
+        try:
+            target_path = _write_to_dir(exports_dir)
+            return {"saved": True, "path": str(target_path), "location": "data", "fallback": True}
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"写入失败: {exc}") from exc

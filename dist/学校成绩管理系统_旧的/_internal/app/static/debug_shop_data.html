@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>商店数据调试工具</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>商店数据调试工具</h1>
+    
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        // 检查所有可能的商店数据键名
+        const shopKeys = [
+            'classPointsGlobalShopItems',
+            'globalShopItems', 
+            'shopItems',
+            'classPointsShopItems'
+        ];
+        
+        // 检查当前配置范围
+        const currentConfigScope = localStorage.getItem('currentConfigScope');
+        
+        const scopeDiv = document.createElement('div');
+        scopeDiv.className = 'result';
+        scopeDiv.innerHTML = `<h3>当前配置范围: ${currentConfigScope || '未设置'}</h3>`;
+        results.appendChild(scopeDiv);
+        
+        // 检查所有键
+        shopKeys.forEach(key => {
+            const data = localStorage.getItem(key);
+            const div = document.createElement('div');
+            
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    div.className = 'result success';
+                    div.innerHTML = `
+                        <h3>✅ 找到数据键: ${key}</h3>
+                        <p>数据类型: ${Array.isArray(parsed) ? '数组' : typeof parsed}</p>
+                        <p>数据长度: ${Array.isArray(parsed) ? parsed.length : 'N/A'}</p>
+                        <pre>${JSON.stringify(parsed, null, 2)}</pre>
+                    `;
+                } catch (e) {
+                    div.className = 'result error';
+                    div.innerHTML = `
+                        <h3>❌ 找到数据键但解析失败: ${key}</h3>
+                        <p>错误: ${e.message}</p>
+                        <pre>${data}</pre>
+                    `;
+                }
+            } else {
+                div.className = 'result warning';
+                div.innerHTML = `<h3>⚠️ 未找到数据键: ${key}</h3>`;
+            }
+            
+            results.appendChild(div);
+        });
+        
+        // 列出所有localStorage键
+        const allKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            allKeys.push(localStorage.key(i));
+        }
+        
+        const keysDiv = document.createElement('div');
+        keysDiv.className = 'result';
+        keysDiv.innerHTML = `
+            <h3>所有localStorage键 (${allKeys.length}个):</h3>
+            <pre>${allKeys.join('\n')}</pre>
+        `;
+        results.appendChild(keysDiv);
+        
+        // 检查积分商店页面的配置状态
+        const checkShopConfig = () => {
+            const configDiv = document.createElement('div');
+            configDiv.className = 'result';
+            
+            // 检查是否有商店商品相关的全局数据
+            const globalShopData = localStorage.getItem('classPointsGlobalShopItems');
+            const hasGlobalShop = globalShopData && JSON.parse(globalShopData).length > 0;
+            
+            configDiv.innerHTML = `
+                <h3>积分商店配置状态:</h3>
+                <p>当前配置范围: <strong>${currentConfigScope || '未设置'}</strong></p>
+                <p>全局商店数据: <strong>${hasGlobalShop ? '✅ 有商品' : '❌ 无商品'}</strong></p>
+                <p>建议操作: ${currentConfigScope === 'global' ? '当前为全局模式，请确保已添加商品' : '请切换到全局配置模式并添加商品'}</p>
+            `;
+            
+            results.appendChild(configDiv);
+        };
+        
+        checkShopConfig();
+    </script>
+</body>
+</html>

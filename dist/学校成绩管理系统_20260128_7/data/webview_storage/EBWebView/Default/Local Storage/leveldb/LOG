@@ -1,0 +1,17 @@
+2026/01/29-17:20:40.557 5c7c Reusing MANIFEST D:\exejifen\dist\学校成绩管理系统_20260128_7\data\webview_storage\EBWebView\Default\Local Storage\leveldb/MANIFEST-000001
+2026/01/29-17:20:40.564 5c7c Recovering log #14
+2026/01/29-17:20:40.564 5c7c Level-0 table #17: started
+2026/01/29-17:20:40.567 5c7c Level-0 table #17: 10354 bytes OK
+2026/01/29-17:20:40.570 5c7c Delete type=0 #3
+2026/01/29-17:20:40.570 5c7c Delete type=0 #14
+2026/01/29-17:20:40.570 5c7c Delete type=2 #16
+2026/01/29-17:20:40.571 925c Compacting 5@0 + 0@1 files
+2026/01/29-17:20:40.588 925c Generated table #19@0: 11 keys, 2551119 bytes
+2026/01/29-17:20:40.591 925c Generated table #20@0: 6 keys, 4368 bytes
+2026/01/29-17:20:40.591 925c Compacted 5@0 + 0@1 files => 2555487 bytes
+2026/01/29-17:20:40.592 925c compacted to: files[ 0 2 1 0 0 0 0 ]
+2026/01/29-17:20:40.592 925c Delete type=2 #7
+2026/01/29-17:20:40.593 925c Delete type=2 #9
+2026/01/29-17:20:40.593 925c Delete type=2 #13
+2026/01/29-17:20:40.593 925c Delete type=2 #15
+2026/01/29-17:20:40.593 925c Delete type=2 #17

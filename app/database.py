@@ -45,15 +45,11 @@ def migrate_exe_db(target_dir: Path) -> None:
 def get_data_dir() -> Path:
     """获取数据存储目录（支持打包后的应用）"""
     if getattr(sys, 'frozen', False):
-        if sys.platform == 'win32':
-            # Frozen Windows: store data under user profile
-            data_dir = get_legacy_data_dir()
-            data_dir.mkdir(parents=True, exist_ok=True)
-            migrate_exe_db(data_dir)
-            return data_dir
-
-        data_dir = get_legacy_data_dir()
+        base_dir = Path(sys.executable).resolve().parent
+        data_dir = base_dir / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
+        migrate_exe_db(data_dir)
+        migrate_legacy_db(data_dir)
         return data_dir
 
     # 开发环境：使用项目目录
