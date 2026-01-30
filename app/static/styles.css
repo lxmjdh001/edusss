@@ -2321,7 +2321,10 @@ h1 {
 #batchStudentRuleSelect .rules-grid,
 #batchGroupRuleSelect .rules-grid {
   max-height: 200px;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-content: flex-start;
 }
 
 /* 模态框内容区域调整 */
@@ -2350,11 +2353,34 @@ h1 {
 #batchStudentRuleSelect .rules-grid,
 #batchGroupRuleSelect .rules-grid {
   max-height: 250px;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 10px;
   background: white;
+  align-content: flex-start;
+}
+
+#batchStudentRuleSelect .rule-option,
+#batchGroupRuleSelect .rule-option {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+#batchStudentRuleSelect .rule-option label,
+#batchGroupRuleSelect .rule-option label {
+  flex-direction: row;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+#batchStudentRuleSelect .rule-name,
+#batchGroupRuleSelect .rule-name,
+#batchStudentRuleSelect .rule-points,
+#batchGroupRuleSelect .rule-points {
+  white-space: nowrap;
 }
 
 /* 批量操作模态框调整 */
