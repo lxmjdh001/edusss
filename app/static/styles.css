@@ -68,13 +68,13 @@ body {
 /* 宠物类型选择网格 - 统一系统风格 */
 .pet-type-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
   margin: 15px 0;
 }
 
 .pet-type-option {
-  padding: 15px 10px;
+  padding: 10px 6px;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
   text-align: center;
@@ -97,17 +97,17 @@ body {
 }
 
 .pet-type-emoji {
-  font-size: 3em;
-  margin-bottom: 10px;
-  padding: 10px;
+  font-size: 2em;
+  margin-bottom: 6px;
+  padding: 6px;
   background: rgba(137, 207, 240, 0.2);
   border-radius: 8px;
   display: inline-block;
 }
 
 .pet-type-name {
-  font-size: 1.1em;
-  font-weight: bold;
+  font-size: 0.9em;
+  font-weight: 600;
   color: #1a202c; /* 提高对比度，符合WCAG AA标准 */
   margin-top: 8px;
 }

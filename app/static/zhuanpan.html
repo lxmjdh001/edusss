@@ -122,6 +122,13 @@
             cursor: pointer;
             color: white;
         }
+
+        .control-panel-toggle i,
+        .history-panel-toggle i,
+        .fullscreen-btn i {
+            color: #ffffff;
+            opacity: 1;
+        }
         
         .pointer {
 			position: absolute;
@@ -308,6 +315,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: rgba(15, 23, 42, 0.85);
+            color: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 8px;
         }
         
         .history-item:last-child {
@@ -330,6 +341,12 @@
         .history-export {
             margin-top: 10px;
             width: 100%;
+        }
+
+        #resultModal .modal-buttons {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
         }
         
         .control-panel label {
@@ -730,7 +747,9 @@
         <div class="modal-content">
             <h2>抽中结果</h2>
             <div class="result" id="resultText"></div>
-            <button id="closeResult" class="btn">关闭</button>
+            <div class="modal-buttons">
+                <button id="closeResult" class="btn">关闭</button>
+            </div>
         </div>
     </div>
 	

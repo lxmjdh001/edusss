@@ -168,6 +168,11 @@
 		<!-- 规则选择区域 -->
 		<div id="ruleSelect" class="modal-select"></div>
 		
+		<div class="modal-buttons" style="margin-top: 20px;">
+		  <button class="btn btn-primary" id="confirmPointsBtn">确定</button>
+		  <button class="btn btn-secondary modal-close-btn" id="cancelPointsBtn">取消</button>
+		</div>
+
 		<!-- 新增：临时积分规则 -->
 		<div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
 		  <h4>➕ 临时积分规则</h4>
@@ -176,11 +181,6 @@
 			<input type="number" id="tempRulePoints" class="modal-input" placeholder="积分值" min="1" style="margin: 0;">
 		  </div>
 		  <button class="btn btn-info" id="addTempRuleBtn" style="width: 100%;">添加临时规则并应用</button>
-		</div>
-		
-		<div class="modal-buttons" style="margin-top: 20px;">
-		  <button class="btn btn-primary" id="confirmPointsBtn">确定</button>
-		  <button class="btn btn-secondary modal-close-btn" id="cancelPointsBtn">取消</button>
 		</div>
 	  </div>
 	</div>
@@ -194,6 +194,11 @@
 		<!-- 规则选择区域 -->
 		<div id="groupRuleSelect" class="modal-select"></div>
 		
+		<div class="modal-buttons" style="margin-top: 20px;">
+		  <button class="btn btn-primary" id="confirmGroupPointsBtn">确定</button>
+		  <button class="btn btn-secondary modal-close-btn" id="cancelGroupPointsBtn">取消</button>
+		</div>
+
 		<!-- 新增：临时积分规则 -->
 		<div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
 		  <h4>➕ 临时小组规则</h4>
@@ -202,11 +207,6 @@
 			<input type="number" id="tempGroupRulePoints" class="modal-input" placeholder="积分值" min="1" style="margin: 0;">
 		  </div>
 		  <button class="btn btn-info" id="addTempGroupRuleBtn" style="width: 100%;">添加临时规则并应用</button>
-		</div>
-		
-		<div class="modal-buttons" style="margin-top: 20px;">
-		  <button class="btn btn-primary" id="confirmGroupPointsBtn">确定</button>
-		  <button class="btn btn-secondary modal-close-btn" id="cancelGroupPointsBtn">取消</button>
 		</div>
 	  </div>
 	</div>
@@ -736,6 +736,14 @@
         </div>
       </div>
       
+      <h4 style="margin-top: 15px;">选择操作</h4>
+      <div id="batchStudentRuleSelect" class="modal-select"></div>
+      
+      <div class="modal-buttons" style="margin-top: 20px;">
+        <button class="btn btn-primary" id="confirmBatchStudentsBtn">执行批量操作</button>
+        <button class="btn btn-secondary" id="cancelBatchBtn">取消</button>
+      </div>
+
 			<!-- 新增：临时积分规则 -->
 	  <div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
 		<h4>➕ 临时积分规则</h4>
@@ -745,14 +753,6 @@
 		</div>
 		<button class="btn btn-info" id="addTempBatchRuleBtn" style="width: 100%;">添加临时规则并应用</button>
 	  </div>
-	  
-      <h4 style="margin-top: 15px;">选择操作</h4>
-      <div id="batchStudentRuleSelect" class="modal-select"></div>
-      
-      <div class="modal-buttons" style="margin-top: 20px;">
-        <button class="btn btn-primary" id="confirmBatchStudentsBtn">执行批量操作</button>
-        <button class="btn btn-secondary" id="cancelBatchBtn">取消</button>
-      </div>
 
       <!-- 新增：清空学生积分区域 -->
       <div class="danger-zone" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #fed7d7;">
@@ -777,6 +777,14 @@
         </div>
       </div>
       
+      <h4 style="margin-top: 15px;">选择操作</h4>
+      <div id="batchGroupRuleSelect" class="modal-select"></div>
+      
+      <div class="modal-buttons" style="margin-top: 20px;">
+        <button class="btn btn-primary" id="confirmBatchGroupsBtn">执行批量操作</button>
+        <button class="btn btn-secondary" id="cancelBatchGroupBtn">取消</button>
+      </div>
+
 	   <div class="temp-rule-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
 		<h4>➕ 临时小组规则</h4>
 		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
@@ -785,14 +793,6 @@
 		</div>
 		<button class="btn btn-info" id="addTempBatchGroupRuleBtn" style="width: 100%;">添加临时规则并应用</button>
 	  </div>
-	  
-      <h4 style="margin-top: 15px;">选择操作</h4>
-      <div id="batchGroupRuleSelect" class="modal-select"></div>
-      
-      <div class="modal-buttons" style="margin-top: 20px;">
-        <button class="btn btn-primary" id="confirmBatchGroupsBtn">执行批量操作</button>
-        <button class="btn btn-secondary" id="cancelBatchGroupBtn">取消</button>
-      </div>
 
       <!-- 新增：清空小组积分区域 -->
       <div class="danger-zone" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #fed7d7;">
