@@ -53,7 +53,11 @@ def startup_event():
 
 @app.get("/", include_in_schema=False)
 def serve_frontend():
-    # 直接返回登录页面，让前端JS处理认证检查和跳转
+    # 根路径返回积分系统登录页
+    points_login = STATIC_DIR / "points-login.html"
+    if points_login.exists():
+        return FileResponse(points_login)
+    # 回退到旧登录页
     login_file = STATIC_DIR / "login.html"
     if login_file.exists():
         return FileResponse(login_file)
