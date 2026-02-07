@@ -6918,9 +6918,20 @@ if (historyTabBtn && petTabBtn) {
 	  const accountTab = document.getElementById('accountTab');
 	  if (!accountTab) return;
 
-	  const user = (window.authGuard && typeof authGuard.getCurrentUser === 'function')
+	  let user = (window.authGuard && typeof authGuard.getCurrentUser === 'function')
 		? authGuard.getCurrentUser()
 		: null;
+	  if (!user && window.authGuard && typeof authGuard.checkAuth === 'function') {
+		try {
+		  user = await authGuard.checkAuth();
+		  if (user && typeof authGuard.getCurrentUser === 'function') {
+			authGuard.currentUser = user;
+			localStorage.setItem('user_info', JSON.stringify(user));
+		  }
+		} catch (e) {
+		  user = null;
+		}
+	  }
 	  let isDesktop = !!(user && user.is_desktop);
 
 	  if (!isDesktop && window.authGuard && typeof authGuard.isDesktopMode === 'function') {
@@ -6945,7 +6956,7 @@ if (historyTabBtn && petTabBtn) {
 		  <div class="account-info-grid">
 			<div class="label">用户名</div>
 			<div>${this.escapeHtml(isDesktop ? '离线版' : username)}</div>
-			${isDesktop ? '' : `
+			${isDesktop || !user ? '' : `
 			<div class="label">到期时间</div>
 			<div>${expiryText}</div>
 			`}
@@ -6963,9 +6974,9 @@ if (historyTabBtn && petTabBtn) {
 	attachAccountEvents() {
 	  const logoutBtn = document.getElementById('accountLogoutBtn');
 	  if (!logoutBtn) return;
-	  logoutBtn.addEventListener('click', () => {
+	  logoutBtn.addEventListener('click', async () => {
 		if (window.authGuard && typeof authGuard.logout === 'function') {
-		  authGuard.logout('/static/points-login.html');
+		  await authGuard.logout('/static/points-login.html');
 		  return;
 		}
 		try {
