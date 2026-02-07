@@ -253,9 +253,9 @@ toggleDisplayMode() {
   }
   
   // 初始化宠物功能
-  initializePetFeatures() {
-    // 加载宠物图片配置
-    this.initializePetImages();
+  async initializePetFeatures() {
+    // 加载宠物图片配置（从服务器读取）
+    await this.initializePetImages();
     
     // 加载学生宠物选择记录
     this.loadStudentPets();
@@ -329,46 +329,47 @@ fixExistingData() {
 
 // ===== 宠物功能核心方法 =====
 
-// 初始化宠物图片配置
-initializePetImages() {
-  const savedPetImages = localStorage.getItem(`petImages_${this.currentClassId}`);
-  if (savedPetImages) {
-    try {
-      const parsedImages = JSON.parse(savedPetImages);
-      // 直接替换整个petImages对象，确保所有图片数据都被加载
-      this.petImages = parsedImages;
-      // 确保所有宠物类型都有完整的图片数据结构
-      this.petTypes.forEach(type => {
-        if (!this.petImages[type.id]) {
-          this.petImages[type.id] = {};
+// 初始化宠物图片配置 - 从服务器文件夹读取
+async initializePetImages() {
+  // 先初始化空结构
+  this.petImages = {};
+  this.petTypes.forEach(type => {
+    this.petImages[type.id] = {};
+    for (let i = 1; i <= 6; i++) {
+      this.petImages[type.id][`level${i}`] = '';
+    }
+  });
+
+  try {
+    const resp = await fetch('/api/pet-images/types');
+    if (!resp.ok) throw new Error('获取宠物图片失败');
+    const data = await resp.json();
+
+    // 将服务器返回的图片URL填入petImages
+    if (data.types && Array.isArray(data.types)) {
+      data.types.forEach(serverType => {
+        if (!this.petImages[serverType.id]) {
+          this.petImages[serverType.id] = {};
         }
         for (let i = 1; i <= 6; i++) {
           const levelKey = `level${i}`;
-          if (typeof this.petImages[type.id][levelKey] === 'undefined') {
-            this.petImages[type.id][levelKey] = '';
+          if (serverType.images && serverType.images[levelKey]) {
+            // 加时间戳防缓存
+            this.petImages[serverType.id][levelKey] = serverType.images[levelKey] + '?t=' + Date.now();
+          } else if (!this.petImages[serverType.id][levelKey]) {
+            this.petImages[serverType.id][levelKey] = '';
           }
         }
-      });
-    } catch (error) {
-      console.error('加载宠物图片配置失败:', error);
-      // 如果加载失败，初始化空的图片数据结构
-      this.petImages = {};
-      this.petTypes.forEach(type => {
-        this.petImages[type.id] = {};
-        for (let i = 1; i <= 6; i++) {
-          this.petImages[type.id][`level${i}`] = '';
+        // 同步等级名称
+        if (serverType.stageNames && serverType.stageNames.length > 0) {
+          if (!this.petStagesByType) this.petStagesByType = {};
+          this.petStagesByType[serverType.id] = serverType.stageNames.map((name, i) => ({ name, level: i + 1 }));
         }
       });
     }
-  } else {
-    // 如果没有保存的图片数据，初始化空的图片数据结构
-    this.petImages = {};
-    this.petTypes.forEach(type => {
-      this.petImages[type.id] = {};
-      for (let i = 1; i <= 6; i++) {
-        this.petImages[type.id][`level${i}`] = '';
-      }
-    });
+    console.log('✅ 从服务器加载宠物图片成功');
+  } catch (error) {
+    console.error('从服务器加载宠物图片失败，使用空数据:', error);
   }
 }
 
@@ -1380,76 +1381,34 @@ readLevelNamesFile(file) {
 }
 
 // 为导入功能上传宠物图片
-uploadPetImageForImport(file, petTypeId, level) {
-  return new Promise((resolve, reject) => {
-    // 验证文件类型
-    if (!file.type.startsWith('image/')) {
-      reject(new Error(`文件"${file.name}"不是图片格式`));
-      return;
-    }
-    
-    // 验证文件大小（最大5MB）
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      reject(new Error(`图片"${file.name}"过大（${(file.size / 1024 / 1024).toFixed(2)}MB），最大支持5MB`));
-      return;
-    }
-    
-    // 验证图片尺寸（可选，通过Image对象）
-    const img = new Image();
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        const imageData = e.target.result;
-        
-        // 验证图片格式
-        if (!imageData.startsWith('data:image/')) {
-          reject(new Error('文件不是有效的图片格式'));
-          return;
-        }
-        
-        // 加载图片验证尺寸
-        img.onload = () => {
-          // 验证图片尺寸（建议最小100x100）
-          if (img.width < 100 || img.height < 100) {
-            reject(new Error(`图片"${file.name}"尺寸过小（${img.width}x${img.height}），建议至少100x100像素`));
-            return;
-          }
-          
-          // 验证图片比例（可选，防止变形）
-          const aspectRatio = img.width / img.height;
-          if (aspectRatio < 0.5 || aspectRatio > 2) {
-            console.warn(`图片"${file.name}"比例异常（${aspectRatio.toFixed(2)}），可能影响显示效果`);
-          }
-          
-          // 保存图片数据
-          const levelKey = `level${level}`;
-          if (!this.petImages[petTypeId]) {
-            this.petImages[petTypeId] = {};
-          }
-          this.petImages[petTypeId][levelKey] = imageData;
-          
-          resolve();
-        };
-        
-        img.onerror = () => {
-          reject(new Error(`无法加载图片"${file.name}"，可能已损坏`));
-        };
-        
-        img.src = imageData;
-        
-      } catch (error) {
-        reject(new Error('处理图片文件失败：' + error.message));
-      }
-    };
-    
-    reader.onerror = () => {
-      reject(new Error(`读取图片文件"${file.name}"失败`));
-    };
-    
-    reader.readAsDataURL(file);
+async uploadPetImageForImport(file, petTypeId, level) {
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    throw new Error(`文件"${file.name}"不是图片格式`);
+  }
+  // 验证文件大小（最大5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error(`图片"${file.name}"过大，最大支持5MB`);
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const resp = await fetch(`/api/pet-images/upload/${petTypeId}/${level}`, {
+    method: 'POST',
+    body: formData
   });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.detail || `上传图片"${file.name}"失败`);
+  }
+
+  const result = await resp.json();
+  const levelKey = `level${level}`;
+  if (!this.petImages[petTypeId]) {
+    this.petImages[petTypeId] = {};
+  }
+  this.petImages[petTypeId][levelKey] = result.url + '?t=' + Date.now();
 }
 
 // 显示导入结果
@@ -1830,347 +1789,89 @@ addPetConfigEventListeners() {
   }
 }
 
-// 上传宠物图片
-uploadPetImage(file, petType, level) {
-  console.log('🚀 uploadPetImage调用开始:', {file, petType, level, currentClassId: this.currentClassId});
-  console.log('🔍 当前显示模式:', this.displayMode); // 添加显示模式日志
-  
-  // 参数完整性验证
+// 上传宠物图片 - 上传到服务器文件夹
+async uploadPetImage(file, petType, level) {
+  console.log('🚀 uploadPetImage调用开始:', {file, petType, level});
+
+  // 参数验证
   if (!file) {
-    console.error('❌ 错误：未提供文件');
     this.showNotification('请选择要上传的图片文件！', 'error');
     return;
   }
-  
   if (!petType || typeof level === 'undefined') {
-    console.error('❌ 错误：缺少必要参数', {petType, level});
     this.showNotification('图片配置参数错误！', 'error');
     return;
   }
-  
-  // 验证文件类型
   if (!file.type.match('image.*')) {
-    console.error('❌ 错误：文件类型无效', {fileType: file.type});
     this.showNotification('请上传有效的图片文件！', 'error');
     return;
   }
-  
-  // 验证文件大小（限制3MB，减少localStorage压力）
-  const maxSize = 3 * 1024 * 1024;
+  const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
-    console.error('❌ 错误：文件过大', {fileSize: file.size, maxSize: maxSize});
-    this.showNotification('图片大小不能超过3MB！', 'error');
+    this.showNotification('图片大小不能超过5MB！', 'error');
     return;
   }
   
-  // 显示上传中的提示
-  const selector = `.pet-config-level input[data-pet-type="${petType}"][data-level="${level}"]`;
-  console.log('🔍 查找上传输入框:', selector);
-  const input = document.querySelector(selector);
-  console.log('✅ 查找结果:', {inputFound: !!input});
-  
-  if (input) {
-    const container = input.closest('.pet-config-upload');
-    if (container) {
-      const divContainer = input.closest('div[style*="position: absolute"]') || container.querySelector('div');
-      if (divContainer) {
-        divContainer.style.backgroundColor = '#f0fdf4';
-        divContainer.style.borderColor = '#bbf7d0';
-        divContainer.style.transition = 'all 0.3s ease';
-      }
+  // 上传到服务器
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const resp = await fetch(`/api/pet-images/upload/${petType}/${level}`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || '上传失败');
     }
+
+    const result = await resp.json();
+    const levelKey = `level${level}`;
+
+    // 更新内存中的图片URL
+    if (!this.petImages) this.petImages = {};
+    if (!this.petImages[petType]) this.petImages[petType] = {};
+    this.petImages[petType][levelKey] = result.url + '?t=' + Date.now();
+
+    this.showNotification('图片上传成功！', 'success');
+
+    // 刷新UI
+    this.renderPetConfig();
+    this.renderStudents();
+    this.renderGroups();
+    this.renderRankings();
+  } catch (error) {
+    console.error('上传宠物图片失败:', error);
+    this.showNotification(`图片上传失败: ${error.message}`, 'error');
   }
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      console.log('文件读取成功');
-      let imageData = e.target.result;
-      const levelKey = `level${level}`;
-      
-      // 先定义saveImageData函数，确保在使用前初始化
-      const saveImageData = (finalImageData) => {
-        console.log('💾 saveImageData函数开始:', {finalImageDataLength: finalImageData.length, levelKey});
-        
-        // 保存图片数据到对应的配置对象
-        // 保存图片数据到对应的配置对象
-        console.log('👤 保存宠物图片数据');
-        if (!this.petImages) {
-          console.log('📂 初始化petImages对象');
-          this.petImages = {};
-        }
-        if (!this.petImages[petType]) {
-          console.log(`📂 初始化宠物类型 ${petType} 的数据结构`);
-          this.petImages[petType] = {};
-        }
-        this.petImages[petType][levelKey] = finalImageData;
-        console.log('✅ 图片数据保存成功:', {petType, levelKey, dataLength: finalImageData.length});
-        
-        // 更新UI
-        if (input) {
-          console.log('开始更新UI');
-          // 简化DOM查找逻辑，直接查找最外层的上传容器
-          const uploadContainer = input.closest('.pet-config-upload');
-          if (uploadContainer) {
-            // 查找上传提示容器（带虚线边框的div）
-            const uploadPromptDiv = uploadContainer.querySelector('div[style*="position: absolute"]') || uploadContainer.querySelector('div');
-            if (uploadPromptDiv) {
-              // 清空容器内容，重新创建图片元素
-              uploadPromptDiv.innerHTML = '';
-              
-              // 创建新图片元素
-              const newImg = document.createElement('img');
-              newImg.src = finalImageData;
-              newImg.className = 'pet-config-image has-image';
-              newImg.alt = `宠物图片 - 等级${level}`;
-              newImg.style.maxWidth = '60px';
-              newImg.style.maxHeight = '60px';
-              newImg.style.objectFit = 'contain';
-              newImg.style.border = '2px solid #3b82f6';
-              newImg.style.borderRadius = '4px';
-              
-              // 将图片添加到上传提示容器
-              uploadPromptDiv.appendChild(newImg);
-              
-              // 重新创建文件输入框（避免事件绑定问题）
-              const newInput = document.createElement('input');
-              newInput.type = 'file';
-              newInput.accept = 'image/*';
-              newInput.dataset.petType = petType;
-              newInput.dataset.level = level;
-
-              newInput.style.position = 'absolute';
-              newInput.style.inset = '0';
-              newInput.style.opacity = '0';
-              newInput.style.cursor = 'pointer';
-              newInput.style.zIndex = '2';
-              
-              // 重新绑定事件
-              newInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  this.uploadPetImage(file, petType, level);
-                }
-              });
-              
-              uploadPromptDiv.appendChild(newInput);
-              console.log('图片元素已成功创建和更新');
-            }
-            
-            // 恢复容器样式
-            const divContainer = input.closest('div[style*="position: absolute"]') || uploadContainer.querySelector('div');
-            if (divContainer) {
-              divContainer.style.backgroundColor = '#f8fafc';
-              divContainer.style.borderColor = '#3b82f6';
-              divContainer.style.display = 'flex';
-              divContainer.style.flexDirection = 'column';
-              divContainer.style.justifyContent = 'center';
-              divContainer.style.alignItems = 'center';
-            }
-          }
-          
-          // 启用移除按钮
-          const petConfigLevel = input.closest('.pet-config-level');
-          if (petConfigLevel) {
-            // 更精确地查找移除按钮
-            let removeBtn;
-            if (isGroup) {
-              removeBtn = petConfigLevel.querySelector('.group-remove-image');
-            } else {
-              removeBtn = petConfigLevel.querySelector(`button[data-pet-type="${petType}"][data-level="${level}"]`);
-            }
-            
-            if (removeBtn) {
-              removeBtn.disabled = false;
-              removeBtn.style.opacity = '1';
-              removeBtn.style.cursor = 'pointer';
-              console.log('✅ 启用移除按钮成功:', {petType, level, isGroup});
-            } else {
-              console.warn('⚠️ 未找到移除按钮:', {petType, level, isGroup});
-              // 如果找不到按钮，重新渲染整个宠物配置来确保UI同步
-              if (isGroup) {
-                this.renderGroupPetConfig();
-              } else {
-                this.renderPetConfig();
-              }
-            }
-          }
-        }
-        
-        // 保存到本地存储
-        console.log('💾 开始保存到localStorage');
-        try {
-          const storageKey = `petImages_${this.currentClassId}`;
-          console.log(`🔑 存储键名: ${storageKey}`);
-          
-          // 获取数据大小，监控存储空间使用
-          const dataToSave = this.petImages;
-          const jsonString = JSON.stringify(dataToSave);
-          const dataSize = new Blob([jsonString]).size;
-          console.log(`📊 数据大小: ${dataSize} bytes (约${(dataSize/1024).toFixed(2)} KB)`);
-          
-          localStorage.setItem(storageKey, jsonString);
-          console.log('✅ 图片保存到localStorage成功');
-          
-          // 验证保存是否成功
-          const savedData = localStorage.getItem(storageKey);
-          if (savedData) {
-            console.log('✅ 验证保存结果: 数据存在');
-          } else {
-            console.warn('⚠️ 验证保存结果: 数据保存后无法读取');
-          }
-          
-          this.showNotification('图片上传成功！', 'success');
-          
-          // 保存成功后，更新相关卡片上的头像
-          console.log('🔄 保存成功，更新相关卡片上的头像');
-          this.renderStudents();
-          this.renderGroups();
-          this.renderRankings();
-        } catch (storageError) {
-          console.error('❌ localStorage保存失败:', {error: storageError, errorName: storageError.name, errorMessage: storageError.message});
-          
-          // 详细诊断存储错误类型
-          if (storageError instanceof DOMException) {
-            console.warn('⚠️ 存储错误类型:', storageError.name);
-            if (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-              console.warn('⚠️ 存储空间配额超出');
-            }
-          }
-          
-          this.showNotification('图片保存失败！本地存储空间不足，请尝试使用较小的图片。', 'error');
-          
-          // 尝试清理缓存
-          if (confirm('存储空间不足，是否尝试清理部分缓存数据？')) {
-            console.log('🧹 用户确认清理缓存');
-            this.clearOldCache();
-          }
-        }
-      };
-      
-      // 图片压缩逻辑 - 在saveImageData函数定义后执行
-      if (imageData.length > 200000) { // 如果超过200KB，尝试优化
-        console.log('图片较大，尝试优化...');
-        // 使用canvas进行简单压缩
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 200;
-          const MAX_HEIGHT = 200;
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          imageData = canvas.toDataURL(file.type, 0.8);
-          console.log('图片优化完成，大小从', e.target.result.length, '减少到', imageData.length);
-          
-          // 保存优化后的图片
-          saveImageData(imageData);
-        };
-        img.onerror = () => {
-          console.error('图片压缩失败，使用原始数据');
-          saveImageData(e.target.result);
-        };
-        img.src = imageData;
-      } else {
-        // 直接保存原始数据
-        saveImageData(imageData);
-      }
-    } catch (error) {
-      console.error('图片处理失败:', error);
-      this.showNotification('图片处理失败，请重试！', 'error');
-      // 恢复容器样式
-      if (input) {
-        const divContainer = input.closest('div[style*="position: absolute"]');
-        if (divContainer) {
-          divContainer.style.backgroundColor = '#f8fafc';
-          divContainer.style.borderColor = '#ddd';
-        }
-      }
-    }
-  };
-  reader.onerror = () => {
-    this.showNotification('图片读取失败，请重试！', 'error');
-    // 恢复容器样式
-    if (input) {
-      const divContainer = input.closest('div[style*="position: absolute"]');
-      if (divContainer) {
-        divContainer.style.backgroundColor = '#f8fafc';
-        divContainer.style.borderColor = '#ddd';
-      }
-    }
-  };
-  reader.readAsDataURL(file);
 }
-
-// 移除宠物图片
-removePetImage(petType, level) {
+// 移除宠物图片 - 从服务器文件夹删除
+async removePetImage(petType, level) {
   const levelKey = `level${level}`;
-  const targetImages = this.petImages;
-  
-  if (targetImages[petType] && targetImages[petType][levelKey]) {
-    // 确认删除
-    if (!confirm('确定要移除这张宠物图片吗？')) {
-      return;
-    }
-    
-    targetImages[petType][levelKey] = '';
-    
-    // 更新UI
-    const selector = `.pet-config-level input[data-pet-type="${petType}"][data-level="${level}"]`;
-    const input = document.querySelector(selector);
-    if (input) {
-      // 找到图片元素
-      const img = input.parentElement.querySelector('img');
-      if (img) {
-        // 移除图片元素
-        img.remove();
-      }
-      
-      // 显示上传提示文本
-      const uploadText = input.parentElement.querySelector('span');
-      if (uploadText) {
-        uploadText.style.display = 'block';
-      } else {
-        // 如果没有span元素，需要创建上传提示文本
-        const uploadDiv = input.parentElement;
-        const newSpan = document.createElement('span');
-        newSpan.textContent = '上传图片';
-        newSpan.style.fontSize = '0.9em';
-        newSpan.style.color = '#64748b';
-        newSpan.style.fontWeight = '500';
-        uploadDiv.appendChild(newSpan);
-      }
-      
-      // 禁用移除按钮
-      const removeBtn = input.closest('.pet-config-level').querySelector('button[data-pet-type]');
-      if (removeBtn) {
-        removeBtn.disabled = true;
-        removeBtn.style.opacity = '0.5';
-        removeBtn.style.cursor = 'not-allowed';
-      }
-    }
-    
-    // 保存到本地存储
-    this.saveAllPetConfig();
-    
-    // 显示成功提示
+
+  if (!this.petImages[petType] || !this.petImages[petType][levelKey]) {
+    return;
+  }
+
+  if (!confirm('确定要移除这张宠物图片吗？')) {
+    return;
+  }
+
+  try {
+    const resp = await fetch(`/api/pet-images/delete/${petType}/${level}`, { method: 'DELETE' });
+    if (!resp.ok) throw new Error('删除失败');
+
+    this.petImages[petType][levelKey] = '';
     this.showNotification('图片已移除！', 'info');
+    this.renderPetConfig();
+    this.renderStudents();
+    this.renderGroups();
+    this.renderRankings();
+  } catch (error) {
+    console.error('删除宠物图片失败:', error);
+    this.showNotification('删除图片失败，请重试', 'error');
   }
 }
 
@@ -2199,8 +1900,7 @@ saveAllPetConfig() {
     localStorage.setItem(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
     localStorage.setItem(`petStages_${this.currentClassId}`, JSON.stringify(this.petStages));
     localStorage.setItem(`groupStages_${this.currentClassId}`, JSON.stringify(this.groupStages)); // 保存小组等级配置
-    localStorage.setItem(`petImages_${this.currentClassId}`, JSON.stringify(this.petImages));
-    // groupLevels已废弃，不再保存
+    // petImages不再保存到localStorage，改为服务器文件夹存储
     localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
     localStorage.setItem(`groupPets_${this.currentClassId}`, JSON.stringify(this.groupPets)); // 保存小组宠物选择
     
@@ -2218,16 +1918,10 @@ saveAllPetConfig() {
   }
 }
 
-// 保存宠物图片配置（保留兼容性）
+// 保存宠物图片配置（图片已改为服务器文件夹存储，此方法保留兼容性）
 savePetImages() {
-  try {
-    localStorage.setItem(`petImages_${this.currentClassId}`, JSON.stringify(this.petImages));
-    return true;
-  } catch (error) {
-    console.error('保存宠物图片失败:', error);
-    this.showNotification('宠物图片保存失败', 'error');
-    return false;
-  }
+  // 图片数据不再保存到localStorage，由服务器文件夹管理
+  return true;
 }
   
   // 测试宠物配置的保存和加载功能
@@ -2362,9 +2056,7 @@ resetPetConfig() {
       }
     });
     
-    // 清空本地存储
-    localStorage.removeItem(`petImages_${this.currentClassId}`);
-    localStorage.removeItem(`groupPetImages_${this.currentClassId}`); // 同时清空小组宠物图片
+    // petImages已改为服务器文件夹存储，无需清理localStorage
     
     // 重新渲染配置界面
     this.renderPetConfig();
@@ -2839,21 +2531,15 @@ getStudentPetImage(student) {
   
   // 根据显示模式返回对应的显示内容
   if (this.displayMode === 'local') {
-    // 检查是否有自定义图片
-    if (this.petImages && this.petImages[petType] && this.petImages[petType][levelKey]) {
-      // 如果是数据URL，确保用img标签包裹
-      const imageData = this.petImages[petType][levelKey];
-      if (imageData.startsWith('data:image/')) {
-        return `<img src="${imageData}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-      }
-      return imageData;
+    // 检查是否有图片（URL路径或base64）
+    const imageData = this.petImages?.[petType]?.[levelKey];
+    if (imageData) {
+      return `<img src="${imageData}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
     } else {
-      // 如果没有自定义图片，显示对应宠物类型的emoji
       const petStage = this.getPetStage(totalPoints, student.name);
       return petStage.emoji || '❓';
     }
   } else {
-    // emoji模式下直接返回对应的宠物等级emoji
     const petStage = this.getPetStage(totalPoints, student.name);
     return petStage.emoji || '❓';
   }
@@ -2895,30 +2581,15 @@ getGroupPetImage(group) {
   }
   
   // 根据显示模式返回对应的显示内容
-  const hasCustomImage = this.displayMode === 'local' && this.petImages && this.petImages[petType] && this.petImages[petType][levelKey];
-  console.log(`🖼️ 自定义图片状态: ${hasCustomImage ? '存在' : '不存在'}`);
-  
-  if (hasCustomImage) {
-    // 如果是数据URL，确保用img标签包裹
-    const imageData = this.petImages[petType][levelKey];
-    console.log(`📁 自定义图片数据: 长度=${imageData.length}, 类型=${imageData.startsWith('data:image/') ? '数据URL' : '其他'}`);
-    
-    if (imageData.startsWith('data:image/')) {
-      const result = `<img src="${imageData}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-      console.log('✅ 返回自定义图片HTML');
-      return result;
+  if (this.displayMode === 'local') {
+    const imageData = this.petImages?.[petType]?.[levelKey];
+    if (imageData) {
+      return `<img src="${imageData}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
     }
-    console.log('✅ 返回自定义图片数据');
-    return imageData;
-  } else {
-    // 返回对应的宠物等级emoji
-    const emojiMap = {  
-      0: '🥚', 1: '🐣', 2: '🐤', 3: '🐦', 4: '🕊️', 5: '🦅'
-    };
-    const emoji = emojiMap[validLevel] || '🐾';
-    console.log(`🔤 返回默认emoji: ${emoji} (对应等级${validLevel})`);
-    return emoji; // 使用更友好的🐾符号替代❓
   }
+  // fallback emoji
+  const emojiMap = { 0: '🥚', 1: '🐣', 2: '🐤', 3: '🐦', 4: '🕊️', 5: '🦅' };
+  return emojiMap[validLevel] || '🐾';
 }
 
 // 保存学生宠物选择
@@ -3902,52 +3573,11 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
       this.groupStages = this.migrateStages(this.getDefaultGroupStages(), 'group');
     }
     
-    // 加载宠物图片配置
-    const savedPetImages = localStorage.getItem(`petImages_${this.currentClassId}`);
-    if (savedPetImages) {
-      try {
-        const parsedImages = JSON.parse(savedPetImages);
-        if (typeof parsedImages === 'object') {
-          this.petImages = parsedImages;
-          // 确保所有宠物类型都有图片数据结构
-          this.petTypes.forEach(type => {
-            if (!this.petImages[type.id]) {
-              this.petImages[type.id] = {};
-              for (let i = 1; i <= 6; i++) {
-                this.petImages[type.id][`level${i}`] = '';
-              }
-            }
-          });
-        }
-      } catch (error) {
-        console.error('加载宠物图片配置失败:', error);
-        this.showNotification('宠物图片配置加载失败', 'warning');
-      }
-    }
+    // 宠物图片已改为从服务器文件夹加载，由 initializePetImages() 处理
     
     // 加载小组宠物图片配置（新增）
-    const savedGroupPetImages = localStorage.getItem(`groupPetImages_${this.currentClassId}`);
-    if (savedGroupPetImages) {
-      try {
-        const parsedGroupImages = JSON.parse(savedGroupPetImages);
-        if (typeof parsedGroupImages === 'object') {
-          this.groupPetImages = parsedGroupImages;
-          // 确保所有宠物类型都有小组图片数据结构
-          this.petTypes.forEach(type => {
-            if (!this.groupPetImages[type.id]) {
-              this.groupPetImages[type.id] = {};
-              for (let i = 1; i <= 6; i++) {
-                this.groupPetImages[type.id][`level${i}`] = '';
-              }
-            }
-          });
-        }
-      } catch (error) {
-        console.error('加载小组宠物图片配置失败:', error);
-        this.showNotification('小组宠物图片配置加载失败', 'warning');
-      }
-    }
-    
+    // 小组宠物图片已改为从服务器文件夹加载（与学生宠物共用同一套图片）
+
     // groupLevels数据结构已废弃，所有功能都基于groupStages
     // 注意：小组等级配置已在loadFromLocalStorage()中加载，此处不再重复加载
     
