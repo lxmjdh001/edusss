@@ -225,6 +225,7 @@
       <button class="modal-tab" data-tab="levelSettings">等级积分设置</button>
       <button class="modal-tab" data-tab="petConfig">🐾 宠物配置</button>
       <button class="modal-tab" data-tab="security">安全设置</button>
+      <button class="modal-tab" data-tab="account">我的账户</button>
     </div>
 		
 		<!-- 个人规则配置 -->
@@ -234,10 +235,13 @@
 		  <button class="btn btn-primary" id="addRuleBtn">添加规则</button>
 		  <div id="ruleList" style="margin-top:15px;text-align:left;"></div>
 		  <!-- 新增：个人规则 txt 导入/导出 -->
-			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
 			  <label for="ruleTxtImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.txt)</label>
 			  <input type="file" id="ruleTxtImport" accept=".txt" style="display:none;">
+			  <label for="ruleExcelImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.xlsx)</label>
+			  <input type="file" id="ruleExcelImport" accept=".xlsx,.xls" style="display:none;">
 			  <button class="btn btn-info" id="ruleTxtExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.txt)</button>
+			  <button class="btn btn-info" id="ruleExcelExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.xlsx)</button>
 			  <button class="btn btn-warning" id="clearRulesBtn" style="padding:6px 12px;font-size:14px;">🗑️ 清空规则</button>
 			</div>
 		</div>
@@ -249,10 +253,13 @@
 		  <button class="btn btn-primary" id="addGroupRuleBtn">添加小组规则</button>
 		  <div id="groupRuleList" style="margin-top:15px;text-align:left;"></div>
 		  <!-- 新增：小组规则 txt 导入/导出 -->
-			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
 			  <label for="groupRuleTxtImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.txt)</label>
 			  <input type="file" id="groupRuleTxtImport" accept=".txt" style="display:none;">
+			  <label for="groupRuleExcelImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.xlsx)</label>
+			  <input type="file" id="groupRuleExcelImport" accept=".xlsx,.xls" style="display:none;">
 			  <button class="btn btn-info" id="groupRuleTxtExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.txt)</button>
+			  <button class="btn btn-info" id="groupRuleExcelExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.xlsx)</button>
 			  <button class="btn btn-warning" id="clearGroupRulesBtn" style="padding:6px 12px;font-size:14px;">🗑️ 清空规则</button>
 			</div>
 		</div>
@@ -268,14 +275,17 @@
 		  <!-- 积分商店规则导出导入功能 -->
 		  <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
 			<h4>📦 商店规则管理</h4>
-			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
-			  <label for="shopRuleImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.json)</label>
-			  <input type="file" id="shopRuleImport" accept=".json" style="display:none;">
-			  <button class="btn btn-info" id="shopRuleExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.json)</button>
+			<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+			  <label for="shopRuleTxtImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.txt)</label>
+			  <input type="file" id="shopRuleTxtImport" accept=".txt" style="display:none;">
+			  <label for="shopRuleExcelImport" class="btn btn-info" style="padding:6px 12px;font-size:14px;">📥 导入规则(.xlsx)</label>
+			  <input type="file" id="shopRuleExcelImport" accept=".xlsx,.xls" style="display:none;">
+			  <button class="btn btn-info" id="shopRuleTxtExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.txt)</button>
+			  <button class="btn btn-info" id="shopRuleExcelExport" style="padding:6px 12px;font-size:14px;">📤 导出规则(.xlsx)</button>
 			  <button class="btn btn-warning" id="clearShopRulesBtn" style="padding:6px 12px;font-size:14px;">🗑️ 清空规则</button>
 			</div>
 			<div style="color: #718096; font-size: 0.9em;">
-			  <p>导出当前商店的所有商品规则为JSON文件，或从JSON文件导入商店商品规则</p>
+			  <p>支持 TXT / Excel 导入导出：商品名称 | 所需积分 | 库存数量（库存写“无限”表示无限库存）</p>
 			</div>
 		  </div>
 		</div>
@@ -368,6 +378,11 @@
 			  <button class="btn btn-danger" id="emergencyResetBtn">紧急重置系统</button>
 			</div>
 		  </div>
+		</div>
+
+		<!-- 我的账户 -->
+		<div id="accountTab" class="modal-tab-content">
+		  <!-- 内容将通过JS动态生成 -->
 		</div>
 		
 		<div class="modal-footer">

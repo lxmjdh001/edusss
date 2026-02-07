@@ -757,6 +757,34 @@
 	
     
     <script>
+        function createPointsStorage() {
+            const prefix = (window.authGuard && typeof authGuard.getStorageNamespace === 'function')
+                ? authGuard.getStorageNamespace('points')
+                : 'points_guest__';
+            const key = (k) => `${prefix}${k}`;
+            const get = (k) => {
+                const primary = localStorage.getItem(key(k));
+                if (primary !== null) return primary;
+                const legacy = localStorage.getItem(k);
+                if (legacy !== null) {
+                    localStorage.setItem(key(k), legacy);
+                    localStorage.removeItem(k);
+                }
+                return legacy;
+            };
+            return {
+                key,
+                get,
+                set: (k, v) => localStorage.setItem(key(k), v),
+                remove: (k, includeLegacy = false) => {
+                    localStorage.removeItem(key(k));
+                    if (includeLegacy) localStorage.removeItem(k);
+                }
+            };
+        }
+
+        const pointsStorage = createPointsStorage();
+
         // 获取DOM元素
         const mainTitle = document.getElementById('mainTitle');
         const inputDataBtn = document.getElementById('inputDataBtn');
@@ -834,12 +862,12 @@
                 bgColor: bgColorPicker.value,
                 bgImageUrl: bgImageUrl
             };
-            localStorage.setItem('wheelData', JSON.stringify(appData));
+            pointsStorage.set('wheelData', JSON.stringify(appData));
         }
 
         // 从本地存储加载数据
         function loadFromLocalStorage() {
-            const savedData = localStorage.getItem('wheelData');
+            const savedData = pointsStorage.get('wheelData');
             if (savedData) {
                 const appData = JSON.parse(savedData);
                 data = appData.data || [];
@@ -1352,7 +1380,7 @@
 
         resetBtn.addEventListener('click', () => {
             if (confirm('确定要初始化吗？所有数据将被清空！')) {
-                localStorage.removeItem('wheelData');
+                pointsStorage.remove('wheelData');
                 location.reload();
             }
         });
@@ -1470,7 +1498,7 @@ document.getElementById('backHomeBtn').addEventListener('click', () => {
 /* ===== 直接读全局商店 ===== */
 function getShopPrizes() {
   // 全局商店键名就是 classPointsGlobalShopItems
-  const raw = localStorage.getItem('classPointsGlobalShopItems');
+  const raw = pointsStorage.get('classPointsGlobalShopItems');
   console.log('【debug】全局商店内容 =', raw);
   if (!raw) {
     console.log('【debug】未找到全局商店数据');
@@ -1522,7 +1550,7 @@ function getShopPrizesFromItems(items) {
 /* ===== 按钮事件 ===== */
 document.getElementById('loadShopBtn').addEventListener('click', () => {
   // 先详细检查数据格式
-  const raw = localStorage.getItem('classPointsGlobalShopItems');
+  const raw = pointsStorage.get('classPointsGlobalShopItems');
   console.log('【详细检查】原始数据:', raw);
   
   if (raw) {
@@ -1559,14 +1587,14 @@ document.getElementById('loadShopBtn').addEventListener('click', () => {
 /* ===== 实时获取当前班级学生 ===== */
 document.getElementById('loadClassStudentsBtn').addEventListener('click', () => {
   // 1. 实时获取当前班级 ID
-  const currentClassId = localStorage.getItem('currentClassId');
+  const currentClassId = pointsStorage.get('currentClassId');
   if (!currentClassId) {
     alert('未检测到当前班级！请先返回主页选择班级。');
     return;
   }
 
   // 2. 读取该班级数据
-  const raw = localStorage.getItem(`classPointsData_${currentClassId}`);
+  const raw = pointsStorage.get(`classPointsData_${currentClassId}`);
   if (!raw) {
     alert('当前班级暂无学生数据！');
     return;
@@ -1607,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasChineseChars = data.some(item => /[\u4e00-\u9fa5]/.test(item));
     
     // 检查是否是商店商品（通过检查是否有商品数据存在）
-    const hasShopData = localStorage.getItem('classPointsGlobalShopItems');
+    const hasShopData = pointsStorage.get('classPointsGlobalShopItems');
     
     // 如果是学生名字且没有商店数据，清空数据
     if (hasChineseChars && !hasShopData) {

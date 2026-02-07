@@ -982,6 +982,34 @@
     </div>
 
     <script>
+        function createPointsStorage() {
+            const prefix = (window.authGuard && typeof authGuard.getStorageNamespace === 'function')
+                ? authGuard.getStorageNamespace('points')
+                : 'points_guest__';
+            const key = (k) => `${prefix}${k}`;
+            const get = (k) => {
+                const primary = localStorage.getItem(key(k));
+                if (primary !== null) return primary;
+                const legacy = localStorage.getItem(k);
+                if (legacy !== null) {
+                    localStorage.setItem(key(k), legacy);
+                    localStorage.removeItem(k);
+                }
+                return legacy;
+            };
+            return {
+                key,
+                get,
+                set: (k, v) => localStorage.setItem(key(k), v),
+                remove: (k, includeLegacy = false) => {
+                    localStorage.removeItem(key(k));
+                    if (includeLegacy) localStorage.removeItem(k);
+                }
+            };
+        }
+
+        const pointsStorage = createPointsStorage();
+
         // 全局变量
         let startTime = null;
         let timerInterval = null;
@@ -1521,7 +1549,7 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
                     return null;
                 }
             }
-            return localStorage.getItem('taskCheckinData');
+            return pointsStorage.get('taskCheckinData');
         }
 
         async function writeTaskCheckinData(payload) {
@@ -1534,7 +1562,7 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
                 }
             }
             try {
-                localStorage.setItem('taskCheckinData', payload);
+                pointsStorage.set('taskCheckinData', payload);
                 return true;
             } catch (e) {
                 console.error('Save task checkin data failed:', e);
@@ -1551,7 +1579,7 @@ document.getElementById('startTaskBtn').addEventListener('click', function () {
                     return false;
                 }
             }
-            localStorage.removeItem('taskCheckinData');
+            pointsStorage.remove('taskCheckinData');
             return true;
         }
 
@@ -1924,7 +1952,7 @@ function deleteThisRecord(idx) {
             
             // 积分同步判定逻辑优化：基于任务名称建立关联
             // 检查该任务是否已经同步过积分
-            const taskSyncHistory = JSON.parse(localStorage.getItem('taskSyncHistory') || '{}');
+            const taskSyncHistory = JSON.parse(pointsStorage.get('taskSyncHistory') || '{}');
             // 关键修复：直接使用currentTaskName变量，确保在loadThisRecord中已正确更新
             const taskKey = record.taskName || '未命名任务';
             
@@ -1969,7 +1997,7 @@ function deleteThisRecord(idx) {
                 };
                 
                 // 保存到本地存储
-                localStorage.setItem('tempTaskRule', JSON.stringify(tempRuleData));
+                pointsStorage.set('tempTaskRule', JSON.stringify(tempRuleData));
                 
                 // 将处理过的学生加入任务同步历史记录
                 availableStudents.forEach(name => {
@@ -1984,7 +2012,7 @@ function deleteThisRecord(idx) {
                 });
                 
                 // 保存任务同步历史记录
-                localStorage.setItem('taskSyncHistory', JSON.stringify(taskSyncHistory));
+                pointsStorage.set('taskSyncHistory', JSON.stringify(taskSyncHistory));
                 
                 // 关闭模态框
                 document.getElementById('syncPointsModal').style.display = 'none';

@@ -154,7 +154,7 @@ class AuthGuard {
     /**
      * 登出
      */
-    async logout() {
+    async logout(redirectUrl = '/static/login.html') {
         try {
             await fetch('/api/auth/logout', {
                 method: 'POST',
@@ -173,7 +173,24 @@ class AuthGuard {
             this.isAuthenticated = false;
 
             // 跳转到登录页
-            window.location.href = '/static/login.html';
+            window.location.href = redirectUrl;
+        }
+    }
+
+    /**
+     * 生成本地存储命名空间（用于多用户隔离）
+     * @param {string} namespace 业务前缀
+     */
+    getStorageNamespace(namespace = 'points') {
+        try {
+            const user = this.getCurrentUser();
+            const rawId = user && (user.account || user.username || user.name || user.phone || user.id);
+            const isDesktop = user && user.is_desktop;
+            const normalized = rawId ? encodeURIComponent(String(rawId).trim()) : '';
+            const bucket = isDesktop ? 'offline' : (normalized || 'guest');
+            return `${namespace}_${bucket}__`;
+        } catch (error) {
+            return `${namespace}_guest__`;
         }
     }
 

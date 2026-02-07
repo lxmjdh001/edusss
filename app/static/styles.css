@@ -2960,6 +2960,58 @@ body:fullscreen {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+/* 我的账户区域样式 */
+.account-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 15px;
+}
+
+.account-section h4 {
+  color: #2d3748;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-section h4::before {
+  content: "👤";
+  font-size: 1.2em;
+}
+
+.account-info-grid {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px 12px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.account-info-grid .label {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.account-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+}
+
+.account-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .security-section .btn {
   margin-left: 10px;
 }

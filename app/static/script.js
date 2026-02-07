@@ -43,6 +43,87 @@ getFallbackEmoji(stageName, type) {
   return map[stageName] || '❓';
 }
 
+// 生成用户隔离的存储前缀
+resolveStorageNamespace() {
+  try {
+    if (window.authGuard && typeof authGuard.getStorageNamespace === 'function') {
+      return authGuard.getStorageNamespace('points');
+    }
+    const userStr = localStorage.getItem('user_info');
+    const user = this.safeJsonParse(userStr, null);
+    const rawId = user && (user.account || user.username || user.name || user.phone || user.id);
+    const normalized = rawId ? encodeURIComponent(String(rawId).trim()) : '';
+    const bucket = (user && user.is_desktop) ? 'offline' : (normalized || 'guest');
+    return `points_${bucket}__`;
+  } catch (error) {
+    return 'points_guest__';
+  }
+}
+
+storageKey(key) {
+  return `${this.storagePrefix}${key}`;
+}
+
+storageGet(key, options = {}) {
+  const { fallback = true, migrate = true } = options;
+  const value = this.safeLocalStorageGet(key);
+  if (value === null && fallback) {
+    try {
+      const legacy = localStorage.getItem(key);
+      if (legacy !== null && migrate) {
+        this.safeLocalStorageSet(key, legacy);
+        localStorage.removeItem(key);
+      }
+      return legacy;
+    } catch (error) {
+      return null;
+    }
+  }
+  return value;
+}
+
+storageSet(key, value) {
+  return this.safeLocalStorageSet(key, value);
+}
+
+storageRemove(key, includeLegacy = false) {
+  try {
+    if (!this.isLocalStorageAvailable()) {
+      console.warn('localStorage不可用，无法删除数据');
+      return false;
+    }
+    localStorage.removeItem(this.storageKey(key));
+    if (includeLegacy) {
+      localStorage.removeItem(key);
+    }
+    return true;
+  } catch (error) {
+    console.error(`删除localStorage数据失败 [${key}]:`, error);
+    return false;
+  }
+}
+
+escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+formatAccountExpiry(expiresAt) {
+  if (!expiresAt) {
+    return { text: '永久', expired: false };
+  }
+  const date = new Date(expiresAt);
+  if (Number.isNaN(date.getTime())) {
+    return { text: String(expiresAt), expired: false };
+  }
+  const text = date.toLocaleString('zh-CN', { hour12: false });
+  return { text, expired: date.getTime() < Date.now() };
+}
+
 	// 切换 emoji ↔ 本地图
 toggleDisplayMode() {
   if (this.displayMode === 'emoji') {
@@ -63,8 +144,8 @@ toggleDisplayMode() {
     this.safeLocalStorageSet('displayMode', this.displayMode); // 同时保存全局显示模式
   } else {
     try {
-      localStorage.setItem(`displayMode_${this.currentClassId}`, this.displayMode);
-      localStorage.setItem('displayMode', this.displayMode);
+      this.storageSet(`displayMode_${this.currentClassId}`, this.displayMode);
+      this.storageSet('displayMode', this.displayMode);
     } catch (error) {
       console.error('保存显示模式失败:', error);
     }
@@ -76,6 +157,7 @@ toggleDisplayMode() {
 }
 	
   constructor(){
+    this.storagePrefix = this.resolveStorageNamespace();
     // 添加全局配置属性
     this.globalRules = []; // 全局积分规则
     this.globalShopItems = []; // 全局商店商品
@@ -89,8 +171,8 @@ toggleDisplayMode() {
     this.safeLocalStorageSet('displayMode', this.displayMode);
     this.safeLocalStorageSet(`displayMode_${this.currentClassId}`, this.displayMode);
   } else {
-    localStorage.setItem('displayMode', this.displayMode);
-    localStorage.setItem(`displayMode_${this.currentClassId}`, this.displayMode);
+    this.storageSet('displayMode', this.displayMode);
+    this.storageSet(`displayMode_${this.currentClassId}`, this.displayMode);
   }
   // 按钮 DOM 缓存（后面要改文字）
   this.toggleModeBtn = null;
@@ -383,7 +465,7 @@ async initializePetImages() {
       });
 
       // 保存更新后的 petTypes 到 localStorage
-      localStorage.setItem(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
+      this.storageSet(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
     }
     console.log('✅ 从服务器加载宠物图片成功');
   } catch (error) {
@@ -1663,7 +1745,7 @@ addPetConfigEventListeners() {
         if (type) {
           type.name = newName;
           // 保存宠物类型配置到localStorage
-          localStorage.setItem(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
+          this.storageSet(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
           // 更新当前界面显示
           this.renderPetConfig();
         }
@@ -1686,7 +1768,7 @@ addPetConfigEventListeners() {
         if (type) {
           type.emoji = newEmoji;
           // 保存宠物类型配置到localStorage
-          localStorage.setItem(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
+          this.storageSet(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
           // 更新当前界面显示
           this.renderPetConfig();
         }
@@ -1709,7 +1791,7 @@ addPetConfigEventListeners() {
         if (type) {
           type.color = newColor;
           // 保存宠物类型配置到localStorage
-          localStorage.setItem(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
+          this.storageSet(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
           // 更新当前界面显示
           this.renderPetConfig();
         }
@@ -1745,7 +1827,7 @@ addPetConfigEventListeners() {
             if (stageIndex < this.petStagesByType[petType].length) {
               this.petStagesByType[petType][stageIndex].name = newName;
               // 保存个人阶段配置到localStorage
-              localStorage.setItem(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
+              this.storageSet(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
               
               // 立即更新UI上的阶段名称标题
               const stageTitle = e.target.closest('.pet-config-level').querySelector('div[style*="font-weight: bold"]');
@@ -1757,7 +1839,7 @@ addPetConfigEventListeners() {
             // 回退到原来的逻辑（兼容性处理）
             if (stageIndex < this.petStages.length) {
               this.petStages[stageIndex].name = newName;
-              localStorage.setItem(`petStages_${this.currentClassId}`, JSON.stringify(this.petStages));
+              this.storageSet(`petStages_${this.currentClassId}`, JSON.stringify(this.petStages));
               
               const stageTitle = e.target.closest('.pet-config-level').querySelector('div[style*="font-weight: bold"]');
               if (stageTitle) {
@@ -1915,16 +1997,16 @@ saveAllPetConfig() {
     }
     
     // 保存各项数据
-    localStorage.setItem(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
-    localStorage.setItem(`petStages_${this.currentClassId}`, JSON.stringify(this.petStages));
-    localStorage.setItem(`groupStages_${this.currentClassId}`, JSON.stringify(this.groupStages)); // 保存小组等级配置
+    this.storageSet(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
+    this.storageSet(`petStages_${this.currentClassId}`, JSON.stringify(this.petStages));
+    this.storageSet(`groupStages_${this.currentClassId}`, JSON.stringify(this.groupStages)); // 保存小组等级配置
     // petImages不再保存到localStorage，改为服务器文件夹存储
-    localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
-    localStorage.setItem(`groupPets_${this.currentClassId}`, JSON.stringify(this.groupPets)); // 保存小组宠物选择
+    this.storageSet(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
+    this.storageSet(`groupPets_${this.currentClassId}`, JSON.stringify(this.groupPets)); // 保存小组宠物选择
     
     // 🆕 新增：保存按宠物类型存储的等级名称数据
     if (this.petStagesByType && typeof this.petStagesByType === 'object') {
-      localStorage.setItem(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
+      this.storageSet(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
     }
     
     this.showNotification('宠物配置保存成功！', 'success');
@@ -2103,7 +2185,7 @@ safeLocalStorageGet(key) {
       console.warn('localStorage不可用');
       return null;
     }
-    return localStorage.getItem(key);
+    return localStorage.getItem(this.storageKey(key));
   } catch (error) {
     console.error(`获取localStorage数据失败 [${key}]:`, error);
     return null;
@@ -2124,7 +2206,7 @@ safeLocalStorageSet(key, value) {
       this.clearOldCache();
     }
     
-    localStorage.setItem(key, value);
+    localStorage.setItem(this.storageKey(key), value);
     return true;
   } catch (error) {
     console.error(`设置localStorage数据失败 [${key}]:`, error);
@@ -2133,7 +2215,7 @@ safeLocalStorageSet(key, value) {
       console.warn('存储空间不足，尝试清理缓存...');
       if (this.clearOldCache()) {
         try {
-          localStorage.setItem(key, value);
+          localStorage.setItem(this.storageKey(key), value);
           return true;
         } catch (retryError) {
           console.error('清理缓存后仍无法保存数据:', retryError);
@@ -2190,7 +2272,7 @@ clearOldCache() {
       return false;
     }
     
-    // 保留必要的数据，清理可能不需要的大型历史数据
+    // 保留必要的数据，清理可能不需要的大型历史数据（仅清理当前用户）
     const keysToKeep = [
       `petTypes_${this.currentClassId}`,
       `petStages_${this.currentClassId}`,
@@ -2210,6 +2292,7 @@ clearOldCache() {
       'displayMode',
       `displayMode_${this.currentClassId}`
     ];
+    const prefixedKeep = new Set(keysToKeep.map(key => this.storageKey(key)));
     
     let clearedCount = 0;
     // 创建一个副本以避免迭代时修改集合的问题
@@ -2219,7 +2302,8 @@ clearOldCache() {
     }
     
     keys.forEach(key => {
-      if (!keysToKeep.includes(key)) {
+      if (!key || !key.startsWith(this.storagePrefix)) return;
+      if (!prefixedKeep.has(key)) {
         localStorage.removeItem(key);
         clearedCount++;
       }
@@ -2612,12 +2696,12 @@ getGroupPetImage(group) {
 
 // 保存学生宠物选择
 saveStudentPets() {
-  localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
+  this.storageSet(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
 }
 
 // 加载学生宠物选择
 loadStudentPets() {
-  const savedPets = localStorage.getItem(`studentPets_${this.currentClassId}`);
+  const savedPets = this.storageGet(`studentPets_${this.currentClassId}`);
   if (savedPets) {
     try {
       this.studentPets = JSON.parse(savedPets);
@@ -2630,7 +2714,7 @@ loadStudentPets() {
 
 // 加载小组宠物选择
 loadGroupPets() {
-  const savedPets = localStorage.getItem(`groupPets_${this.currentClassId}`);
+  const savedPets = this.storageGet(`groupPets_${this.currentClassId}`);
   if (savedPets) {
     try {
       this.groupPets = JSON.parse(savedPets);
@@ -2663,7 +2747,7 @@ init(){
   this.loadClassesFromLocalStorage(); // 然后加载班级列表
   
   // 先读取保存的模式（在加载班级数据之前）
-  const savedMode = localStorage.getItem(`displayMode_${this.currentClassId}`);
+  const savedMode = this.storageGet(`displayMode_${this.currentClassId}`);
   if (savedMode) {
     this.displayMode = savedMode;
   }
@@ -2674,7 +2758,7 @@ init(){
   this.fixExistingData();
   
   // 加载宠物类型配置（在currentClassId正确设置后）
-  const savedPetTypes = localStorage.getItem(`petTypes_${this.currentClassId}`);
+  const savedPetTypes = this.storageGet(`petTypes_${this.currentClassId}`);
   if (savedPetTypes) {
     try {
       const parsedTypes = JSON.parse(savedPetTypes);
@@ -2695,7 +2779,7 @@ init(){
   }
   
   // 加载宠物阶段配置（在currentClassId正确设置后）
-  const savedPetStages = localStorage.getItem(`petStages_${this.currentClassId}`);
+  const savedPetStages = this.storageGet(`petStages_${this.currentClassId}`);
   if (savedPetStages) {
     try {
       const parsedStages = JSON.parse(savedPetStages);
@@ -2711,7 +2795,7 @@ init(){
   }
   
   // 加载小组阶段配置（在currentClassId正确设置后）
-  const savedGroupStages = localStorage.getItem(`groupStages_${this.currentClassId}`);
+  const savedGroupStages = this.storageGet(`groupStages_${this.currentClassId}`);
   if (savedGroupStages) {
     try {
       const parsedGroupStages = JSON.parse(savedGroupStages);
@@ -2729,16 +2813,16 @@ init(){
   }
   
   // 读取临时任务积分规则
-  const tempRule = localStorage.getItem('tempTaskRule');
+  const tempRule = this.storageGet('tempTaskRule');
   if (tempRule) {
     this.applyTempTaskRule(JSON.parse(tempRule));
-    localStorage.removeItem('tempTaskRule'); // 只用一次
+    this.storageRemove('tempTaskRule'); // 只用一次
   }
   
   // 初始化配置范围
   if (!this.currentConfigScope) {
     // 检查当前班级是否有自定义配置
-    const data = localStorage.getItem(`classPointsData_${this.currentClassId}`);
+    const data = this.storageGet(`classPointsData_${this.currentClassId}`);
     if (data) {
       const parsed = JSON.parse(data);
       const hasCustomConfig = (parsed.rules && parsed.rules.length > 0) || 
@@ -2787,7 +2871,7 @@ init(){
   this.updateLockButton();
   this.renderClassSelector(); // 渲染班级选择器
   // 首次加载时把当前班级写入共享键
-localStorage.setItem('currentClassId', this.currentClassId);
+this.storageSet('currentClassId', this.currentClassId);
 
 // 全屏功能
 const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -2841,15 +2925,15 @@ function updateFullscreenButton() {
   // 加载全局配置
   loadGlobalConfig() {
     // 全局积分规则
-    const globalRulesData = localStorage.getItem('classPointsGlobalRules');
+    const globalRulesData = this.storageGet('classPointsGlobalRules');
     this.globalRules = globalRulesData ? JSON.parse(globalRulesData) : this.getDefaultRules();
     
     // 全局商店商品
-    const globalShopData = localStorage.getItem('classPointsGlobalShopItems');
+    const globalShopData = this.storageGet('classPointsGlobalShopItems');
     this.globalShopItems = globalShopData ? JSON.parse(globalShopData) : this.getDefaultShopItems();
     
     // 全局小组规则
-    const globalGroupRulesData = localStorage.getItem('classPointsGlobalGroupRules');
+    const globalGroupRulesData = this.storageGet('classPointsGlobalGroupRules');
     this.globalGroupRules = globalGroupRulesData ? JSON.parse(globalGroupRulesData) : this.getDefaultGroupRules();
     
     // 初始化当前使用的配置为全局配置
@@ -2860,9 +2944,9 @@ function updateFullscreenButton() {
   
   // 保存全局配置
   saveGlobalConfig() {
-    localStorage.setItem('classPointsGlobalRules', JSON.stringify(this.globalRules));
-    localStorage.setItem('classPointsGlobalShopItems', JSON.stringify(this.globalShopItems));
-    localStorage.setItem('classPointsGlobalGroupRules', JSON.stringify(this.globalGroupRules));
+    this.storageSet('classPointsGlobalRules', JSON.stringify(this.globalRules));
+    this.storageSet('classPointsGlobalShopItems', JSON.stringify(this.globalShopItems));
+    this.storageSet('classPointsGlobalGroupRules', JSON.stringify(this.globalGroupRules));
   }
   
   // 渲染等级积分设置
@@ -3060,7 +3144,7 @@ resetGroupToDefault(){
     
   // 加载班级列表
   loadClassesFromLocalStorage() {
-    const classesData = localStorage.getItem('classPointsClasses');
+    const classesData = this.storageGet('classPointsClasses');
     if (classesData) {
       try {
         this.classes = JSON.parse(classesData);
@@ -3102,7 +3186,7 @@ resetGroupToDefault(){
   
   // 保存班级列表到本地存储
   saveClassesToLocalStorage() {
-    localStorage.setItem('classPointsClasses', JSON.stringify(this.classes));
+    this.storageSet('classPointsClasses', JSON.stringify(this.classes));
   }
   
   // ===== 新增方法：计算时间段起止日 =====
@@ -3466,7 +3550,7 @@ saveAll(){
     scoreToPointsRatio: this.scoreToPointsRatio
     // 注意：宠物阶段数据已独立存储，不再保存到主存储中
   };
-  localStorage.setItem(`classPointsData_${this.currentClassId}`, JSON.stringify(data));
+  this.storageSet(`classPointsData_${this.currentClassId}`, JSON.stringify(data));
   
   // 保存小组等级数据到单独的存储（只保存积分范围，不保存名称）
   if (this.groupStages && Array.isArray(this.groupStages)) {
@@ -3478,12 +3562,12 @@ saveAll(){
       emoji: stage.emoji
       // 不包含name字段，因为名称已固定
     }));
-    localStorage.setItem(`groupStages_${this.currentClassId}`, JSON.stringify(groupStagesData));
+    this.storageSet(`groupStages_${this.currentClassId}`, JSON.stringify(groupStagesData));
   }
   
   // 保存学生宠物选择数据（关键修复：确保批量应用宠物数据持久化）
   if (this.studentPets && Object.keys(this.studentPets).length > 0) {
-    localStorage.setItem(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
+    this.storageSet(`studentPets_${this.currentClassId}`, JSON.stringify(this.studentPets));
   }
   
   this.updateClassStudentCount();
@@ -3505,7 +3589,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     
     // 加载按宠物类型存储的等级数据（关键修复）
     // 总是优先从localStorage加载petStagesByType数据，确保数据一致性
-    const savedPetStagesByType = localStorage.getItem(`petStagesByType_${this.currentClassId}`);
+    const savedPetStagesByType = this.storageGet(`petStagesByType_${this.currentClassId}`);
     if (savedPetStagesByType) {
       try {
         const parsedPetStagesByType = JSON.parse(savedPetStagesByType);
@@ -3525,7 +3609,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     }
     
     // 加载宠物类型配置
-    const savedPetTypes = localStorage.getItem(`petTypes_${this.currentClassId}`);
+    const savedPetTypes = this.storageGet(`petTypes_${this.currentClassId}`);
     if (savedPetTypes) {
       try {
         const parsedTypes = JSON.parse(savedPetTypes);
@@ -3551,7 +3635,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     // 加载个人宠物阶段配置（仅在需要时覆盖）
     // 只有当明确允许覆盖且petStagesByType为空时才加载旧的个人宠物阶段配置
     if (preventPetStagesByTypeOverride === false && (!this.petStagesByType || Object.keys(this.petStagesByType).length === 0)) {
-      const savedPetStages = localStorage.getItem(`petStages_${this.currentClassId}`);
+      const savedPetStages = this.storageGet(`petStages_${this.currentClassId}`);
       if (savedPetStages) {
         try {
           const parsedStages = JSON.parse(savedPetStages);
@@ -3566,7 +3650,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     }
     
     // 加载小组阶段配置
-    const savedGroupStages = localStorage.getItem(`groupStages_${this.currentClassId}`);
+    const savedGroupStages = this.storageGet(`groupStages_${this.currentClassId}`);
     if (savedGroupStages) {
       try {
         const parsedGroupStages = JSON.parse(savedGroupStages);
@@ -3604,7 +3688,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     // 注意：小组等级配置已在loadFromLocalStorage()中加载，此处不再重复加载
     
     // 加载学生宠物选择数据
-    const savedStudentPets = localStorage.getItem(`studentPets_${this.currentClassId}`);
+    const savedStudentPets = this.storageGet(`studentPets_${this.currentClassId}`);
     if (savedStudentPets) {
       try {
         const parsedStudentPets = JSON.parse(savedStudentPets);
@@ -3618,7 +3702,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     }
     
     // 加载小组宠物选择数据（新增）
-    const savedGroupPets = localStorage.getItem(`groupPets_${this.currentClassId}`);
+    const savedGroupPets = this.storageGet(`groupPets_${this.currentClassId}`);
     if (savedGroupPets) {
       try {
         const parsedGroupPets = JSON.parse(savedGroupPets);
@@ -3632,7 +3716,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     }
     
     // 加载小组头像数据（新增）
-    const savedGroupAvatars = localStorage.getItem(`groupAvatars_${this.currentClassId}`);
+    const savedGroupAvatars = this.storageGet(`groupAvatars_${this.currentClassId}`);
     if (savedGroupAvatars) {
       try {
         const parsedGroupAvatars = JSON.parse(savedGroupAvatars);
@@ -3655,7 +3739,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
 
 // 从旧存储方式加载个人等级数据
 loadPetStagesFromLegacyStorage() {
-  const savedPetStages = localStorage.getItem(`petStages_${this.currentClassId}`);
+  const savedPetStages = this.storageGet(`petStages_${this.currentClassId}`);
   if (savedPetStages) {
     try {
       const parsedPetStages = JSON.parse(savedPetStages);
@@ -3687,7 +3771,7 @@ loadPetStagesFromLegacyStorage() {
 loadFromLocalStorage(){
   if (!this.currentClassId) return;
   
-  const data = localStorage.getItem(`classPointsData_${this.currentClassId}`);
+  const data = this.storageGet(`classPointsData_${this.currentClassId}`);
   if(data){
     try{
       const parsed = JSON.parse(data);
@@ -3698,7 +3782,7 @@ loadFromLocalStorage(){
       this.scoreToPointsRatio = parsed.scoreToPointsRatio || 10;
       
       // 优先从按宠物类型独立存储的petStagesByType加载个人等级数据
-      const savedPetStagesByType = localStorage.getItem(`petStagesByType_${this.currentClassId}`);
+      const savedPetStagesByType = this.storageGet(`petStagesByType_${this.currentClassId}`);
       if (savedPetStagesByType) {
         try {
           const parsedPetStagesByType = JSON.parse(savedPetStagesByType);
@@ -3726,7 +3810,7 @@ loadFromLocalStorage(){
       }
       
       // 优先从单独的groupStages存储加载小组等级数据
-      const savedGroupStages = localStorage.getItem(`groupStages_${this.currentClassId}`);
+      const savedGroupStages = this.storageGet(`groupStages_${this.currentClassId}`);
       if (savedGroupStages) {
         try {
           const parsedGroupStages = JSON.parse(savedGroupStages);
@@ -3799,7 +3883,7 @@ loadFromLocalStorage(){
   }
   
   // 加载学生宠物分配数据（无论是否有班级数据）
-  const savedStudentPets = localStorage.getItem(`studentPets_${this.currentClassId}`);
+  const savedStudentPets = this.storageGet(`studentPets_${this.currentClassId}`);
   if (savedStudentPets) {
     try {
       const parsedStudentPets = JSON.parse(savedStudentPets);
@@ -3816,8 +3900,8 @@ loadFromLocalStorage(){
   // 使用true参数，防止覆盖已加载的按宠物类型存储的等级数据
   this.loadAllPetConfig(true);
   
-  const title = localStorage.getItem(`mainTitle_${this.currentClassId}`) || 
-                localStorage.getItem('mainTitle') || 
+  const title = this.storageGet(`mainTitle_${this.currentClassId}`) || 
+                this.storageGet('mainTitle') || 
                 `${this.currentClassName} - 班级积分宠物成长系统`;
   document.getElementById('mainTitle').textContent = title;
 }
@@ -4002,7 +4086,7 @@ switchClass(classId) {
   this.loadAllPetConfig();
   
   // 加载新班级的显示模式
-  const savedMode = localStorage.getItem(`displayMode_${this.currentClassId}`);
+  const savedMode = this.storageGet(`displayMode_${this.currentClassId}`);
   if (savedMode) {
     this.displayMode = savedMode;
   }
@@ -4034,7 +4118,7 @@ switchClass(classId) {
   
   console.log(`已切换到班级: ${this.currentClassName}, 显示模式: ${this.displayMode}`);
   // 把当前班级 ID 写入全局缓存，供其他页面实时读取
-localStorage.setItem('currentClassId', classId);
+this.storageSet('currentClassId', classId);
 }
   
   // 打开班级管理模态框
@@ -4216,8 +4300,8 @@ editClass(classId) {
     this.saveClassesToLocalStorage();
     
     // 删除本地存储中的数据
-    localStorage.removeItem(`classPointsData_${classId}`);
-    localStorage.removeItem(`mainTitle_${classId}`);
+    this.storageRemove(`classPointsData_${classId}`);
+    this.storageRemove(`mainTitle_${classId}`);
     
     this.renderClassList();
     this.renderClassSelector();
@@ -4239,7 +4323,7 @@ editClass(classId) {
     
     if (historyToggleBtn && historyList) {
       // 初始化折叠状态（从localStorage读取）
-      const isCollapsed = localStorage.getItem('historyCollapsed') === 'true';
+      const isCollapsed = this.storageGet('historyCollapsed') === 'true';
       if (isCollapsed) {
         historyList.classList.add('collapsed');
         historyToggleBtn.classList.add('collapsed');
@@ -4254,13 +4338,13 @@ editClass(classId) {
           historyList.classList.remove('collapsed');
           historyToggleBtn.classList.remove('collapsed');
           historyToggleBtn.querySelector('.toggle-text').textContent = '折叠';
-          localStorage.setItem('historyCollapsed', 'false');
+          this.storageSet('historyCollapsed', 'false');
         } else {
           // 折叠
           historyList.classList.add('collapsed');
           historyToggleBtn.classList.add('collapsed');
           historyToggleBtn.querySelector('.toggle-text').textContent = '展开';
-          localStorage.setItem('historyCollapsed', 'true');
+          this.storageSet('historyCollapsed', 'true');
         }
       });
     }
@@ -4625,6 +4709,8 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
 			  this.renderPetConfig();
 			} else if (tabName === 'security') {
 			  this.renderSecuritySettings();
+			} else if (tabName === 'account') {
+			  this.renderAccountSettings();
 			}
 		  }
 		}
@@ -4651,9 +4737,9 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
     document.getElementById('mainTitle').addEventListener('blur',()=>{
       if(this.isLocked) return;
       if (this.currentClassId) {
-        localStorage.setItem(`mainTitle_${this.currentClassId}`, document.getElementById('mainTitle').textContent);
+        this.storageSet(`mainTitle_${this.currentClassId}`, document.getElementById('mainTitle').textContent);
       } else {
-        localStorage.setItem('mainTitle', document.getElementById('mainTitle').textContent);
+        this.storageSet('mainTitle', document.getElementById('mainTitle').textContent);
       }
     });
     
@@ -4690,6 +4776,42 @@ document.getElementById('ruleTxtImport')?.addEventListener('change', e => {
   reader.readAsText(file, 'utf-8');
 });
 
+// 个人规则 Excel 导入
+document.getElementById('ruleExcelImport')?.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = new Uint8Array(reader.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const newRules = [];
+      rows.forEach(row => {
+        const name = row && row[0] != null ? String(row[0]).trim() : '';
+        const ptsRaw = row && row[1] != null ? String(row[1]).trim() : '';
+        if (!name) return;
+        const pts = Number(ptsRaw);
+        if (Number.isNaN(pts)) return;
+        newRules.push({ name, points: pts });
+      });
+      if (!newRules.length) throw '没有有效规则';
+      const target = this.currentConfigScope === 'global' ? this.globalRules : this.rules;
+      target.push(...newRules);
+      if (this.currentConfigScope === 'global') this.saveGlobalConfig();
+      this.saveAll();
+      this.renderRuleList();
+      alert(`已成功导入 ${newRules.length} 条个人规则！`);
+    } catch (err) {
+      alert('导入失败：' + err);
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
 // 个人规则 txt 导出
 document.getElementById('ruleTxtExport')?.addEventListener('click', () => {
   const target = this.currentConfigScope === 'global' ? this.globalRules : this.rules;
@@ -4697,6 +4819,18 @@ document.getElementById('ruleTxtExport')?.addEventListener('click', () => {
   const content = target.map(r => `${r.name}|${r.points}`).join('\n');
   const filename = `个人积分规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.txt`;
   this.exportFile(filename, content, 'text/plain;charset=utf-8');
+});
+
+// 个人规则 Excel 导出
+document.getElementById('ruleExcelExport')?.addEventListener('click', () => {
+  const target = this.currentConfigScope === 'global' ? this.globalRules : this.rules;
+  if (!target.length) return alert('当前没有个人规则可导出');
+  const excelData = target.map(r => [r.name, r.points]);
+  const ws = XLSX.utils.aoa_to_sheet(excelData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '个人规则');
+  const filename = `个人积分规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`;
+  XLSX.writeFile(wb, filename);
 });
 	
 // 小组规则 txt 导入
@@ -4729,6 +4863,42 @@ document.getElementById('groupRuleTxtImport')?.addEventListener('change', e => {
   reader.readAsText(file, 'utf-8');
 });
 
+// 小组规则 Excel 导入
+document.getElementById('groupRuleExcelImport')?.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = new Uint8Array(reader.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const newRules = [];
+      rows.forEach(row => {
+        const name = row && row[0] != null ? String(row[0]).trim() : '';
+        const ptsRaw = row && row[1] != null ? String(row[1]).trim() : '';
+        if (!name) return;
+        const pts = Number(ptsRaw);
+        if (Number.isNaN(pts)) return;
+        newRules.push({ name, points: pts });
+      });
+      if (!newRules.length) throw '没有有效规则';
+      const target = this.currentConfigScope === 'global' ? this.globalGroupRules : this.groupRules;
+      target.push(...newRules);
+      if (this.currentConfigScope === 'global') this.saveGlobalConfig();
+      this.saveAll();
+      this.renderGroupRuleList();
+      alert(`已成功导入 ${newRules.length} 条小组规则！`);
+    } catch (err) {
+      alert('导入失败：' + err);
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
 // 小组规则 txt 导出
 document.getElementById('groupRuleTxtExport')?.addEventListener('click', () => {
   const target = this.currentConfigScope === 'global' ? this.globalGroupRules : this.groupRules;
@@ -4738,64 +4908,149 @@ document.getElementById('groupRuleTxtExport')?.addEventListener('click', () => {
   this.exportFile(filename, content, 'text/plain;charset=utf-8');
 });
 
-// 商店规则导入
-document.getElementById('shopRuleImport')?.addEventListener('change', e => {
+// 商店规则 TXT 导入
+document.getElementById('shopRuleTxtImport')?.addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const data = JSON.parse(reader.result);
-      if (!Array.isArray(data)) throw '文件格式不正确，应为商品数组';
-      
-      // 验证每个商品项的格式
-      const validItems = data.filter(item => {
-        return item && typeof item.name === 'string' && 
-               typeof item.cost === 'number' && item.cost > 0 &&
-               (item.stock === null || (typeof item.stock === 'number' && item.stock >= 0));
-      });
-      
-      if (!validItems.length) throw '没有有效的商品数据';
-      
-      // 根据当前配置范围决定导入到哪个数组
-      const targetArray = this.currentConfigScope === 'global' ? this.globalShopItems : this.shopItems;
-      
-      // 询问用户是否替换现有数据
-      const shouldReplace = confirm(`检测到 ${validItems.length} 个有效商品。\n\n选择"确定"将替换现有商品，选择"取消"将追加到现有商品列表。`);
-      
-      if (shouldReplace) {
-        // 替换现有数据
-        targetArray.length = 0;
-        targetArray.push(...validItems);
-      } else {
-        // 追加到现有数据
-        targetArray.push(...validItems);
+      const lines = reader.result.split(/\r?\n/).filter(Boolean);
+      const newItems = [];
+      for (const ln of lines) {
+        const line = ln.trim();
+        if (!line) continue;
+        const parts = line.includes('|')
+          ? line.split('|').map(s => s.trim())
+          : line.split(/\s+/).map(s => s.trim());
+        const name = parts[0] || '';
+        const costRaw = parts[1] || '';
+        const stockRaw = parts[2] || '';
+        if (!name) continue;
+        const cost = Number(costRaw);
+        if (Number.isNaN(cost) || cost <= 0) continue;
+        let stock = null;
+        if (stockRaw && stockRaw !== '无限' && stockRaw !== '无限库存') {
+          const stockNum = Number(stockRaw);
+          if (!Number.isNaN(stockNum) && stockNum >= 0) {
+            stock = stockNum;
+          }
+        }
+        newItems.push({ name, cost, stock });
       }
-      
-      // 保存数据
+      if (!newItems.length) throw '没有有效的商品数据';
+      const targetArray = this.currentConfigScope === 'global' ? this.globalShopItems : this.shopItems;
+      const shouldReplace = confirm(`检测到 ${newItems.length} 个有效商品。\n\n选择"确定"将替换现有商品，选择"取消"将追加到现有商品列表。`);
+      if (shouldReplace) {
+        targetArray.length = 0;
+        targetArray.push(...newItems);
+      } else {
+        targetArray.push(...newItems);
+      }
       if (this.currentConfigScope === 'global') {
         this.saveGlobalConfig();
       }
       this.saveAll();
       this.renderShopList();
-      
-      alert(`成功导入 ${validItems.length} 个商品！`);
+      alert(`成功导入 ${newItems.length} 个商品！`);
     } catch (err) {
       alert('导入失败：' + err);
-      e.target.value = ''; // 允许重复导入同一文件
+    } finally {
+      e.target.value = '';
     }
   };
   reader.readAsText(file, 'utf-8');
 });
 
-// 商店规则导出
-document.getElementById('shopRuleExport')?.addEventListener('click', () => {
+// 商店规则 Excel 导入
+document.getElementById('shopRuleExcelImport')?.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = new Uint8Array(reader.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const newItems = [];
+      rows.forEach(row => {
+        const name = row && row[0] != null ? String(row[0]).trim() : '';
+        const costRaw = row && row[1] != null ? String(row[1]).trim() : '';
+        const stockRaw = row && row[2] != null ? String(row[2]).trim() : '';
+        if (!name) return;
+        const cost = Number(costRaw);
+        if (Number.isNaN(cost) || cost <= 0) return;
+        let stock = null;
+        if (stockRaw && stockRaw !== '无限' && stockRaw !== '无限库存') {
+          const stockNum = Number(stockRaw);
+          if (!Number.isNaN(stockNum) && stockNum >= 0) {
+            stock = stockNum;
+          }
+        }
+        newItems.push({ name, cost, stock });
+      });
+      if (!newItems.length) throw '没有有效的商品数据';
+      const targetArray = this.currentConfigScope === 'global' ? this.globalShopItems : this.shopItems;
+      const shouldReplace = confirm(`检测到 ${newItems.length} 个有效商品。\n\n选择"确定"将替换现有商品，选择"取消"将追加到现有商品列表。`);
+      if (shouldReplace) {
+        targetArray.length = 0;
+        targetArray.push(...newItems);
+      } else {
+        targetArray.push(...newItems);
+      }
+      if (this.currentConfigScope === 'global') {
+        this.saveGlobalConfig();
+      }
+      this.saveAll();
+      this.renderShopList();
+      alert(`成功导入 ${newItems.length} 个商品！`);
+    } catch (err) {
+      alert('导入失败：' + err);
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// 商店规则 TXT 导出
+document.getElementById('shopRuleTxtExport')?.addEventListener('click', () => {
   const target = this.currentConfigScope === 'global' ? this.globalShopItems : this.shopItems;
   if (!target.length) return alert('当前没有商品可导出');
-  
-  const data = JSON.stringify(target, null, 2);
-  const filename = `商店商品规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
-  this.exportFile(filename, data, 'application/json;charset=utf-8');
+  const content = target.map(item => {
+    const stock = item.stock === null || item.stock === undefined ? '无限' : item.stock;
+    return `${item.name}|${item.cost}|${stock}`;
+  }).join('\n');
+  const filename = `商店商品规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.txt`;
+  this.exportFile(filename, content, 'text/plain;charset=utf-8');
+});
+
+// 商店规则 Excel 导出
+document.getElementById('shopRuleExcelExport')?.addEventListener('click', () => {
+  const target = this.currentConfigScope === 'global' ? this.globalShopItems : this.shopItems;
+  if (!target.length) return alert('当前没有商品可导出');
+  const excelData = target.map(item => {
+    const stock = item.stock === null || item.stock === undefined ? '无限' : item.stock;
+    return [item.name, item.cost, stock];
+  });
+  const ws = XLSX.utils.aoa_to_sheet(excelData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '商店商品');
+  const filename = `商店商品规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`;
+  XLSX.writeFile(wb, filename);
+});
+
+// 小组规则 Excel 导出
+document.getElementById('groupRuleExcelExport')?.addEventListener('click', () => {
+  const target = this.currentConfigScope === 'global' ? this.globalGroupRules : this.groupRules;
+  if (!target.length) return alert('当前没有小组规则可导出');
+  const excelData = target.map(r => [r.name, r.points]);
+  const ws = XLSX.utils.aoa_to_sheet(excelData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '小组规则');
+  const filename = `小组积分规则_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`;
+  XLSX.writeFile(wb, filename);
 });
 
 // 个人规则清空
@@ -4906,6 +5161,9 @@ document.getElementById('clearShopRulesBtn')?.addEventListener('click', () => {
       if (tab === 'security') {
         this.renderSecuritySettings();
       }
+	  if (tab === 'account') {
+		this.renderAccountSettings();
+	  }
     }
   }
 
@@ -6507,7 +6765,7 @@ if (historyTabBtn && petTabBtn) {
 	  } else {
 		// 使用班级配置
 		// 如果班级有自定义配置则使用，否则使用全局配置
-		const data = localStorage.getItem(`classPointsData_${this.currentClassId}`);
+		const data = this.storageGet(`classPointsData_${this.currentClassId}`);
 		if (data) {
 		  const parsed = JSON.parse(data);
 		  this.rules = parsed.rules && parsed.rules.length > 0 ? parsed.rules : this.globalRules;
@@ -6654,6 +6912,69 @@ if (historyTabBtn && petTabBtn) {
 	  
 	  // 重新绑定安全设置相关事件（只保留安全相关事件）
 	  this.attachSecurityEvents();
+	}
+
+	async renderAccountSettings() {
+	  const accountTab = document.getElementById('accountTab');
+	  if (!accountTab) return;
+
+	  const user = (window.authGuard && typeof authGuard.getCurrentUser === 'function')
+		? authGuard.getCurrentUser()
+		: null;
+	  let isDesktop = !!(user && user.is_desktop);
+
+	  if (!isDesktop && window.authGuard && typeof authGuard.isDesktopMode === 'function') {
+		try {
+		  isDesktop = await authGuard.isDesktopMode();
+		} catch (e) {
+		  isDesktop = false;
+		}
+	  }
+
+	  const rawName = user && (user.account || user.username || user.name || user.phone || user.id);
+	  const username = rawName ? String(rawName) : '未登录';
+
+	  const expiryInfo = this.formatAccountExpiry(user ? user.expires_at : null);
+	  const expiryText = isDesktop ? '' : (expiryInfo.expired
+		? `<span style="color:#e53e3e;font-weight:600;">${this.escapeHtml(expiryInfo.text)}（已过期）</span>`
+		: this.escapeHtml(expiryInfo.text));
+
+	  accountTab.innerHTML = `
+		<div class="account-section">
+		  <h4>我的账户</h4>
+		  <div class="account-info-grid">
+			<div class="label">用户名</div>
+			<div>${this.escapeHtml(isDesktop ? '离线版' : username)}</div>
+			${isDesktop ? '' : `
+			<div class="label">到期时间</div>
+			<div>${expiryText}</div>
+			`}
+		  </div>
+		  ${isDesktop ? `<div style="margin-top: 10px;"><span class="account-badge">离线版</span></div>` : ''}
+		  <div class="account-actions">
+			<button class="btn btn-secondary" id="accountLogoutBtn">退出</button>
+		  </div>
+		</div>
+	  `;
+
+	  this.attachAccountEvents();
+	}
+
+	attachAccountEvents() {
+	  const logoutBtn = document.getElementById('accountLogoutBtn');
+	  if (!logoutBtn) return;
+	  logoutBtn.addEventListener('click', () => {
+		if (window.authGuard && typeof authGuard.logout === 'function') {
+		  authGuard.logout('/static/points-login.html');
+		  return;
+		}
+		try {
+		  this.storageRemove('session_token', true);
+		  this.storageRemove('user_info', true);
+		} finally {
+		  window.location.href = '/static/points-login.html';
+		}
+	  });
 	}
 
 	// 修改 attachSecurityEvents 方法，只保留安全相关事件
@@ -7075,7 +7396,7 @@ if (historyTabBtn && petTabBtn) {
   // 新增：当全局配置改变时，更新所有使用全局配置的班级
   updateAllClassesWithGlobalConfig() {
     this.classes.forEach(cls => {
-      const classData = localStorage.getItem(`classPointsData_${cls.id}`);
+      const classData = this.storageGet(`classPointsData_${cls.id}`);
       if (classData) {
         const data = JSON.parse(classData);
         // 如果班级没有自定义配置，则更新为最新的全局配置
@@ -7089,7 +7410,7 @@ if (historyTabBtn && petTabBtn) {
           data.groupRules = this.globalGroupRules;
         }
         
-        localStorage.setItem(`classPointsData_${cls.id}`, JSON.stringify(data));
+        this.storageSet(`classPointsData_${cls.id}`, JSON.stringify(data));
       }
     });
   }
@@ -10251,13 +10572,13 @@ getStudentPetName(student) {
     groupAvatars[groupName] = emoji;
     
     // 保存到本地存储
-    localStorage.setItem(`groupAvatars_${this.currentClassId}`, JSON.stringify(groupAvatars));
+    this.storageSet(`groupAvatars_${this.currentClassId}`, JSON.stringify(groupAvatars));
   }
   
   // 加载小组头像数据
   loadGroupAvatars() {
     try {
-      const data = localStorage.getItem(`groupAvatars_${this.currentClassId}`);
+      const data = this.storageGet(`groupAvatars_${this.currentClassId}`);
       return data ? JSON.parse(data) : {};
     } catch (error) {
       console.error('加载小组头像数据失败:', error);
@@ -10291,7 +10612,7 @@ getStudentPetName(student) {
 		this.saveAll();
 		
 		if (this.currentClassId) {
-		  localStorage.removeItem(`mainTitle_${this.currentClassId}`);
+		  this.storageRemove(`mainTitle_${this.currentClassId}`);
 		}
 		
 		this.renderStudents();
@@ -10726,7 +11047,7 @@ exportBackup(){
 	// 确保全局配置更新方法正确
 	updateAllClassesWithGlobalConfig() {
 	  this.classes.forEach(cls => {
-		const classData = localStorage.getItem(`classPointsData_${cls.id}`);
+		const classData = this.storageGet(`classPointsData_${cls.id}`);
 		if (classData) {
 		  try {
 			const data = JSON.parse(classData);
@@ -10741,7 +11062,7 @@ exportBackup(){
 			  data.groupRules = this.globalGroupRules;
 			}
 			
-			localStorage.setItem(`classPointsData_${cls.id}`, JSON.stringify(data));
+			this.storageSet(`classPointsData_${cls.id}`, JSON.stringify(data));
 		  } catch (e) {
 			console.error(`更新班级 ${cls.name} 配置失败:`, e);
 		  }
