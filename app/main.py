@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .database import init_db, get_data_dir
-from .routes import invite_codes, members, query_codes, students, points, auth, activation_codes
+from .routes import invite_codes, members, query_codes, students, points, auth, activation_codes, points_admin
 
 app = FastAPI(
     title="学校成绩管理系统",
@@ -36,6 +36,7 @@ app.include_router(activation_codes.router)
 app.include_router(query_codes.router)
 app.include_router(students.router)
 app.include_router(points.router)
+app.include_router(points_admin.router)
 
 STATIC_DIR = Path(__file__).parent / "static"
 INDEX_FILE = STATIC_DIR / "grades.html"
@@ -64,6 +65,30 @@ def serve_points():
     if points_file.exists():
         return FileResponse(points_file)
     raise HTTPException(status_code=404, detail="积分系统页面未找到")
+
+
+@app.get("/points-login.html", include_in_schema=False)
+def serve_points_login():
+    f = STATIC_DIR / "points-login.html"
+    if f.exists():
+        return FileResponse(f)
+    raise HTTPException(status_code=404, detail="积分系统登录页面未找到")
+
+
+@app.get("/points-register.html", include_in_schema=False)
+def serve_points_register():
+    f = STATIC_DIR / "points-register.html"
+    if f.exists():
+        return FileResponse(f)
+    raise HTTPException(status_code=404, detail="积分系统注册页面未找到")
+
+
+@app.get("/points-admin.html", include_in_schema=False)
+def serve_points_admin():
+    f = STATIC_DIR / "points-admin.html"
+    if f.exists():
+        return FileResponse(f)
+    raise HTTPException(status_code=404, detail="积分系统管理后台未找到")
 
 
 @app.get("/healthz", response_class=JSONResponse, tags=["system"])

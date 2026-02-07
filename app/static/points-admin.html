@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 积分宠物系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5; min-height: 100vh;
+        }
+        .login-gate {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .login-box {
+            background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%; max-width: 400px; padding: 40px; border: 1px solid #e0e0e0;
+        }
+        .login-box h1 { text-align: center; font-size: 24px; color: #333; margin-bottom: 8px; }
+        .login-box p { text-align: center; color: #666; font-size: 14px; margin-bottom: 24px; }
+        .admin-panel { display: none; }
+        .admin-header {
+            background: white; border-bottom: 1px solid #e0e0e0; padding: 16px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .admin-header h1 { font-size: 20px; color: #333; }
+        .admin-header .btn-logout {
+            padding: 6px 16px; background: #f5f5f5; border: 1px solid #ddd;
+            border-radius: 4px; cursor: pointer; font-size: 13px; color: #666;
+        }
+        .admin-header .btn-logout:hover { background: #eee; }
+        .tabs {
+            display: flex; background: white; border-bottom: 1px solid #e0e0e0; padding: 0 24px;
+        }
+        .tab-btn {
+            padding: 12px 20px; border: none; background: none; cursor: pointer;
+            font-size: 14px; color: #666; border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn.active { color: #333; border-bottom-color: #333; font-weight: 500; }
+        .tab-btn:hover { color: #333; }
+        .tab-content { display: none; padding: 24px; }
+        .tab-content.active { display: block; }
+        .toolbar {
+            display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 16px; border: 1px solid #ddd; border-radius: 4px;
+            cursor: pointer; font-size: 13px; background: white; transition: all 0.2s;
+        }
+        .btn:hover { background: #f5f5f5; }
+        .btn-primary { background: #333; color: white; border-color: #333; }
+        .btn-primary:hover { background: #000; }
+        .btn-danger { color: #c33; border-color: #fcc; }
+        .btn-danger:hover { background: #fee; }
+        .btn-success { color: #2a7; border-color: #bec; }
+        .btn-success:hover { background: #efe; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        input, select {
+            padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;
+            font-size: 13px; transition: border-color 0.2s;
+        }
+        input:focus, select:focus { outline: none; border-color: #333; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+        th { background: #fafafa; font-weight: 500; color: #666; }
+        td { color: #333; }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500;
+        }
+        .badge-green { background: #efe; color: #2a7; }
+        .badge-red { background: #fee; color: #c33; }
+        .badge-gray { background: #f5f5f5; color: #999; }
+        .badge-blue { background: #eef; color: #36c; }
+        .stats-row { display: flex; gap: 16px; margin-bottom: 20px; }
+        .stat-card {
+            flex: 1; background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+            padding: 16px; text-align: center;
+        }
+        .stat-card .num { font-size: 28px; font-weight: 600; color: #333; }
+        .stat-card .label { font-size: 13px; color: #666; margin-top: 4px; }
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: white; border-radius: 8px; padding: 24px; width: 100%;
+            max-width: 440px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .modal h3 { font-size: 18px; color: #333; margin-bottom: 16px; }
+        .modal .form-group { margin-bottom: 14px; }
+        .modal .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #333; font-weight: 500; }
+        .modal .form-group input, .modal .form-group select {
+            width: 100%; padding: 10px 12px;
+        }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .alert-inline {
+            padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; font-size: 13px; display: none;
+        }
+        .alert-error { background: #fee; color: #c33; border: 1px solid #fcc; }
+        .alert-success { background: #efe; color: #3c3; border: 1px solid #cfc; }
+        .empty-tip { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<!-- 密码门禁 -->
+<div class="login-gate" id="loginGate">
+    <div class="login-box">
+        <h1>管理后台</h1>
+        <p>积分宠物系统管理</p>
+        <div id="gateAlert" class="alert-inline alert-error"></div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <input type="password" id="adminPwd" placeholder="请输入管理密码" style="width:100%;padding:12px 16px;font-size:14px;">
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:12px;font-size:16px;" onclick="verifyAdmin()">进入管理后台</button>
+    </div>
+</div>
+
+<!-- 管理面板 -->
+<div class="admin-panel" id="adminPanel">
+    <div class="admin-header">
+        <h1>积分宠物系统 - 管理后台</h1>
+        <button class="btn-logout" onclick="logout()">退出</button>
+    </div>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('users')">用户管理</button>
+        <button class="tab-btn" onclick="switchTab('codes')">激活码管理</button>
+    </div>
+
+    <!-- 用户管理 Tab -->
+    <div class="tab-content active" id="tab-users">
+        <div class="toolbar">
+            <input type="text" id="userKeyword" placeholder="搜索用户名..." style="width:200px;">
+            <button class="btn" onclick="loadUsers()">搜索</button>
+            <button class="btn btn-primary" onclick="showCreateUser()">新增用户</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th><th>用户名</th><th>VIP</th><th>状态</th>
+                    <th>注册时间</th><th>到期时间</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="usersBody"><tr><td colspan="7" class="empty-tip">加载中...</td></tr></tbody>
+        </table>
+    </div>
+
+    <!-- 激活码管理 Tab -->
+    <div class="tab-content" id="tab-codes">
+        <div class="stats-row" id="codeStats"></div>
+        <div class="toolbar">
+            <select id="codeType">
+                <option value="1">天卡 (1天)</option>
+                <option value="30">月卡 (30天)</option>
+                <option value="90">季卡 (90天)</option>
+                <option value="365" selected>年卡 (365天)</option>
+            </select>
+            <input type="number" id="codeCount" value="1" min="1" max="500" style="width:80px;" placeholder="数量">
+            <button class="btn btn-primary" onclick="generateCodes()">生成激活码</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>激活码</th><th>有效天数</th><th>状态</th>
+                    <th>生成时间</th><th>使用时间</th><th>激活用户</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="codesBody"><tr><td colspan="7" class="empty-tip">加载中...</td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 新增用户弹窗 -->
+<div class="modal-overlay" id="createUserModal">
+    <div class="modal">
+        <h3>新增用户</h3>
+        <div id="createUserAlert" class="alert-inline alert-error"></div>
+        <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="newUsername" placeholder="3-64个字符" minlength="3" maxlength="64">
+        </div>
+        <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="newPassword" placeholder="至少6个字符" minlength="6">
+        </div>
+        <div class="form-group">
+            <label>有效期</label>
+            <select id="newValidDays">
+                <option value="1">1天</option>
+                <option value="30">30天</option>
+                <option value="90">90天</option>
+                <option value="365" selected>365天</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeModal('createUserModal')">取消</button>
+            <button class="btn btn-primary" onclick="createUser()">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑用户弹窗 -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal">
+        <h3>编辑用户</h3>
+        <div id="editUserAlert" class="alert-inline alert-error"></div>
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="editUsername" disabled style="background:#f5f5f5;">
+        </div>
+        <div class="form-group">
+            <label>新密码 (留空不修改)</label>
+            <input type="password" id="editPassword" placeholder="留空则不修改">
+        </div>
+        <div class="form-group">
+            <label>续期天数 (留空不续期)</label>
+            <select id="editExtendDays">
+                <option value="">不续期</option>
+                <option value="1">1天</option>
+                <option value="30">30天</option>
+                <option value="90">90天</option>
+                <option value="365">365天</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeModal('editUserModal')">取消</button>
+            <button class="btn btn-primary" onclick="updateUser()">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let adminPassword = '';
+const API = '/api/points-admin';
+
+function fmt(dt) {
+    if (!dt) return '-';
+    const d = new Date(dt);
+    return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+}
+
+function showInlineAlert(id, msg, type='error') {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'alert-inline alert-' + type;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+        b.classList.toggle('active', b.textContent.includes(name === 'users' ? '用户' : '激活码'));
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'codes') { loadCodes(); loadCodeStats(); }
+    if (name === 'users') { loadUsers(); }
+}
+
+// ========== 密码验证 ==========
+async function verifyAdmin() {
+    const pwd = document.getElementById('adminPwd').value;
+    if (!pwd) { showInlineAlert('gateAlert', '请输入密码'); return; }
+    try {
+        const resp = await fetch(API + '/verify-admin', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({password: pwd})
+        });
+        if (resp.ok) {
+            adminPassword = pwd;
+            document.getElementById('loginGate').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            loadUsers();
+        } else {
+            showInlineAlert('gateAlert', '密码错误');
+        }
+    } catch(e) { showInlineAlert('gateAlert', '网络错误'); }
+}
+
+document.getElementById('adminPwd').addEventListener('keydown', e => {
+    if (e.key === 'Enter') verifyAdmin();
+});
+
+function logout() {
+    adminPassword = '';
+    document.getElementById('adminPanel').style.display = 'none';
+    document.getElementById('loginGate').style.display = 'flex';
+    document.getElementById('adminPwd').value = '';
+}
+
+// ========== 用户管理 ==========
+async function loadUsers() {
+    const keyword = document.getElementById('userKeyword').value.trim();
+    let url = API + '/users?password=' + encodeURIComponent(adminPassword);
+    if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) { document.getElementById('usersBody').innerHTML = '<tr><td colspan="7" class="empty-tip">加载失败</td></tr>'; return; }
+        const users = await resp.json();
+        renderUsers(users);
+    } catch(e) { document.getElementById('usersBody').innerHTML = '<tr><td colspan="7" class="empty-tip">网络错误</td></tr>'; }
+}
+
+function renderUsers(users) {
+    const tbody = document.getElementById('usersBody');
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无用户</td></tr>'; return; }
+    tbody.innerHTML = users.map(u => {
+        const now = new Date();
+        const expired = u.expires_at && new Date(u.expires_at) < now;
+        const statusBadge = !u.is_active
+            ? '<span class="badge badge-red">已禁用</span>'
+            : expired
+                ? '<span class="badge badge-gray">已过期</span>'
+                : '<span class="badge badge-green">正常</span>';
+        return `<tr>
+            <td>${u.id}</td>
+            <td>${u.account}</td>
+            <td><span class="badge badge-blue">VIP${u.vip_level}</span></td>
+            <td>${statusBadge}</td>
+            <td>${fmt(u.registered_at)}</td>
+            <td>${fmt(u.expires_at)}</td>
+            <td>
+                <button class="btn btn-sm" onclick="showEditUser(${u.id},'${u.account}')">编辑</button>
+                <button class="btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleUser(${u.id},${!u.is_active})">${u.is_active ? '禁用' : '启用'}</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.account}')">删除</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function showCreateUser() {
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newValidDays').value = '365';
+    document.getElementById('createUserModal').classList.add('show');
+}
+
+async function createUser() {
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newPassword').value;
+    const valid_days = parseInt(document.getElementById('newValidDays').value);
+    if (!username || username.length < 3) { showInlineAlert('createUserAlert','用户名至少3个字符'); return; }
+    if (!password || password.length < 6) { showInlineAlert('createUserAlert','密码至少6个字符'); return; }
+    try {
+        const resp = await fetch(API + '/users?password=' + encodeURIComponent(adminPassword), {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({username, password, valid_days})
+        });
+        if (resp.ok) {
+            closeModal('createUserModal');
+            loadUsers();
+        } else {
+            const data = await resp.json();
+            showInlineAlert('createUserAlert', data.detail || '创建失败');
+        }
+    } catch(e) { showInlineAlert('createUserAlert','网络错误'); }
+}
+
+function showEditUser(id, account) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUsername').value = account;
+    document.getElementById('editPassword').value = '';
+    document.getElementById('editExtendDays').value = '';
+    document.getElementById('editUserModal').classList.add('show');
+}
+
+async function updateUser() {
+    const id = document.getElementById('editUserId').value;
+    const password = document.getElementById('editPassword').value;
+    const extendDays = document.getElementById('editExtendDays').value;
+    const body = {};
+    if (password) body.password = password;
+    if (extendDays) body.extend_days = parseInt(extendDays);
+    if (!Object.keys(body).length) { showInlineAlert('editUserAlert','请至少修改一项'); return; }
+    try {
+        const resp = await fetch(API + '/users/' + id + '?password=' + encodeURIComponent(adminPassword), {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(body)
+        });
+        if (resp.ok) { closeModal('editUserModal'); loadUsers(); }
+        else { const d = await resp.json(); showInlineAlert('editUserAlert', d.detail || '更新失败'); }
+    } catch(e) { showInlineAlert('editUserAlert','网络错误'); }
+}
+
+async function toggleUser(id, newActive) {
+    try {
+        await fetch(API + '/users/' + id + '?password=' + encodeURIComponent(adminPassword), {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({is_active: newActive})
+        });
+        loadUsers();
+    } catch(e) { alert('操作失败'); }
+}
+
+async function deleteUser(id, account) {
+    if (!confirm('确定删除用户 "' + account + '"？此操作不可恢复。')) return;
+    try {
+        const resp = await fetch(API + '/users/' + id + '?password=' + encodeURIComponent(adminPassword), { method: 'DELETE' });
+        if (resp.ok) { loadUsers(); } else { const d = await resp.json(); alert(d.detail || '删除失败'); }
+    } catch(e) { alert('网络错误'); }
+}
+
+// ========== 激活码管理 ==========
+async function loadCodeStats() {
+    try {
+        const resp = await fetch(API + '/activation-codes/stats?password=' + encodeURIComponent(adminPassword));
+        if (!resp.ok) return;
+        const s = await resp.json();
+        document.getElementById('codeStats').innerHTML = `
+            <div class="stat-card"><div class="num">${s.total}</div><div class="label">总数</div></div>
+            <div class="stat-card"><div class="num">${s.used}</div><div class="label">已使用</div></div>
+            <div class="stat-card"><div class="num">${s.unused}</div><div class="label">未使用</div></div>`;
+    } catch(e) {}
+}
+
+async function loadCodes() {
+    try {
+        const resp = await fetch(API + '/activation-codes?password=' + encodeURIComponent(adminPassword));
+        if (!resp.ok) { document.getElementById('codesBody').innerHTML = '<tr><td colspan="7" class="empty-tip">加载失败</td></tr>'; return; }
+        const codes = await resp.json();
+        renderCodes(codes);
+    } catch(e) { document.getElementById('codesBody').innerHTML = '<tr><td colspan="7" class="empty-tip">网络错误</td></tr>'; }
+}
+
+function renderCodes(codes) {
+    const tbody = document.getElementById('codesBody');
+    if (!codes.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无激活码</td></tr>'; return; }
+    const typeMap = {1:'天卡',30:'月卡',90:'季卡',365:'年卡'};
+    tbody.innerHTML = codes.map(c => {
+        const label = typeMap[c.valid_days] || (c.valid_days + '天');
+        const statusBadge = c.is_used
+            ? '<span class="badge badge-gray">已使用</span>'
+            : '<span class="badge badge-green">未使用</span>';
+        return `<tr>
+            <td style="font-family:monospace;letter-spacing:1px;">${c.code}</td>
+            <td>${label}</td>
+            <td>${statusBadge}</td>
+            <td>${fmt(c.generated_at || c.created_at)}</td>
+            <td>${c.is_used ? fmt(c.used_at) : '-'}</td>
+            <td>${c.activated_by_username || '-'}</td>
+            <td>${c.is_used ? '' : '<button class="btn btn-sm btn-danger" onclick="deleteCode('+c.id+')">删除</button>'}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function generateCodes() {
+    const valid_days = parseInt(document.getElementById('codeType').value);
+    const count = parseInt(document.getElementById('codeCount').value) || 1;
+    const url = count > 1
+        ? API + '/activation-codes/batch?password=' + encodeURIComponent(adminPassword)
+        : API + '/activation-codes?password=' + encodeURIComponent(adminPassword);
+    const body = count > 1 ? {valid_days, count} : {valid_days};
+    try {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(body)
+        });
+        if (resp.ok) { loadCodes(); loadCodeStats(); }
+        else { const d = await resp.json(); alert(d.detail || '生成失败'); }
+    } catch(e) { alert('网络错误'); }
+}
+
+async function deleteCode(id) {
+    if (!confirm('确定删除此激活码？')) return;
+    try {
+        const resp = await fetch(API + '/activation-codes/' + id + '?password=' + encodeURIComponent(adminPassword), { method: 'DELETE' });
+        if (resp.ok) { loadCodes(); loadCodeStats(); }
+        else { const d = await resp.json(); alert(d.detail || '删除失败'); }
+    } catch(e) { alert('网络错误'); }
+}
+</script>
+</body>
+</html>

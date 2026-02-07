@@ -104,3 +104,4 @@ def seed_subject_ranges():
                 record = models.SubjectRange(subject=subject, config=[dict(item) for item in DEFAULT_RANGE_CONFIG])
                 session.add(record)
         session.commit()
+

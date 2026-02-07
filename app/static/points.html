@@ -860,20 +860,27 @@
   <!-- 增强包：多选规则+批量清空 -->
 
   <script>
-    // 桌面版：自动设置默认用户
-    if (!localStorage.getItem('user_info')) {
-      // 设置默认用户信息
-      const defaultUser = {
-        username: 'desktop_user',
-        name: '桌面用户',
-        role: 'teacher'
-      };
-      localStorage.setItem('user_info', JSON.stringify(defaultUser));
-      console.log('桌面模式：已设置默认用户');
-    }
-
-    // 初始化认证守卫（桌面版不需要验证）
-    authGuard.init({ required: false });
+    // 根据桌面/网页模式初始化认证
+    (async function initAuth() {
+      try {
+        const resp = await fetch('/api/desktop-mode');
+        const data = await resp.json();
+        if (data.desktop_mode) {
+          // 桌面版：免登录，设置默认用户
+          if (!localStorage.getItem('user_info')) {
+            const defaultUser = { username: 'desktop_user', name: '桌面用户', role: 'teacher' };
+            localStorage.setItem('user_info', JSON.stringify(defaultUser));
+          }
+          authGuard.init({ required: false });
+        } else {
+          // 网页版：强制登录，未登录跳转积分系统登录页
+          authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
+        }
+      } catch (e) {
+        // 网络异常时默认要求登录
+        authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
+      }
+    })();
   </script>
 </body>
 </html>

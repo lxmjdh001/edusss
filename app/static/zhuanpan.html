@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>班级幸运抽奖大转盘</title>
     <script src="/static/xlsx.full.min.js"></script>
+    <script src="/static/auth-guard.js"></script>
     <link href="/static/fonts/fontawesome/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -1646,6 +1647,19 @@ function initWheelSizeByRatio() {
 
 </script>
 
+<script>
+(async function initAuth() {
+  try {
+    const resp = await fetch('/api/desktop-mode');
+    const data = await resp.json();
+    if (!data.desktop_mode) {
+      authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
+    }
+  } catch (e) {
+    authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
+  }
+})();
+</script>
 
 </body>
 </html>
