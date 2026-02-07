@@ -308,12 +308,13 @@ async def create_pet_type(
     _verify_inside(pet_dir, base_dir)
 
     if pet_dir.exists():
-        raise HTTPException(status_code=409, detail="该宠物类型已存在")
-
-    pet_dir.mkdir(parents=True, exist_ok=True)
-    hidden_flag = pet_dir / ".hidden"
-    if hidden_flag.exists():
-        hidden_flag.unlink()
+        hidden_flag = pet_dir / ".hidden"
+        if hidden_flag.exists():
+            hidden_flag.unlink()
+        else:
+            raise HTTPException(status_code=409, detail="该宠物类型已存在")
+    else:
+        pet_dir.mkdir(parents=True, exist_ok=True)
 
     # 如果提供了等级名称，写入txt文件
     if data.stageNames:
