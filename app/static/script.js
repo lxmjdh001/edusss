@@ -6932,6 +6932,20 @@ if (historyTabBtn && petTabBtn) {
 		  user = null;
 		}
 	  }
+	  if (!user) {
+		try {
+		  const resp = await fetch('/api/auth/me', { credentials: 'include' });
+		  if (resp.ok) {
+			user = await resp.json();
+			if (window.authGuard && typeof authGuard.getCurrentUser === 'function') {
+			  authGuard.currentUser = user;
+			  localStorage.setItem('user_info', JSON.stringify(user));
+			}
+		  }
+		} catch (e) {
+		  user = null;
+		}
+	  }
 	  let isDesktop = !!(user && user.is_desktop);
 
 	  if (!isDesktop && window.authGuard && typeof authGuard.isDesktopMode === 'function') {

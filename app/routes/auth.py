@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import get_db
-from ..dependencies import get_current_user, get_active_member
+from ..dependencies import get_current_user, get_active_member, get_optional_user
 from ..utils import hash_password, verify_password, generate_session_token, get_session_expiry
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -176,18 +176,19 @@ def login(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
     response: Response,
-    current_user: models.Member = Depends(get_current_user),
+    current_user: models.Member | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """
     用户登出
     删除当前会话
     """
-    # 删除当前用户的所有会话（可选：只删除当前会话）
-    db.query(models.Session).filter(
-        models.Session.member_id == current_user.id
-    ).delete()
-    db.commit()
+    if current_user:
+        # 删除当前用户的所有会话（可选：只删除当前会话）
+        db.query(models.Session).filter(
+            models.Session.member_id == current_user.id
+        ).delete()
+        db.commit()
 
     # 清除Cookie
     response.delete_cookie(key="session_token")
