@@ -345,27 +345,45 @@ async initializePetImages() {
     if (!resp.ok) throw new Error('获取宠物图片失败');
     const data = await resp.json();
 
-    // 将服务器返回的图片URL填入petImages
+    // 将服务器返回的宠物类型和图片URL同步到前端
     if (data.types && Array.isArray(data.types)) {
-      data.types.forEach(serverType => {
+      // 默认颜色列表，用于自动分配
+      const defaultColors = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff'];
+
+      data.types.forEach((serverType, idx) => {
+        // 同步 petTypes：如果前端没有这个类型，自动添加
+        const exists = this.petTypes.find(t => t.id === serverType.id);
+        if (!exists) {
+          this.petTypes.push({
+            id: serverType.id,
+            name: serverType.id,
+            emoji: '🐾',
+            color: defaultColors[idx % defaultColors.length]
+          });
+        }
+
+        // 同步图片URL
         if (!this.petImages[serverType.id]) {
           this.petImages[serverType.id] = {};
         }
         for (let i = 1; i <= 6; i++) {
           const levelKey = `level${i}`;
           if (serverType.images && serverType.images[levelKey]) {
-            // 加时间戳防缓存
             this.petImages[serverType.id][levelKey] = serverType.images[levelKey] + '?t=' + Date.now();
           } else if (!this.petImages[serverType.id][levelKey]) {
             this.petImages[serverType.id][levelKey] = '';
           }
         }
+
         // 同步等级名称
         if (serverType.stageNames && serverType.stageNames.length > 0) {
           if (!this.petStagesByType) this.petStagesByType = {};
           this.petStagesByType[serverType.id] = serverType.stageNames.map((name, i) => ({ name, level: i + 1 }));
         }
       });
+
+      // 保存更新后的 petTypes 到 localStorage
+      localStorage.setItem(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
     }
     console.log('✅ 从服务器加载宠物图片成功');
   } catch (error) {
