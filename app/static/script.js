@@ -2895,15 +2895,17 @@ renderPetLevelSettings() {
   const container = document.getElementById('petLevelSettings');
   container.innerHTML = '';
   this.petStages.forEach((stage, i) => {
+    const minPts = parseInt(stage.minPoints) || 0;
     const next = this.petStages[i + 1];
-    const maxValue = next ? next.minPoints - 1 : '';
+    const nextMin = next ? parseInt(next.minPoints) : NaN;
+    const maxValue = isNaN(nextMin) ? '' : nextMin - 1;
     const row = document.createElement('div');
     row.className = 'level-setting-item';
 
     row.innerHTML = `
       <div style="width: 80px; font-weight: bold; color: #374151;">${i + 1}级</div>
       <div>
-        <input id="pet-min-${i}" type="number" value="${stage.minPoints}" min="0" style="width:70px">
+        <input id="pet-min-${i}" type="number" value="${minPts}" min="0" style="width:70px">
         <span>-</span>
         <input id="pet-max-${i}" type="number" value="${maxValue}" ${i === this.petStages.length - 1 ? 'disabled' : ''} style="width:70px">
       </div>
@@ -2918,15 +2920,17 @@ renderGroupLevelSettings() {
   const container = document.getElementById('groupLevelSettings');
   container.innerHTML = '';
   this.groupStages.forEach((stage, i) => {
+    const minPts = parseInt(stage.minPoints) || 0;
     const next = this.groupStages[i + 1];
-    const maxValue = next ? next.minPoints - 1 : '';
+    const nextMin = next ? parseInt(next.minPoints) : NaN;
+    const maxValue = isNaN(nextMin) ? '' : nextMin - 1;
     const row = document.createElement('div');
     row.className = 'level-setting-item';
 
     row.innerHTML = `
       <div style="width: 80px; font-weight: bold; color: #374151;">${i + 1}级</div>
       <div>
-        <input id="group-min-${i}" type="number" value="${stage.minPoints}" min="0" style="width:70px">
+        <input id="group-min-${i}" type="number" value="${minPts}" min="0" style="width:70px">
         <span>-</span>
         <input id="group-max-${i}" type="number" value="${maxValue}" ${i === this.groupStages.length - 1 ? 'disabled' : ''} style="width:70px">
       </div>
