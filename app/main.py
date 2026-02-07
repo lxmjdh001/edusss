@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .database import init_db, get_data_dir
-from .routes import invite_codes, members, query_codes, students, points, auth, activation_codes, points_admin, pet_images
+from .routes import invite_codes, members, query_codes, students, points, auth, activation_codes, points_admin, pet_images, points_kv
 
 app = FastAPI(
     title="学校成绩管理系统",
@@ -38,6 +38,7 @@ app.include_router(students.router)
 app.include_router(points.router)
 app.include_router(points_admin.router)
 app.include_router(pet_images.router)
+app.include_router(points_kv.router)
 
 STATIC_DIR = Path(__file__).parent / "static"
 INDEX_FILE = STATIC_DIR / "grades.html"

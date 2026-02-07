@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint, JSON
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint, JSON, Text
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -203,6 +203,20 @@ class PointRule(Base, TimestampMixin):
     points = Column(Integer, nullable=False)
     rule_type = Column(String(20), nullable=False)  # 'student' or 'group'
     is_active = Column(Boolean, default=True, nullable=False)
+
+
+class PointsKV(Base, TimestampMixin):
+    """积分系统键值存储（用于前端数据持久化）"""
+    __tablename__ = "points_kv"
+    __table_args__ = (
+        UniqueConstraint("owner_type", "owner_id", "key", name="uq_points_kv_owner_key"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_type = Column(String(20), nullable=False)
+    owner_id = Column(Integer, nullable=True)
+    key = Column(String(200), nullable=False, index=True)
+    value = Column(Text, nullable=False)
 
 
 class Session(Base, TimestampMixin):

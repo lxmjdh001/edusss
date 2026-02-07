@@ -96,10 +96,118 @@ storageRemove(key, includeLegacy = false) {
     if (includeLegacy) {
       localStorage.removeItem(key);
     }
+    this.queueRemoteDelete(key);
     return true;
   } catch (error) {
     console.error(`删除localStorage数据失败 [${key}]:`, error);
     return false;
+  }
+}
+
+async ensureStoragePrefix() {
+  if (!window.USE_DATABASE) return;
+  try {
+    let isDesktop = false;
+    if (window.authGuard && typeof authGuard.isDesktopMode === 'function') {
+      isDesktop = await authGuard.isDesktopMode();
+    }
+    if (!isDesktop) {
+      const resp = await fetch('/api/auth/me', { credentials: 'include' });
+      if (resp.ok) {
+        const user = await resp.json();
+        localStorage.setItem('user_info', JSON.stringify(user));
+      }
+    } else if (!localStorage.getItem('user_info')) {
+      localStorage.setItem('user_info', JSON.stringify({ account: 'offline', is_desktop: true }));
+    }
+  } catch (error) {
+    // 忽略，使用现有前缀
+  }
+  const newPrefix = this.resolveStorageNamespace();
+  if (newPrefix !== this.storagePrefix) {
+    this.storagePrefix = newPrefix;
+  }
+}
+
+async preloadRemoteStorage() {
+  if (!window.USE_DATABASE) return;
+  if (this.remoteStorageLoaded) return;
+  await this.ensureStoragePrefix();
+  try {
+    const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
+    if (!resp.ok) return;
+    const items = await resp.json();
+    if (Array.isArray(items)) {
+      items.forEach(item => {
+        if (!item || !item.key) return;
+        localStorage.setItem(this.storageKey(item.key), item.value ?? '');
+      });
+    }
+    this.remoteStorageLoaded = true;
+  } catch (error) {
+    console.error('加载远程存储失败:', error);
+  }
+}
+
+queueRemoteSet(key, value) {
+  if (!window.USE_DATABASE) return;
+  if (!this.remoteSyncQueue) return;
+  this.remoteDeleteQueue?.delete(key);
+  this.remoteSyncQueue.set(key, value);
+  if (this.remoteSyncTimer) return;
+  this.remoteSyncTimer = setTimeout(() => {
+    this.flushRemoteQueue();
+  }, 500);
+}
+
+queueRemoteDelete(key) {
+  if (!window.USE_DATABASE) return;
+  if (!this.remoteDeleteQueue) return;
+  this.remoteSyncQueue?.delete(key);
+  this.remoteDeleteQueue.add(key);
+  if (this.remoteSyncTimer) return;
+  this.remoteSyncTimer = setTimeout(() => {
+    this.flushRemoteQueue();
+  }, 500);
+}
+
+async flushRemoteQueue() {
+  if (!window.USE_DATABASE) return;
+  if (this.remoteSyncInFlight) return;
+  const items = Array.from(this.remoteSyncQueue?.entries() || []).map(([key, value]) => ({
+    key,
+    value: String(value)
+  }));
+  const deletes = Array.from(this.remoteDeleteQueue || []);
+  this.remoteSyncQueue?.clear();
+  this.remoteDeleteQueue?.clear();
+  if (this.remoteSyncTimer) {
+    clearTimeout(this.remoteSyncTimer);
+    this.remoteSyncTimer = null;
+  }
+  if (!items.length && !deletes.length) return;
+  this.remoteSyncInFlight = true;
+  try {
+    if (items.length > 0) {
+      await fetch('/api/points-kv/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ items })
+      });
+    }
+    if (deletes.length > 0) {
+      await Promise.all(deletes.map(key => fetch(`/api/points-kv/${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })));
+    }
+  } catch (error) {
+    console.error('同步远程存储失败:', error);
+    items.forEach(item => this.remoteSyncQueue.set(item.key, item.value));
+    deletes.forEach(key => this.remoteDeleteQueue.add(key));
+  } finally {
+    this.remoteSyncInFlight = false;
   }
 }
 
@@ -158,6 +266,11 @@ toggleDisplayMode() {
 	
   constructor(){
     this.storagePrefix = this.resolveStorageNamespace();
+    this.remoteSyncQueue = new Map();
+    this.remoteDeleteQueue = new Set();
+    this.remoteSyncTimer = null;
+    this.remoteSyncInFlight = false;
+    this.remoteStorageLoaded = false;
     // 添加全局配置属性
     this.globalRules = []; // 全局积分规则
     this.globalShopItems = []; // 全局商店商品
@@ -2207,6 +2320,7 @@ safeLocalStorageSet(key, value) {
     }
     
     localStorage.setItem(this.storageKey(key), value);
+    this.queueRemoteSet(key, value);
     return true;
   } catch (error) {
     console.error(`设置localStorage数据失败 [${key}]:`, error);
@@ -2216,6 +2330,7 @@ safeLocalStorageSet(key, value) {
       if (this.clearOldCache()) {
         try {
           localStorage.setItem(this.storageKey(key), value);
+          this.queueRemoteSet(key, value);
           return true;
         } catch (retryError) {
           console.error('清理缓存后仍无法保存数据:', retryError);
@@ -11913,35 +12028,38 @@ setupSortListeners() {
 
 // 初始化系统
 document.addEventListener('DOMContentLoaded', () => {
-  const system = new ClassPointsSystem();
-  system.loadFromLocalStorage();          // 加载数据
-  system.setupTimeFilterListeners();      // 👈 关键！绑定时间按钮事件
-  system.setupSortListeners();            // 👈 绑定排序事件监听器
-  system.renderRankings();                // 初始渲染排行榜
+  (async () => {
+    const system = new ClassPointsSystem();
+    await system.preloadRemoteStorage();
+    system.loadFromLocalStorage();          // 加载数据
+    system.setupTimeFilterListeners();      // 👈 关键！绑定时间按钮事件
+    system.setupSortListeners();            // 👈 绑定排序事件监听器
+    system.renderRankings();                // 初始渲染排行榜
 
-  // 挂到全局方便调试（可选）
-  window.pointsSystem = system;
-  
-  // 添加全局函数用于调用积分历史
-  window.openStudentHistory = function(index) {
-    console.log('全局函数openStudentHistory被调用', {index, system: !!window.pointsSystem});
-    if (window.pointsSystem) {
-      window.pointsSystem.openStudentHistory(index);
-    } else {
-      console.error('window.pointsSystem不存在');
-      alert('系统未初始化完成，请稍后再试');
-    }
-  };
-  
-  window.openGroupHistory = function(index) {
-    console.log('全局函数openGroupHistory被调用', {index, system: !!window.pointsSystem});
-    if (window.pointsSystem) {
-      window.pointsSystem.openGroupHistory(index);
-    } else {
-      console.error('window.pointsSystem不存在');
-      alert('系统未初始化完成，请稍后再试');
-    }
-  };
+    // 挂到全局方便调试（可选）
+    window.pointsSystem = system;
+    
+    // 添加全局函数用于调用积分历史
+    window.openStudentHistory = function(index) {
+      console.log('全局函数openStudentHistory被调用', {index, system: !!window.pointsSystem});
+      if (window.pointsSystem) {
+        window.pointsSystem.openStudentHistory(index);
+      } else {
+        console.error('window.pointsSystem不存在');
+        alert('系统未初始化完成，请稍后再试');
+      }
+    };
+    
+    window.openGroupHistory = function(index) {
+      console.log('全局函数openGroupHistory被调用', {index, system: !!window.pointsSystem});
+      if (window.pointsSystem) {
+        window.pointsSystem.openGroupHistory(index);
+      } else {
+        console.error('window.pointsSystem不存在');
+        alert('系统未初始化完成，请稍后再试');
+      }
+    };
+  })();
 });
 
 
