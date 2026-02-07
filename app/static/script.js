@@ -3062,6 +3062,7 @@ function updateFullscreenButton() {
     this.storageSet('classPointsGlobalRules', JSON.stringify(this.globalRules));
     this.storageSet('classPointsGlobalShopItems', JSON.stringify(this.globalShopItems));
     this.storageSet('classPointsGlobalGroupRules', JSON.stringify(this.globalGroupRules));
+    this.flushRemoteQueue();
   }
   
   // 渲染等级积分设置
@@ -3686,6 +3687,7 @@ saveAll(){
   }
   
   this.updateClassStudentCount();
+  this.flushRemoteQueue();
 }
   
   // 更新班级学生数量
