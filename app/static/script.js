@@ -49,7 +49,7 @@ resolveStorageNamespace() {
     if (window.authGuard && typeof authGuard.getStorageNamespace === 'function') {
       return authGuard.getStorageNamespace('points');
     }
-    const userStr = localStorage.getItem('user_info');
+    const userStr = this._kvCache.get('user_info') || null;
     const user = this.safeJsonParse(userStr, null);
     const rawId = user && (user.account || user.username || user.name || user.phone || user.id);
     const normalized = rawId ? encodeURIComponent(String(rawId).trim()) : '';
@@ -68,16 +68,13 @@ storageGet(key, options = {}) {
   const { fallback = true, migrate = true } = options;
   const value = this.safeLocalStorageGet(key);
   if (value === null && fallback) {
-    try {
-      const legacy = localStorage.getItem(key);
-      if (legacy !== null && migrate) {
-        this.safeLocalStorageSet(key, legacy);
-        localStorage.removeItem(key);
-      }
-      return legacy;
-    } catch (error) {
-      return null;
+    // 检查无前缀的旧格式 key
+    const legacy = this._kvCache.has(key) ? this._kvCache.get(key) : null;
+    if (legacy !== null && migrate) {
+      this.safeLocalStorageSet(key, legacy);
+      this._kvCache.delete(key);
     }
+    return legacy;
   }
   return value;
 }
@@ -88,18 +85,14 @@ storageSet(key, value) {
 
 storageRemove(key, includeLegacy = false) {
   try {
-    if (!this.isLocalStorageAvailable()) {
-      console.warn('localStorage不可用，无法删除数据');
-      return false;
-    }
-    localStorage.removeItem(this.storageKey(key));
+    this._kvCache.delete(this.storageKey(key));
     if (includeLegacy) {
-      localStorage.removeItem(key);
+      this._kvCache.delete(key);
     }
     this.queueRemoteDelete(key);
     return true;
   } catch (error) {
-    console.error(`删除localStorage数据失败 [${key}]:`, error);
+    console.error(`删除缓存数据失败 [${key}]:`, error);
     return false;
   }
 }
@@ -115,10 +108,10 @@ async ensureStoragePrefix() {
       const resp = await fetch('/api/auth/me', { credentials: 'include' });
       if (resp.ok) {
         const user = await resp.json();
-        localStorage.setItem('user_info', JSON.stringify(user));
+        this._kvCache.set('user_info', JSON.stringify(user));
       }
-    } else if (!localStorage.getItem('user_info')) {
-      localStorage.setItem('user_info', JSON.stringify({ account: 'offline', is_desktop: true }));
+    } else if (!this._kvCache.has('user_info')) {
+      this._kvCache.set('user_info', JSON.stringify({ account: 'offline', is_desktop: true }));
     }
   } catch (error) {
     // 忽略，使用现有前缀
@@ -138,11 +131,10 @@ async preloadRemoteStorage() {
     const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
     if (!resp.ok) return;
     const items = await resp.json();
-    console.log('[diag] points-kv/all returned', Array.isArray(items) ? items.length + ' items' : typeof items, Array.isArray(items) && items.length > 0 ? items.map(i => i?.key).slice(0, 10) : items);
     if (Array.isArray(items)) {
       items.forEach(item => {
         if (!item || !item.key) return;
-        localStorage.setItem(this.storageKey(item.key), item.value ?? '');
+        this._kvCache.set(this.storageKey(item.key), item.value ?? '');
       });
     }
     this.remoteStorageLoaded = true;
@@ -268,6 +260,7 @@ toggleDisplayMode() {
 }
 	
   constructor(){
+    this._kvCache = new Map(); // 内存缓存，替代 localStorage
     this.storagePrefix = this.resolveStorageNamespace();
     this.remoteSyncQueue = new Map();
     this.remoteDeleteQueue = new Set();
@@ -283,15 +276,7 @@ toggleDisplayMode() {
     this.currentConfigScope = 'global'; // 当前配置范围：global 或 class
 
 	// 显示模式：'emoji' | 'local' - 强制使用'local'模式
-  this.displayMode = 'local'; // 强制使用local模式，确保能看到上传的自定义图片
-  // 立即更新localStorage中的显示模式
-  if (this.safeLocalStorageSet) {
-    this.safeLocalStorageSet('displayMode', this.displayMode);
-    this.safeLocalStorageSet(`displayMode_${this.currentClassId}`, this.displayMode);
-  } else {
-    this.storageSet('displayMode', this.displayMode);
-    this.storageSet(`displayMode_${this.currentClassId}`, this.displayMode);
-  }
+  this.displayMode = 'local'; // 默认值，init() 会从数据库缓存中读取并覆盖
   // 按钮 DOM 缓存（后面要改文字）
   this.toggleModeBtn = null;
 	
@@ -397,11 +382,13 @@ toggleDisplayMode() {
     
     // 初始化宠物功能（保存promise以便外部await）
     this.petFeaturesReady = this.initializePetFeatures();
-    
+
     // 设置模态框点击外部关闭功能
     this.setupModalClickOutsideClose();
-    
-    this.init();
+
+    // 注意：不在构造函数中调用 init()
+    // init() 需要在 preloadRemoteStorage() 之后调用，
+    // 否则服务器数据还没加载到 localStorage，会导致创建新的默认班级
   }
   
   // 为所有模态框添加点击外部区域自动关闭的功能
@@ -2318,63 +2305,25 @@ resetPetConfig() {
 
 // 清理旧缓存数据
 // 检查localStorage是否可用
+// 内存缓存始终可用
 isLocalStorageAvailable() {
-  try {
-    const test = '__localStorage_test__';
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  return true;
 }
 
 // 安全地获取localStorage数据
 safeLocalStorageGet(key) {
-  try {
-    if (!this.isLocalStorageAvailable()) {
-      console.warn('localStorage不可用');
-      return null;
-    }
-    return localStorage.getItem(this.storageKey(key));
-  } catch (error) {
-    console.error(`获取localStorage数据失败 [${key}]:`, error);
-    return null;
-  }
+  const fullKey = this.storageKey(key);
+  return this._kvCache.has(fullKey) ? this._kvCache.get(fullKey) : null;
 }
 
-// 安全地设置localStorage数据
+// 设置数据到内存缓存并队列写入数据库
 safeLocalStorageSet(key, value) {
   try {
-    if (!this.isLocalStorageAvailable()) {
-      console.warn('localStorage不可用');
-      return false;
-    }
-    
-    // 检查存储空间是否足够
-    if (this.checkStorageSize(value) > 5) { // 如果数据大于5MB，尝试清理缓存
-      console.warn(`数据过大 (${this.formatStorageSize(this.checkStorageSize(value))})，尝试清理缓存...`);
-      this.clearOldCache();
-    }
-    
-    localStorage.setItem(this.storageKey(key), value);
+    this._kvCache.set(this.storageKey(key), value);
     this.queueRemoteSet(key, value);
     return true;
   } catch (error) {
-    console.error(`设置localStorage数据失败 [${key}]:`, error);
-    // 存储空间不足时尝试清理缓存
-    if (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-      console.warn('存储空间不足，尝试清理缓存...');
-      if (this.clearOldCache()) {
-        try {
-          localStorage.setItem(this.storageKey(key), value);
-          this.queueRemoteSet(key, value);
-          return true;
-        } catch (retryError) {
-          console.error('清理缓存后仍无法保存数据:', retryError);
-        }
-      }
-    }
+    console.error(`设置缓存数据失败 [${key}]:`, error);
     return false;
   }
 }
@@ -2419,56 +2368,8 @@ formatStorageSize(sizeInMB) {
 }
 
 clearOldCache() {
-  try {
-    if (!this.isLocalStorageAvailable()) {
-      console.warn('localStorage不可用，无法清理缓存');
-      return false;
-    }
-    
-    // 保留必要的数据，清理可能不需要的大型历史数据（仅清理当前用户）
-    const keysToKeep = [
-      `petTypes_${this.currentClassId}`,
-      `petStages_${this.currentClassId}`,
-      `petImages_${this.currentClassId}`,
-      `groupPetImages_${this.currentClassId}`,
-      `groupLevels_${this.currentClassId}`,
-      `studentPets_${this.currentClassId}`,
-      `groupPets_${this.currentClassId}`,
-      `students_${this.currentClassId}`,
-      `groups_${this.currentClassId}`,
-      `rules_${this.currentClassId}`,
-      `groupRules_${this.currentClassId}`,
-      'classPointsGlobalRules',
-      'classPointsGlobalShopItems',
-      'classPointsGlobalGroupRules',
-      'classPointsClasses',
-      'displayMode',
-      `displayMode_${this.currentClassId}`
-    ];
-    const prefixedKeep = new Set(keysToKeep.map(key => this.storageKey(key)));
-    
-    let clearedCount = 0;
-    // 创建一个副本以避免迭代时修改集合的问题
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      keys.push(localStorage.key(i));
-    }
-    
-    keys.forEach(key => {
-      if (!key || !key.startsWith(this.storagePrefix)) return;
-      if (!prefixedKeep.has(key)) {
-        localStorage.removeItem(key);
-        clearedCount++;
-      }
-    });
-    
-    this.showNotification(`已清理 ${clearedCount} 项缓存数据！`, 'success');
-    return true;
-  } catch (error) {
-    console.error('清理缓存失败:', error);
-    this.showNotification('清理缓存失败！', 'error');
-    return false;
-  }
+  // 内存缓存无配额限制，无需清理
+  return true;
 }
 
 // 渲染宠物选择界面
@@ -7083,7 +6984,7 @@ if (historyTabBtn && petTabBtn) {
 		  user = await authGuard.checkAuth();
 		  if (user && typeof authGuard.getCurrentUser === 'function') {
 			authGuard.currentUser = user;
-			localStorage.setItem('user_info', JSON.stringify(user));
+			this._kvCache.set('user_info', JSON.stringify(user));
 		  }
 		} catch (e) {
 		  user = null;
@@ -7096,7 +6997,7 @@ if (historyTabBtn && petTabBtn) {
 			user = await resp.json();
 			if (window.authGuard && typeof authGuard.getCurrentUser === 'function') {
 			  authGuard.currentUser = user;
-			  localStorage.setItem('user_info', JSON.stringify(user));
+			  this._kvCache.set('user_info', JSON.stringify(user));
 			}
 		  }
 		} catch (e) {
@@ -12091,39 +11992,35 @@ document.addEventListener('DOMContentLoaded', () => {
     console.time('[perf] total init');
     const system = new ClassPointsSystem();
 
-    // 诊断：检查初始状态
-    console.log('[diag] storagePrefix:', system.storagePrefix);
-    console.log('[diag] currentClassId:', system.currentClassId);
-    console.log('[diag] classes:', system.classes);
+    // 关键：先从服务器预加载数据到内存缓存，再初始化班级和学生数据
+    let loadSuccess = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        console.time('[perf] preload+pet parallel');
+        await Promise.all([
+          system.preloadRemoteStorage(),
+          system.petFeaturesReady || Promise.resolve()
+        ]);
+        console.timeEnd('[perf] preload+pet parallel');
+        loadSuccess = true;
+        break;
+      } catch (e) {
+        console.error(`数据加载第 ${attempt + 1} 次失败:`, e);
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      }
+    }
 
-    // 并行执行：远程存储预加载 + 宠物图片加载（两者无依赖）
-    console.time('[perf] preload+pet parallel');
-    await Promise.all([
-      system.preloadRemoteStorage(),
-      system.petFeaturesReady || Promise.resolve()
-    ]);
-    console.timeEnd('[perf] preload+pet parallel');
+    if (!loadSuccess && window.USE_DATABASE) {
+      hideLoadingOverlay();
+      alert('数据加载失败，请刷新页面重试');
+      return;
+    }
 
-    // 诊断：检查预加载后状态
-    console.log('[diag] after preload - storagePrefix:', system.storagePrefix);
-    console.log('[diag] after preload - currentClassId:', system.currentClassId);
-    const kvKey = system.storageKey(`classPointsData_${system.currentClassId}`);
-    const rawData = localStorage.getItem(kvKey);
-    console.log('[diag] localStorage key:', kvKey, '| has data:', !!rawData, '| length:', rawData?.length);
-
-    console.time('[perf] loadFromLocalStorage');
-    system.loadFromLocalStorage();
-    console.timeEnd('[perf] loadFromLocalStorage');
-
-    // 诊断：检查加载后数据
-    console.log('[diag] after load - students:', system.students?.length, '| groups:', system.groups?.length);
+    // 服务器数据已加载到内存缓存，现在可以安全地初始化班级和学生数据
+    system.init();
 
     system.setupTimeFilterListeners();
     system.setupSortListeners();
-
-    console.time('[perf] renderRankings');
-    system.renderRankings();
-    console.timeEnd('[perf] renderRankings');
 
     // 挂到全局方便调试（可选）
     window.pointsSystem = system;
