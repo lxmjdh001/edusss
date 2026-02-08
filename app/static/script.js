@@ -12063,8 +12063,25 @@ setupSortListeners() {
 }
 
 
+// 隐藏加载遮罩
+function hideLoadingOverlay() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.classList.add('fade-out');
+    setTimeout(() => { overlay.remove(); }, 400);
+  }
+  document.body.classList.remove('loading');
+}
+
 // 初始化系统
 document.addEventListener('DOMContentLoaded', () => {
+  const initStart = Date.now();
+  // 安全超时：最多3秒后强制显示页面
+  const safetyTimer = setTimeout(() => {
+    console.warn('加载超时，强制显示页面');
+    hideLoadingOverlay();
+  }, 3000);
+
   (async () => {
     const system = new ClassPointsSystem();
     await system.preloadRemoteStorage();
@@ -12075,7 +12092,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 挂到全局方便调试（可选）
     window.pointsSystem = system;
-    
+
     // 添加全局函数用于调用积分历史
     window.openStudentHistory = function(index) {
       console.log('全局函数openStudentHistory被调用', {index, system: !!window.pointsSystem});
@@ -12086,7 +12103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('系统未初始化完成，请稍后再试');
       }
     };
-    
+
     window.openGroupHistory = function(index) {
       console.log('全局函数openGroupHistory被调用', {index, system: !!window.pointsSystem});
       if (window.pointsSystem) {
@@ -12096,5 +12113,20 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('系统未初始化完成，请稍后再试');
       }
     };
+
+    // 数据加载完成，隐藏遮罩
+    clearTimeout(safetyTimer);
+    const elapsed = Date.now() - initStart;
+    // 至少显示加载动画300ms，避免闪烁
+    const minDelay = Math.max(0, 300 - elapsed);
+    setTimeout(() => { hideLoadingOverlay(); }, minDelay);
+
+    // 首次加载后自动刷新一次数据，确保显示最新
+    setTimeout(() => {
+      if (window.pointsSystem) {
+        window.pointsSystem.loadFromLocalStorage();
+        window.pointsSystem.renderRankings();
+      }
+    }, 500);
   })();
 });

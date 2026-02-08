@@ -6,8 +6,59 @@
   <title>班级积分宠物成长系统</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/auth-guard.js"></script>
+  <style>
+    /* 加载遮罩层 */
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      transition: opacity 0.4s ease;
+    }
+    #loadingOverlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loader-spinner {
+      width: 56px; height: 56px;
+      border: 5px solid #c7d2fe;
+      border-top: 5px solid #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 24px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loader-text {
+      font-size: 18px;
+      color: #4338ca;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+    .loader-sub {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+    /* 页面内容初始隐藏，防止闪烁 */
+    body.loading .main-container {
+      visibility: hidden;
+    }
+  </style>
 </head>
-<body>
+<body class="loading">
+  <!-- 加载遮罩层 -->
+  <div id="loadingOverlay">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">正在加载数据...</div>
+    <div class="loader-sub">请稍候，系统初始化中</div>
+  </div>
+
   <div class="main-container">
     
     <h1 id="mainTitle" contenteditable="true">班级积分宠物成长系统</h1>
