@@ -2140,6 +2140,18 @@ h1 {
   .left-content, .right-content {
     flex: 1;
   }
+
+  .left-content {
+    display: contents;
+  }
+
+  .right-content {
+    order: 2;
+  }
+
+  .history-section {
+    order: 3;
+  }
   
   .students-grid {
     grid-template-columns: repeat(2, 1fr);
