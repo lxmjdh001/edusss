@@ -108,7 +108,8 @@
 		  
 		  <button class="btn btn-danger" id="clearBtn">🗑️ 清空数据</button>
 		  <button class="btn btn-warning" id="lockBtn">🔓 锁定页面</button>
-		  
+		  <button class="btn btn-purple" id="remoteLockBtn" style="display:none;">📱 远程锁屏</button>
+
 		  <!-- 修改为技术支持按钮并移至最右侧 -->
 		  <div class="tooltip">
 			<button class="btn btn-info" id="techSupportBtn">🛠️ 技术支持</button>
@@ -751,6 +752,32 @@
           忘记密码？使用管理员重置
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- 远程锁屏：设置密码弹窗（手机端用） -->
+  <div id="remoteLockModal" class="modal">
+    <div class="modal-content">
+      <h3>📱 远程锁屏</h3>
+      <p>设置锁屏密码后，电脑端将被锁定</p>
+      <input id="remoteLockPassword" type="password" class="modal-input" placeholder="设置锁屏密码">
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="confirmRemoteLockBtn">确认锁定</button>
+        <button class="btn btn-secondary" id="cancelRemoteLockBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 远程锁屏：被锁定弹窗（电脑端用） -->
+  <div id="remoteLockOverlay" class="modal" style="z-index:100000;">
+    <div class="modal-content">
+      <h3>🔒 屏幕已被远程锁定</h3>
+      <p>请输入密码解锁</p>
+      <input id="remoteUnlockPassword" type="password" class="modal-input" placeholder="输入解锁密码">
+      <div class="modal-buttons">
+        <button class="btn btn-primary" id="confirmRemoteUnlockBtn">解锁</button>
+      </div>
+      <p id="remoteUnlockError" style="color:#e53e3e;display:none;margin-top:10px;"></p>
     </div>
   </div>
 

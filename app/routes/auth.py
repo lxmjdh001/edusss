@@ -16,6 +16,10 @@ from ..utils import hash_password, verify_password, generate_session_token, get_
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# 远程锁屏状态存储（内存字典，按用户ID隔离）
+# 格式: { member_id: { "locked": True, "password_hash": "..." } }
+_remote_lock_store: dict[int, dict] = {}
+
 
 @router.post("/register", response_model=schemas.AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(
@@ -293,3 +297,51 @@ def redeem_invite_code(
         "expires_at": current_user.expires_at,
         "vip_level": current_user.vip_level,
     }
+
+
+class RemoteLockRequest(schemas.BaseModel):
+    lock_password: str
+
+
+@router.post("/remote-lock")
+def remote_lock(
+    payload: RemoteLockRequest,
+    current_user: models.Member = Depends(get_active_member),
+):
+    """手机端调用：设置远程锁定"""
+    if not payload.lock_password.strip():
+        raise HTTPException(status_code=400, detail="锁屏密码不能为空")
+    _remote_lock_store[current_user.id] = {
+        "locked": True,
+        "password_hash": hash_password(payload.lock_password),
+    }
+    return {"success": True, "message": "远程锁定已生效"}
+
+
+@router.get("/lock-status")
+def lock_status(
+    current_user: models.Member = Depends(get_active_member),
+):
+    """电脑端轮询：检查是否被远程锁定"""
+    info = _remote_lock_store.get(current_user.id)
+    locked = bool(info and info.get("locked"))
+    return {"locked": locked}
+
+
+class RemoteUnlockRequest(schemas.BaseModel):
+    password: str
+
+
+@router.post("/remote-unlock")
+def remote_unlock(
+    payload: RemoteUnlockRequest,
+    current_user: models.Member = Depends(get_active_member),
+):
+    """电脑端调用：验证密码解锁"""
+    info = _remote_lock_store.get(current_user.id)
+    if not info or not info.get("locked"):
+        return {"success": True, "message": "未处于锁定状态"}
+    if not verify_password(payload.password, info["password_hash"]):
+        raise HTTPException(status_code=400, detail="密码错误")
+    _remote_lock_store.pop(current_user.id, None)
+    return {"success": True, "message": "解锁成功"}

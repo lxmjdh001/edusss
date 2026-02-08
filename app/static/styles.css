@@ -590,6 +590,11 @@ h1 {
   color: #2d3748;
 }
 
+.btn-purple {
+  background: linear-gradient(135deg, #9F7AEA 0%, #B794F4 100%);
+  color: white;
+}
+
 .btn-danger {
   background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); /* 活泼的红色 */
   color: white;

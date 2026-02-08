@@ -4575,6 +4575,14 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       this.clearData();
     });
     document.getElementById('lockBtn').addEventListener('click',()=>this.toggleLock());
+    // 远程锁屏按钮事件
+    document.getElementById('remoteLockBtn').addEventListener('click',()=>this.showRemoteLockModal());
+    document.getElementById('confirmRemoteLockBtn').addEventListener('click',()=>this.doRemoteLock());
+    document.getElementById('cancelRemoteLockBtn').addEventListener('click',()=>{
+      document.getElementById('remoteLockModal').style.display='none';
+    });
+    document.getElementById('confirmRemoteUnlockBtn').addEventListener('click',()=>this.doRemoteUnlock());
+    this.initRemoteLockFeature();
     document.getElementById('batchBtn').addEventListener('click',()=>{
       if(this.isLocked) return;
       this.openBatchModal();
@@ -9204,7 +9212,7 @@ clearRandomRecords(){
     const adminCode = prompt('请输入管理员重置代码（请联系系统管理员获取）：');
     // 这里可以设置一个管理员代码，比如班级名称+年份
     const validAdminCode = 'class2025'; // 修改为实际的管理员代码
-    
+
     if(adminCode === validAdminCode){
       this.lockPassword = '';
       this.isLocked = false;
@@ -9215,6 +9223,123 @@ clearRandomRecords(){
       alert('系统已通过管理员权限解锁！');
     } else {
       alert('管理员代码错误！');
+    }
+  }
+
+  // ========== 远程锁屏功能 ==========
+
+  initRemoteLockFeature(){
+    const isMobile = window.innerWidth <= 768;
+    const remoteLockBtn = document.getElementById('remoteLockBtn');
+    if(remoteLockBtn){
+      remoteLockBtn.style.display = isMobile ? '' : 'none';
+    }
+    // 非手机端启动轮询
+    if(!isMobile){
+      this._remoteLockPollTimer = setInterval(()=>this.pollRemoteLockStatus(), 3000);
+    }
+  }
+
+  showRemoteLockModal(){
+    document.getElementById('remoteLockPassword').value = '';
+    document.getElementById('remoteLockModal').style.display = 'flex';
+    document.getElementById('remoteLockPassword').focus();
+  }
+
+  async doRemoteLock(){
+    const pwd = document.getElementById('remoteLockPassword').value;
+    if(!pwd.trim()){
+      alert('请输入锁屏密码');
+      return;
+    }
+    try{
+      const resp = await fetch('/api/auth/remote-lock',{
+        method:'POST',
+        credentials:'include',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+(localStorage.getItem('session_token')||'')
+        },
+        body:JSON.stringify({lock_password:pwd})
+      });
+      const data = await resp.json();
+      if(resp.ok){
+        alert('远程锁定已生效！电脑端将被锁定');
+        document.getElementById('remoteLockModal').style.display='none';
+      } else {
+        alert(data.detail||'锁定失败');
+      }
+    }catch(e){
+      console.error('远程锁定失败:',e);
+      alert('网络错误，请重试');
+    }
+  }
+
+  async pollRemoteLockStatus(){
+    try{
+      const resp = await fetch('/api/auth/lock-status',{
+        method:'GET',
+        credentials:'include',
+        headers:{
+          'Authorization':'Bearer '+(localStorage.getItem('session_token')||'')
+        }
+      });
+      if(resp.ok){
+        const data = await resp.json();
+        if(data.locked){
+          this.showRemoteLockOverlay();
+        }
+      }
+    }catch(e){
+      // 静默忽略轮询错误
+    }
+  }
+
+  showRemoteLockOverlay(){
+    // 停止轮询，避免重复弹窗
+    if(this._remoteLockPollTimer){
+      clearInterval(this._remoteLockPollTimer);
+      this._remoteLockPollTimer = null;
+    }
+    document.getElementById('remoteUnlockPassword').value = '';
+    document.getElementById('remoteUnlockError').style.display = 'none';
+    document.getElementById('remoteLockOverlay').style.display = 'flex';
+    document.getElementById('remoteUnlockPassword').focus();
+    document.body.style.overflow = 'hidden';
+  }
+
+  async doRemoteUnlock(){
+    const pwd = document.getElementById('remoteUnlockPassword').value;
+    const errEl = document.getElementById('remoteUnlockError');
+    if(!pwd.trim()){
+      errEl.textContent = '请输入密码';
+      errEl.style.display = 'block';
+      return;
+    }
+    try{
+      const resp = await fetch('/api/auth/remote-unlock',{
+        method:'POST',
+        credentials:'include',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+(localStorage.getItem('session_token')||'')
+        },
+        body:JSON.stringify({password:pwd})
+      });
+      const data = await resp.json();
+      if(resp.ok && data.success){
+        document.getElementById('remoteLockOverlay').style.display='none';
+        document.body.style.overflow='';
+        errEl.style.display='none';
+        // 恢复轮询
+        this._remoteLockPollTimer = setInterval(()=>this.pollRemoteLockStatus(), 3000);
+      } else {
+        errEl.textContent = data.detail||'密码错误';
+        errEl.style.display = 'block';
+      }
+    }catch(e){
+      errEl.textContent = '网络错误，请重试';
+      errEl.style.display = 'block';
     }
   }
   
