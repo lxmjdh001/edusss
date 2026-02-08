@@ -2248,6 +2248,22 @@ h1 {
     flex-direction: column;
     align-items: stretch;
   }
+
+  .modal-content {
+    width: 95%;
+    padding: 15px 10px;
+    border-radius: 12px;
+  }
+
+  .modal-tabs {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+
+  .modal-tab {
+    padding: 6px 10px;
+    font-size: 0.8em;
+  }
 }
 
 /* 滚动条样式 */
