@@ -546,15 +546,19 @@ async initializePetImages() {
       const defaultColors = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff'];
 
       data.types.forEach((serverType, idx) => {
+        const serverName = serverType.name || serverType.id;
         // 同步 petTypes：如果前端没有这个类型，自动添加
         const exists = this.petTypes.find(t => t.id === serverType.id);
         if (!exists) {
           this.petTypes.push({
             id: serverType.id,
-            name: serverType.id,
+            name: serverName,
             emoji: '🐾',
             color: defaultColors[idx % defaultColors.length]
           });
+        } else if (serverType.name && exists.name !== serverType.name) {
+          // 有服务端名称时同步更新，避免一直显示ID
+          exists.name = serverType.name;
         }
 
         // 同步图片URL
@@ -570,10 +574,21 @@ async initializePetImages() {
           }
         }
 
-        // 同步等级名称
+        // 同步等级名称（保持积分区间等结构，只替换名称）
         if (serverType.stageNames && serverType.stageNames.length > 0) {
           if (!this.petStagesByType) this.petStagesByType = {};
-          this.petStagesByType[serverType.id] = serverType.stageNames.map((name, i) => ({ name, level: i + 1 }));
+          const existingStages = this.petStagesByType[serverType.id];
+          const baseStages =
+            Array.isArray(existingStages) && existingStages.length > 0
+              ? existingStages
+              : (Array.isArray(this.petStages) && this.petStages.length > 0
+                ? this.petStages
+                : this.migrateStages(this.getDefaultPetStages(), 'pet'));
+          const mergedStages = JSON.parse(JSON.stringify(baseStages));
+          serverType.stageNames.forEach((name, i) => {
+            if (mergedStages[i]) mergedStages[i].name = name;
+          });
+          this.petStagesByType[serverType.id] = mergedStages;
         }
       });
 
@@ -12063,7 +12078,5 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   })();
 });
-
-
 
 

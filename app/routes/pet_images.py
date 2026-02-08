@@ -111,6 +111,7 @@ def _collect_pet_types(pet_root: Path, skip_dirs: Optional[set[str]] = None) -> 
                     images[f"level{level}"] = _build_image_url(pet_root, pet_id, f"{level}{ext}")
                     break
         result[pet_id] = {
+            "name": pet_id,
             "images": images,
             "stageNames": _read_stage_names(folder),
         }
@@ -174,10 +175,12 @@ def list_pet_types(
             continue
         source_map = _collect_pet_types(source_dir)
         for pet_id, info in source_map.items():
-            existing = user_types.get(pet_id, {"images": {}, "stageNames": []})
+            existing = user_types.get(pet_id, {"images": {}, "stageNames": [], "name": None})
             images = {**existing.get("images", {}), **info.get("images", {})}
             stage_names = info.get("stageNames") or existing.get("stageNames") or []
+            name = info.get("name") or existing.get("name")
             user_types[pet_id] = {
+                "name": name,
                 "images": images,
                 "stageNames": stage_names,
             }
@@ -187,15 +190,17 @@ def list_pet_types(
     for pet_id in all_ids:
         if _is_type_hidden(user_dir, pet_id):
             continue
-        global_info = global_types.get(pet_id, {"images": {}, "stageNames": []})
-        user_info = user_types.get(pet_id, {"images": {}, "stageNames": []})
+        global_info = global_types.get(pet_id, {"images": {}, "stageNames": [], "name": None})
+        user_info = user_types.get(pet_id, {"images": {}, "stageNames": [], "name": None})
         images = {**global_info.get("images", {}), **user_info.get("images", {})}
         deleted_levels = _get_deleted_levels(user_dir, pet_id)
         for level in deleted_levels:
             images.pop(f"level{level}", None)
         stage_names = user_info.get("stageNames") or global_info.get("stageNames") or []
+        name = user_info.get("name") or global_info.get("name") or pet_id
         result.append({
             "id": pet_id,
+            "name": name,
             "images": images,
             "stageNames": stage_names[:6],
             "imageCount": len(images),
@@ -318,8 +323,7 @@ async def create_pet_type(
 
     # 如果提供了等级名称，写入txt文件
     if data.stageNames:
-        txt_name = _safe_name(data.name or pet_id)
-        txt_path = pet_dir / f"{txt_name}等级名称.txt"
+        txt_path = pet_dir / "等级名称.txt"
         lines = [f"{i+1}. {name}" for i, name in enumerate(data.stageNames[:6])]
         txt_path.write_text('\n'.join(lines), encoding='utf-8')
 
