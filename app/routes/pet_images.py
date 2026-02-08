@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -19,6 +20,15 @@ router = APIRouter(prefix="/api/pet-images", tags=["pet-images"])
 
 # 支持的图片扩展名
 IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
+
+# 宠物类型列表缓存 {owner_bucket: (timestamp, result)}
+_pet_types_cache: dict[str, tuple[float, dict]] = {}
+_PET_TYPES_CACHE_TTL = 30  # 缓存30秒
+
+
+def _invalidate_pet_cache(owner_bucket: str):
+    """清除指定用户的宠物类型缓存"""
+    _pet_types_cache.pop(owner_bucket, None)
 
 
 def _get_pet_images_dir() -> Path:
@@ -161,10 +171,16 @@ class CreateTypeRequest(BaseModel):
 def list_pet_types(
     current_user: Optional[models.Member] = Depends(get_optional_user),
 ):
-    """扫描用户目录，返回所有宠物类型及其图片"""
+    """扫描用户目录，返回所有宠物类型及其图片（带缓存）"""
     user_dir = _get_owner_dir(current_user)
-    global_dir = _get_pet_images_dir()
     owner_bucket = user_dir.name
+
+    # 检查缓存
+    cached = _pet_types_cache.get(owner_bucket)
+    if cached and (time.time() - cached[0]) < _PET_TYPES_CACHE_TTL:
+        return cached[1]
+
+    global_dir = _get_pet_images_dir()
     legacy_user_dir = global_dir / owner_bucket
 
     global_types = _collect_pet_types(global_dir, skip_dirs={"__users__", owner_bucket})
@@ -206,7 +222,9 @@ def list_pet_types(
             "imageCount": len(images),
         })
 
-    return {"types": result}
+    response = {"types": result}
+    _pet_types_cache[owner_bucket] = (time.time(), response)
+    return response
 
 
 @router.post("/upload/{pet_type}/{level}")
@@ -258,6 +276,7 @@ async def upload_pet_image(
 
     target_path.write_bytes(content)
 
+    _invalidate_pet_cache(base_dir.name)
     url = _build_image_url(base_dir, safe_type, f"{level}{ext}")
     return {"success": True, "url": url}
 
@@ -298,6 +317,7 @@ def delete_pet_image(
         hidden_flag = pet_dir / f".level{level}.deleted"
         hidden_flag.write_text("deleted", encoding="utf-8")
 
+    _invalidate_pet_cache(base_dir.name)
     return {"success": True, "deleted": deleted}
 
 
@@ -327,6 +347,7 @@ async def create_pet_type(
         lines = [f"{i+1}. {name}" for i, name in enumerate(data.stageNames[:6])]
         txt_path.write_text('\n'.join(lines), encoding='utf-8')
 
+    _invalidate_pet_cache(base_dir.name)
     return {"success": True, "id": pet_id}
 
 
@@ -355,4 +376,5 @@ def delete_pet_type(
         pet_dir.mkdir(parents=True, exist_ok=True)
         (pet_dir / ".hidden").write_text("hidden", encoding="utf-8")
 
+    _invalidate_pet_cache(base_dir.name)
     return {"success": True}

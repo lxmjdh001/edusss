@@ -931,6 +931,8 @@
       try {
         const resp = await fetch('/api/desktop-mode');
         const data = await resp.json();
+        // 缓存结果，避免后续重复请求
+        if (window.authGuard) authGuard._desktopModeCache = !!data.desktop_mode;
         if (data.desktop_mode) {
           // 桌面版：免登录，设置默认用户
           if (!localStorage.getItem('user_info')) {

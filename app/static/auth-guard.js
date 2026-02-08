@@ -73,6 +73,7 @@ class AuthGuard {
      * 检查是否为桌面模式
      */
     async isDesktopMode() {
+        if (this._desktopModeCache !== undefined) return this._desktopModeCache;
         try {
             const response = await fetch('/api/desktop-mode', {
                 method: 'GET',
@@ -80,10 +81,13 @@ class AuthGuard {
             });
             if (response.ok) {
                 const data = await response.json();
-                return data.desktop_mode === true;
+                this._desktopModeCache = data.desktop_mode === true;
+                return this._desktopModeCache;
             }
+            this._desktopModeCache = false;
             return false;
         } catch (error) {
+            this._desktopModeCache = false;
             return false;
         }
     }

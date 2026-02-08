@@ -132,6 +132,7 @@ async ensureStoragePrefix() {
 async preloadRemoteStorage() {
   if (!window.USE_DATABASE) return;
   if (this.remoteStorageLoaded) return;
+  console.time('[perf] preloadRemoteStorage');
   await this.ensureStoragePrefix();
   try {
     const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
@@ -147,6 +148,7 @@ async preloadRemoteStorage() {
   } catch (error) {
     console.error('加载远程存储失败:', error);
   }
+  console.timeEnd('[perf] preloadRemoteStorage');
 }
 
 queueRemoteSet(key, value) {
@@ -392,8 +394,8 @@ toggleDisplayMode() {
 	
 	// 🆕 新增：数据修复调用（在init()中执行，确保数据已加载）
     
-    // 初始化宠物功能
-    this.initializePetFeatures();
+    // 初始化宠物功能（保存promise以便外部await）
+    this.petFeaturesReady = this.initializePetFeatures();
     
     // 设置模态框点击外部关闭功能
     this.setupModalClickOutsideClose();
@@ -528,6 +530,7 @@ fixExistingData() {
 
 // 初始化宠物图片配置 - 从服务器文件夹读取
   async initializePetImages() {
+  console.time('[perf] initializePetImages');
   // 先初始化空结构
   this.petImages = {};
   this.petTypes.forEach(type => {
@@ -608,6 +611,7 @@ fixExistingData() {
   } finally {
     this.petImagesLoaded = true;
     this.maybeRefreshPetStageViews();
+    console.timeEnd('[perf] initializePetImages');
   }
 }
 
@@ -5530,13 +5534,13 @@ renderGroups() {
   grid.appendChild(createCard);
 
   // 已有小组
+  const groupAvatars = this.loadGroupAvatars();
   this.groups.forEach((group, i) => {
     const stage = this.getGroupStage(group.points, group.name);
     const level = this.getGroupLevel(group.points, group.name);
 
     // 显示小组头像（优先显示自定义emoji头像，其次显示宠物形象）
     let showContent;
-    const groupAvatars = this.loadGroupAvatars();
     const customAvatar = groupAvatars[group.name];
     
     if (customAvatar) {
@@ -12083,12 +12087,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 3000);
 
   (async () => {
+    console.time('[perf] total init');
     const system = new ClassPointsSystem();
-    await system.preloadRemoteStorage();
-    system.loadFromLocalStorage();          // 加载数据
-    system.setupTimeFilterListeners();      // 👈 关键！绑定时间按钮事件
-    system.setupSortListeners();            // 👈 绑定排序事件监听器
-    system.renderRankings();                // 初始渲染排行榜
+
+    // 并行执行：远程存储预加载 + 宠物图片加载（两者无依赖）
+    console.time('[perf] preload+pet parallel');
+    await Promise.all([
+      system.preloadRemoteStorage(),
+      system.petFeaturesReady || Promise.resolve()
+    ]);
+    console.timeEnd('[perf] preload+pet parallel');
+
+    console.time('[perf] loadFromLocalStorage');
+    system.loadFromLocalStorage();
+    console.timeEnd('[perf] loadFromLocalStorage');
+
+    system.setupTimeFilterListeners();
+    system.setupSortListeners();
+
+    console.time('[perf] renderRankings');
+    system.renderRankings();
+    console.timeEnd('[perf] renderRankings');
 
     // 挂到全局方便调试（可选）
     window.pointsSystem = system;
@@ -12116,6 +12135,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 数据加载完成，隐藏遮罩
     clearTimeout(safetyTimer);
+    console.timeEnd('[perf] total init');
     const elapsed = Date.now() - initStart;
     // 至少显示加载动画300ms，避免闪烁
     const minDelay = Math.max(0, 300 - elapsed);
