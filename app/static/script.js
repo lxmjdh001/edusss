@@ -7034,12 +7034,13 @@ if (historyTabBtn && petTabBtn) {
 			`}
 		  </div>
 		  ${isDesktop ? '' : `
-		  <div class="account-password" style="margin-top: 12px;">
-			<div class="label" style="margin-bottom: 6px;">修改密码</div>
-			<div style="display: flex; gap: 8px; align-items: center;">
-			  <input type="password" id="accountNewPassword" placeholder="输入新密码（至少6位）" style="width: 220px;">
-			  <button class="btn btn-primary" id="accountChangePasswordBtn">确认修改</button>
+		  <div class="account-password">
+			<div class="account-password-title">修改密码</div>
+			<div class="account-password-form">
+			  <input type="password" id="accountNewPassword" class="account-password-input" placeholder="输入新密码（至少6位）">
+			  <button class="btn btn-primary account-password-btn" id="accountChangePasswordBtn">确认修改</button>
 			</div>
+			<div class="account-password-hint">建议使用字母+数字组合，至少6位</div>
 		  </div>
 		  `}
 		  ${isDesktop ? `<div style="margin-top: 10px;"><span class="account-badge">离线版</span></div>` : ''}
@@ -7103,10 +7104,10 @@ if (historyTabBtn && petTabBtn) {
             const err = await resp.json().catch(() => ({}));
             throw new Error(err.detail || '修改失败');
           }
-          this.showNotification('密码修改成功', 'success');
+          alert('密码修改成功');
           pwdInput.value = '';
         } catch (error) {
-          this.showNotification(`修改失败：${error.message}`, 'error');
+          alert(`修改失败：${error.message}`);
         } finally {
           changeBtn.disabled = false;
         }

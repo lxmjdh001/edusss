@@ -3012,6 +3012,62 @@ body:fullscreen {
   justify-content: flex-end;
 }
 
+.account-password {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px dashed #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.account-password-title {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 8px;
+}
+
+.account-password-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.account-password-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.account-password-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.account-password-btn {
+  white-space: nowrap;
+}
+
+.account-password-hint {
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .account-password-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .account-password-input {
+    min-width: 100%;
+  }
+}
+
 .security-section .btn {
   margin-left: 10px;
 }
