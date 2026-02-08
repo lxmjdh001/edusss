@@ -271,6 +271,8 @@ toggleDisplayMode() {
     this.remoteSyncTimer = null;
     this.remoteSyncInFlight = false;
     this.remoteStorageLoaded = false;
+    this.classDataLoaded = false;
+    this.petImagesLoaded = false;
     // 添加全局配置属性
     this.globalRules = []; // 全局积分规则
     this.globalShopItems = []; // 全局商店商品
@@ -525,7 +527,7 @@ fixExistingData() {
 // ===== 宠物功能核心方法 =====
 
 // 初始化宠物图片配置 - 从服务器文件夹读取
-async initializePetImages() {
+  async initializePetImages() {
   // 先初始化空结构
   this.petImages = {};
   this.petTypes.forEach(type => {
@@ -601,13 +603,20 @@ async initializePetImages() {
       }
     }
     console.log('✅ 从服务器加载宠物图片成功');
-    // 刷新界面，确保等级名称立即生效
-    this.renderStudents();
-    this.renderGroups();
-    this.renderPetConfig();
   } catch (error) {
     console.error('从服务器加载宠物图片失败，使用空数据:', error);
+  } finally {
+    this.petImagesLoaded = true;
+    this.maybeRefreshPetStageViews();
   }
+}
+
+// 等待班级数据与宠物配置都准备好后刷新界面，避免使用默认名称
+maybeRefreshPetStageViews() {
+  if (!this.classDataLoaded || !this.petImagesLoaded) return;
+  this.renderStudents();
+  this.renderGroups();
+  this.renderPetConfig();
 }
 
 // 渲染宠物配置界面
@@ -2892,6 +2901,8 @@ init(){
   }
 
   this.loadFromLocalStorage(); // 最后加载当前班级数据
+  this.classDataLoaded = true;
+  this.maybeRefreshPetStageViews();
   
   // 🆕 新增：数据修复调用（确保数据已加载）
   this.fixExistingData();
