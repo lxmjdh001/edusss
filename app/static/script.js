@@ -592,10 +592,19 @@ async initializePetImages() {
         }
       });
 
-      // 保存更新后的 petTypes 到 localStorage
-      this.storageSet(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
+      // 保存更新后的 petTypes / petStagesByType 到 localStorage
+      if (this.currentClassId) {
+        this.storageSet(`petTypes_${this.currentClassId}`, JSON.stringify(this.petTypes));
+        if (this.petStagesByType && Object.keys(this.petStagesByType).length > 0) {
+          this.storageSet(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
+        }
+      }
     }
     console.log('✅ 从服务器加载宠物图片成功');
+    // 刷新界面，确保等级名称立即生效
+    this.renderStudents();
+    this.renderGroups();
+    this.renderPetConfig();
   } catch (error) {
     console.error('从服务器加载宠物图片失败，使用空数据:', error);
   }
@@ -3722,7 +3731,7 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
     // 加载按宠物类型存储的等级数据（关键修复）
     // 总是优先从localStorage加载petStagesByType数据，确保数据一致性
     const savedPetStagesByType = this.storageGet(`petStagesByType_${this.currentClassId}`);
-    if (savedPetStagesByType) {
+    if (savedPetStagesByType && (!this.petStagesByType || Object.keys(this.petStagesByType).length === 0)) {
       try {
         const parsedPetStagesByType = JSON.parse(savedPetStagesByType);
         if (parsedPetStagesByType && typeof parsedPetStagesByType === 'object') {
@@ -12078,5 +12087,3 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   })();
 });
-
-
