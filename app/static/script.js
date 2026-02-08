@@ -7043,22 +7043,23 @@ if (historyTabBtn && petTabBtn) {
 	  this.attachAccountEvents();
 	}
 
-	attachAccountEvents() {
-	  const logoutBtn = document.getElementById('accountLogoutBtn');
-	  if (!logoutBtn) return;
-	  logoutBtn.addEventListener('click', async () => {
-		if (window.authGuard && typeof authGuard.logout === 'function') {
-		  await authGuard.logout('/static/points-login.html');
-		  return;
-		}
-		try {
-		  this.storageRemove('session_token', true);
-		  this.storageRemove('user_info', true);
-		} finally {
-		  window.location.href = '/static/points-login.html';
-		}
-	  });
-	}
+  attachAccountEvents() {
+    const logoutBtn = document.getElementById('accountLogoutBtn');
+    if (!logoutBtn) return;
+    logoutBtn.addEventListener('click', async () => {
+      if (window.authGuard && typeof authGuard.logout === 'function') {
+        await authGuard.logout('/static/points-login.html');
+        return;
+      }
+      try {
+        localStorage.setItem('force_logout', '1');
+        this.storageRemove('session_token', true);
+        this.storageRemove('user_info', true);
+      } finally {
+        window.location.href = '/static/points-login.html?logout=1';
+      }
+    });
+  }
 
 	// 修改 attachSecurityEvents 方法，只保留安全相关事件
 	attachSecurityEvents() {

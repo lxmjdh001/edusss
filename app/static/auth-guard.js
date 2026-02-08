@@ -7,6 +7,7 @@ class AuthGuard {
     constructor() {
         this.currentUser = null;
         this.isAuthenticated = false;
+        this.forceLogoutKey = 'force_logout';
     }
 
     /**
@@ -96,6 +97,10 @@ class AuthGuard {
      */
     async checkAuth() {
         try {
+            if (this.isForceLoggedOut()) {
+                return null;
+            }
+
             // 检查是否为桌面模式
             const desktopMode = await this.isDesktopMode();
             if (desktopMode) {
@@ -134,6 +139,14 @@ class AuthGuard {
         return localStorage.getItem('session_token') || '';
     }
 
+    isForceLoggedOut() {
+        return localStorage.getItem(this.forceLogoutKey) === '1';
+    }
+
+    clearForceLogout() {
+        localStorage.removeItem(this.forceLogoutKey);
+    }
+
     /**
      * 获取当前用户信息
      */
@@ -160,6 +173,8 @@ class AuthGuard {
      */
     async logout(redirectUrl = '/static/login.html') {
         const token = this.getToken();
+
+        localStorage.setItem(this.forceLogoutKey, '1');
 
         // 立即清除本地数据（这是登录页判断是否已登录的唯一依据）
         localStorage.removeItem('session_token');

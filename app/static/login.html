@@ -238,6 +238,7 @@
                 if (response.ok) {
                     localStorage.setItem('session_token', data.token);
                     localStorage.setItem('user_info', JSON.stringify(data.member));
+                    localStorage.removeItem('force_logout');
 
                     showAlert('登录成功，正在跳转...', 'success');
 
@@ -261,7 +262,7 @@
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const params = new URLSearchParams(window.location.search);
-                if (params.get('logout') === '1') {
+                if (params.get('logout') === '1' || localStorage.getItem('force_logout') === '1') {
                     return;
                 }
                 const token = localStorage.getItem('session_token');
