@@ -643,17 +643,24 @@ h1 {
 /* 响应式设计调整 */
 @media (max-width: 768px) {
   .controls-row {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
     align-items: stretch;
+    justify-items: stretch;
   }
-  
+
   .controls-row-2 {
     justify-content: center;
     padding-right: 0;
   }
-  
-  .btn {
+
+  .controls-row .btn {
     width: 100%;
+    font-size: 0.85em;
+    height: 36px;
+    padding: 6px 8px;
+    margin: 0 !important;
   }
 }
 
@@ -2098,16 +2105,97 @@ h1 {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .main-container {
+    width: 100%;
+    padding: 8px;
+    border-radius: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .current-class-indicator {
+    position: static;
+    display: block;
+    text-align: center;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   .main-content {
     flex-direction: column;
+    gap: 10px;
+    margin: 10px 0;
   }
-  
+
   .left-content, .right-content {
     flex: 1;
   }
   
   .students-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin: 8px 0;
+  }
+
+  .student-card, .group-card {
+    padding: 8px 4px;
+    border-radius: 12px;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .student-name, .group-name {
+    font-size: 0.85em;
+    margin-bottom: 4px;
+  }
+
+  .pet-container-large {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 4px;
+  }
+
+  .pet-container {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 4px;
+  }
+
+  .points-info {
+    font-size: 0.75em;
+    margin: 2px 0;
+  }
+
+  .level-info {
+    font-size: 0.65em;
+    padding: 1px 4px;
+  }
+
+  .progress-bar {
+    height: 4px;
+    margin-top: 4px;
+  }
+
+  .student-actions {
+    gap: 2px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    padding: 3px 4px;
+    font-size: 0.65em;
+    min-width: 20px;
   }
   
   .controls {
@@ -3010,6 +3098,53 @@ body:fullscreen {
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+}
+
+.account-renew {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #f1f5f9;
+}
+
+.account-renew-title {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.account-renew-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.account-renew-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.account-renew-input:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.account-renew-btn {
+  white-space: nowrap;
+}
+
+.account-renew-hint {
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .account-password {
