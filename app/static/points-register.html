@@ -127,6 +127,7 @@
                 if (response.ok) {
                     localStorage.setItem('session_token', data.token);
                     localStorage.setItem('user_info', JSON.stringify(data.member));
+                    localStorage.removeItem('force_logout');
                     showAlert('注册成功，正在跳转...', 'success');
                     setTimeout(() => { window.location.href = '/static/points.html'; }, 1000);
                 } else {
@@ -142,17 +143,27 @@
             }
         });
 
-        window.addEventListener('DOMContentLoaded', async () => {
+        // 仅在检测到本地 token 时跳转，避免误判为桌面模式导致注册页被踢回登录
+        (async () => {
             try {
-                const dmResp = await fetch('/api/desktop-mode');
-                const dmData = await dmResp.json();
-                if (dmData.desktop_mode) {
-                    window.location.href = '/static/points.html'; return;
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('logout') === '1' || localStorage.getItem('force_logout') === '1') {
+                    return;
                 }
-                const response = await fetch('/api/auth/check', { credentials: 'include' });
-                if (response.ok) { window.location.href = '/static/points.html'; }
-            } catch (error) { console.log('未登录'); }
-        });
+                const token = localStorage.getItem('session_token');
+                if (!token) {
+                    return;
+                }
+                const response = await fetch('/api/auth/check', {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                });
+                if (response.ok) {
+                    window.location.href = '/static/points.html';
+                }
+            } catch (error) {
+                console.log('未登录');
+            }
+        })();
     </script>
 </body>
 </html>
