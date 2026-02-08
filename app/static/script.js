@@ -2820,19 +2820,13 @@ init(){
       const parsedTypes = JSON.parse(savedPetTypes);
       if (Array.isArray(parsedTypes) && parsedTypes.length > 0) {
         this.petTypes = parsedTypes;
-      } else {
-        // 如果解析失败或数组为空，保持为空配置
-        this.petTypes = [];
       }
+      // 如果解析结果为空数组，保留已从服务器加载的 petTypes
     } catch (error) {
       console.error('加载宠物类型配置失败:', error);
-      // 如果解析失败，保持为空配置
-      this.petTypes = [];
     }
-  } else {
-    // 如果没有保存的宠物类型配置，保持为空配置
-    this.petTypes = [];
   }
+  // 如果没有保存的配置，保留 initializePetImages() 已从服务器加载的公共宠物类型
   
   // 加载宠物阶段配置（在currentClassId正确设置后）
   const savedPetStages = this.storageGet(`petStages_${this.currentClassId}`);
