@@ -7,7 +7,6 @@ class AuthGuard {
     constructor() {
         this.currentUser = null;
         this.isAuthenticated = false;
-        this.forceLogoutKey = 'force_logout';
     }
 
     /**
@@ -97,10 +96,6 @@ class AuthGuard {
      */
     async checkAuth() {
         try {
-            if (this.isForceLoggedOut()) {
-                return null;
-            }
-
             // 检查是否为桌面模式
             const desktopMode = await this.isDesktopMode();
             if (desktopMode) {
@@ -139,14 +134,6 @@ class AuthGuard {
         return localStorage.getItem('session_token') || '';
     }
 
-    isForceLoggedOut() {
-        return localStorage.getItem(this.forceLogoutKey) === '1';
-    }
-
-    clearForceLogout() {
-        localStorage.removeItem(this.forceLogoutKey);
-    }
-
     /**
      * 获取当前用户信息
      */
@@ -172,19 +159,15 @@ class AuthGuard {
      * 登出
      */
     async logout(redirectUrl = '/static/login.html') {
-        // 保存 token 用于发送登出请求（清除 localStorage 后就取不到了）
         const token = this.getToken();
 
-        // 先清除本地数据，防止竞态
-        localStorage.setItem(this.forceLogoutKey, '1');
+        // 立即清除本地数据（这是登录页判断是否已登录的唯一依据）
         localStorage.removeItem('session_token');
         localStorage.removeItem('user_info');
         this.currentUser = null;
         this.isAuthenticated = false;
 
-        // 前端主动清除 cookie（非 httponly 的情况下生效）
-        document.cookie = 'session_token=; Max-Age=0; path=/;';
-
+        // 通知后端删除 session（即使失败也不影响前端已登出）
         try {
             await fetch('/api/auth/logout', {
                 method: 'POST',
@@ -193,13 +176,10 @@ class AuthGuard {
                     'Authorization': `Bearer ${token}`,
                 }
             });
-            // 等待浏览器处理 Set-Cookie 响应头（清除 httponly cookie）
-            await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
             console.error('登出失败:', error);
         }
 
-        // 跳转到登录页
         window.location.href = redirectUrl;
     }
 
