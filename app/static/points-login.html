@@ -125,7 +125,8 @@
             }
         });
 
-        window.addEventListener('DOMContentLoaded', async () => {
+        // 立即执行，不依赖 DOMContentLoaded（避免事件已触发导致检查被跳过）
+        (async () => {
             try {
                 if (localStorage.getItem('force_logout') === '1') {
                     return;
@@ -145,7 +146,7 @@
             } catch (error) {
                 console.log('未登录');
             }
-        });
+        })();
     </script>
 </body>
 </html>
