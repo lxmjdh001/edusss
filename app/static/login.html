@@ -262,6 +262,8 @@
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 if (localStorage.getItem('force_logout') === '1') {
+                    // 主动清除可能残留的 cookie
+                    document.cookie = 'session_token=; Max-Age=0; path=/;';
                     return;
                 }
                 const response = await fetch('/api/auth/check', {

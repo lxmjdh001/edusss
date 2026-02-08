@@ -172,27 +172,35 @@ class AuthGuard {
      * 登出
      */
     async logout(redirectUrl = '/static/login.html') {
+        // 保存 token 用于发送登出请求（清除 localStorage 后就取不到了）
+        const token = this.getToken();
+
+        // 先清除本地数据，防止竞态
+        localStorage.setItem(this.forceLogoutKey, '1');
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('user_info');
+        this.currentUser = null;
+        this.isAuthenticated = false;
+
+        // 前端主动清除 cookie（非 httponly 的情况下生效）
+        document.cookie = 'session_token=; Max-Age=0; path=/;';
+
         try {
             await fetch('/api/auth/logout', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${this.getToken()}`,
+                    'Authorization': `Bearer ${token}`,
                 }
             });
+            // 等待浏览器处理 Set-Cookie 响应头（清除 httponly cookie）
+            await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
             console.error('登出失败:', error);
-        } finally {
-            localStorage.setItem(this.forceLogoutKey, '1');
-            // 清除本地数据
-            localStorage.removeItem('session_token');
-            localStorage.removeItem('user_info');
-            this.currentUser = null;
-            this.isAuthenticated = false;
-
-            // 跳转到登录页
-            window.location.href = redirectUrl;
         }
+
+        // 跳转到登录页
+        window.location.href = redirectUrl;
     }
 
     /**
