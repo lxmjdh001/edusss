@@ -7,6 +7,7 @@ class AuthGuard {
     constructor() {
         this.currentUser = null;
         this.isAuthenticated = false;
+        this.forceLogoutKey = 'force_logout';
     }
 
     /**
@@ -92,6 +93,10 @@ class AuthGuard {
      */
     async checkAuth() {
         try {
+            if (this.isForceLoggedOut()) {
+                return null;
+            }
+
             // 检查是否为桌面模式
             const desktopMode = await this.isDesktopMode();
             if (desktopMode) {
@@ -130,6 +135,14 @@ class AuthGuard {
         return localStorage.getItem('session_token') || '';
     }
 
+    isForceLoggedOut() {
+        return localStorage.getItem(this.forceLogoutKey) === '1';
+    }
+
+    clearForceLogout() {
+        localStorage.removeItem(this.forceLogoutKey);
+    }
+
     /**
      * 获取当前用户信息
      */
@@ -166,6 +179,7 @@ class AuthGuard {
         } catch (error) {
             console.error('登出失败:', error);
         } finally {
+            localStorage.setItem(this.forceLogoutKey, '1');
             // 清除本地数据
             localStorage.removeItem('session_token');
             localStorage.removeItem('user_info');

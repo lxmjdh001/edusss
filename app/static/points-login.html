@@ -109,6 +109,7 @@
                 if (response.ok) {
                     localStorage.setItem('session_token', data.token);
                     localStorage.setItem('user_info', JSON.stringify(data.member));
+                    localStorage.removeItem('force_logout');
                     showAlert('登录成功，正在跳转...', 'success');
                     setTimeout(() => { window.location.href = '/static/points.html'; }, 1000);
                 } else {
@@ -126,6 +127,9 @@
 
         window.addEventListener('DOMContentLoaded', async () => {
             try {
+                if (localStorage.getItem('force_logout') === '1') {
+                    return;
+                }
                 // 桌面模式直接跳转
                 const dmResp = await fetch('/api/desktop-mode');
                 const dmData = await dmResp.json();
