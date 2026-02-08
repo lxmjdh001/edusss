@@ -7034,6 +7034,14 @@ if (historyTabBtn && petTabBtn) {
 			`}
 		  </div>
 		  ${isDesktop ? '' : `
+		  <div class="account-renew">
+			<div class="account-renew-title">自动续期</div>
+			<div class="account-renew-form">
+			  <input type="text" id="accountInviteCode" class="account-renew-input" placeholder="输入激活码">
+			  <button class="btn btn-primary account-renew-btn" id="accountRedeemBtn">自动续期</button>
+			</div>
+			<div class="account-renew-hint">续期后有效期将立即叠加</div>
+		  </div>
 		  <div class="account-password">
 			<div class="account-password-title">修改密码</div>
 			<div class="account-password-form">
@@ -7110,6 +7118,56 @@ if (historyTabBtn && petTabBtn) {
           alert(`修改失败：${error.message}`);
         } finally {
           changeBtn.disabled = false;
+        }
+      });
+    }
+
+    const redeemBtn = document.getElementById('accountRedeemBtn');
+    const inviteInput = document.getElementById('accountInviteCode');
+    if (redeemBtn && inviteInput) {
+      redeemBtn.addEventListener('click', async () => {
+        const code = inviteInput.value.trim();
+        if (!code) {
+          alert('请输入激活码');
+          return;
+        }
+        redeemBtn.disabled = true;
+        try {
+          const payload = JSON.stringify({ code });
+          let resp;
+          if (window.authGuard && typeof authGuard.request === 'function') {
+            resp = await authGuard.request('/api/auth/redeem-invite', {
+              method: 'POST',
+              body: payload,
+            });
+          } else {
+            const token = localStorage.getItem('session_token') || '';
+            resp = await fetch('/api/auth/redeem-invite', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              credentials: 'include',
+              body: payload,
+            });
+          }
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || '续期失败');
+          }
+          const data = await resp.json().catch(() => ({}));
+          if (window.authGuard && authGuard.currentUser) {
+            authGuard.currentUser.expires_at = data.expires_at || authGuard.currentUser.expires_at;
+            if (data.vip_level) authGuard.currentUser.vip_level = data.vip_level;
+          }
+          alert('续期成功');
+          inviteInput.value = '';
+          await this.renderAccountSettings();
+        } catch (error) {
+          alert(`续期失败：${error.message}`);
+        } finally {
+          redeemBtn.disabled = false;
         }
       });
     }

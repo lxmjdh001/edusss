@@ -247,3 +247,49 @@ def change_password(
     db.add(current_user)
     db.commit()
     return {"success": True}
+
+
+@router.post("/redeem-invite", status_code=status.HTTP_200_OK)
+def redeem_invite_code(
+    payload: schemas.RedeemInviteCodeRequest,
+    current_user: models.Member = Depends(get_active_member),
+    db: Session = Depends(get_db),
+):
+    """
+    使用激活码为当前账号续期
+    """
+    code = payload.code.strip()
+    if not code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="激活码不能为空")
+
+    invite_code = db.query(models.InviteCode).filter(
+        models.InviteCode.code == code
+    ).first()
+    if not invite_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="激活码不存在")
+    if invite_code.is_used:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="激活码已被使用")
+
+    base_time = current_user.expires_at
+    now = datetime.utcnow()
+    if not base_time or base_time < now:
+        base_time = now
+
+    new_expires_at = base_time + timedelta(days=invite_code.valid_days)
+    current_user.expires_at = new_expires_at
+    if invite_code.vip_level and invite_code.vip_level > current_user.vip_level:
+        current_user.vip_level = invite_code.vip_level
+
+    invite_code.is_used = True
+    invite_code.used_at = now
+    invite_code.used_by_member_id = current_user.id
+
+    db.add(current_user)
+    db.add(invite_code)
+    db.commit()
+
+    return {
+        "success": True,
+        "expires_at": current_user.expires_at,
+        "vip_level": current_user.vip_level,
+    }
