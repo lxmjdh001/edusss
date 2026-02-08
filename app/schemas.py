@@ -40,6 +40,10 @@ class Member(MemberBase):
     updated_at: datetime
 
 
+class ChangePasswordRequest(ORMModel):
+    password: str = Field(..., min_length=6, max_length=128, description="新密码")
+
+
 class InviteCodeBase(ORMModel):
     vip_level: int = Field(1, ge=1, le=3, description="激活后会员等级")
     valid_days: int = Field(365, ge=1, le=3650, description="有效天数")

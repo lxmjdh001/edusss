@@ -232,3 +232,18 @@ def check_auth_status(
         "is_active": current_user.is_active,
         "expires_at": current_user.expires_at,
     }
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+def change_password(
+    payload: schemas.ChangePasswordRequest,
+    current_user: models.Member = Depends(get_active_member),
+    db: Session = Depends(get_db),
+):
+    """
+    修改当前登录用户的密码
+    """
+    current_user.password_hash = hash_password(payload.password)
+    db.add(current_user)
+    db.commit()
+    return {"success": True}

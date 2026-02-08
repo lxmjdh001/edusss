@@ -7033,6 +7033,15 @@ if (historyTabBtn && petTabBtn) {
 			<div>${expiryText}</div>
 			`}
 		  </div>
+		  ${isDesktop ? '' : `
+		  <div class="account-password" style="margin-top: 12px;">
+			<div class="label" style="margin-bottom: 6px;">修改密码</div>
+			<div style="display: flex; gap: 8px; align-items: center;">
+			  <input type="password" id="accountNewPassword" placeholder="输入新密码（至少6位）" style="width: 220px;">
+			  <button class="btn btn-primary" id="accountChangePasswordBtn">确认修改</button>
+			</div>
+		  </div>
+		  `}
 		  ${isDesktop ? `<div style="margin-top: 10px;"><span class="account-badge">离线版</span></div>` : ''}
 		  <div class="account-actions">
 			<button class="btn btn-secondary" id="accountLogoutBtn">退出</button>
@@ -7059,6 +7068,50 @@ if (historyTabBtn && petTabBtn) {
         window.location.href = '/static/points-login.html?logout=1';
       }
     });
+
+    const changeBtn = document.getElementById('accountChangePasswordBtn');
+    const pwdInput = document.getElementById('accountNewPassword');
+    if (changeBtn && pwdInput) {
+      changeBtn.addEventListener('click', async () => {
+        const newPassword = pwdInput.value.trim();
+        if (!newPassword || newPassword.length < 6) {
+          this.showNotification('密码至少6位', 'error');
+          return;
+        }
+        changeBtn.disabled = true;
+        try {
+          const payload = JSON.stringify({ password: newPassword });
+          let resp;
+          if (window.authGuard && typeof authGuard.request === 'function') {
+            resp = await authGuard.request('/api/auth/change-password', {
+              method: 'POST',
+              body: payload,
+            });
+          } else {
+            const token = localStorage.getItem('session_token') || '';
+            resp = await fetch('/api/auth/change-password', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              credentials: 'include',
+              body: payload,
+            });
+          }
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || '修改失败');
+          }
+          this.showNotification('密码修改成功', 'success');
+          pwdInput.value = '';
+        } catch (error) {
+          this.showNotification(`修改失败：${error.message}`, 'error');
+        } finally {
+          changeBtn.disabled = false;
+        }
+      });
+    }
   }
 
 	// 修改 attachSecurityEvents 方法，只保留安全相关事件
