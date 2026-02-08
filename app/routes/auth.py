@@ -190,8 +190,8 @@ def logout(
         ).delete()
         db.commit()
 
-    # 清除Cookie
-    response.delete_cookie(key="session_token")
+    # 清除Cookie（参数需与 set_cookie 一致才能正确清除）
+    response.delete_cookie(key="session_token", httponly=True, samesite="lax")
 
     return None
 
