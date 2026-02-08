@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import get_db
-from ..dependencies import get_current_user, get_active_member, get_optional_user
+from ..dependencies import get_current_user, get_active_member
 from ..utils import hash_password, verify_password, generate_session_token, get_session_expiry
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -175,20 +175,31 @@ def login(
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
+    request: Request,
     response: Response,
-    current_user: models.Member | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     """
     用户登出
-    删除当前会话
+    直接通过token删除会话，不依赖用户解析
     """
-    if current_user:
-        # 删除当前用户的所有会话（可选：只删除当前会话）
-        db.query(models.Session).filter(
-            models.Session.member_id == current_user.id
-        ).delete()
-        db.commit()
+    # 从Cookie或Header中提取token
+    token = request.cookies.get("session_token")
+    if not token:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+    if token:
+        # 先查到session获取member_id，删除该用户所有会话
+        session_obj = db.query(models.Session).filter(
+            models.Session.session_token == token
+        ).first()
+        if session_obj:
+            db.query(models.Session).filter(
+                models.Session.member_id == session_obj.member_id
+            ).delete()
+            db.commit()
 
     # 清除Cookie（参数需与 set_cookie 一致才能正确清除）
     response.delete_cookie(key="session_token", httponly=True, samesite="lax")
