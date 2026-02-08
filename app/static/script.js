@@ -9225,8 +9225,12 @@ clearRandomRecords(){
   initRemoteLockFeature(){
     const isMobile = window.innerWidth <= 768;
     const remoteLockBtn = document.getElementById('remoteLockBtn');
+    const lockBtn = document.getElementById('lockBtn');
     if(remoteLockBtn){
       remoteLockBtn.style.display = isMobile ? '' : 'none';
+    }
+    if(lockBtn){
+      lockBtn.style.display = isMobile ? 'none' : '';
     }
     // 非手机端启动轮询
     if(!isMobile){
