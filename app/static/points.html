@@ -12,12 +12,15 @@
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 100%);
-      display: flex;
+      display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 99999;
       transition: opacity 0.4s ease;
+    }
+    #loadingOverlay.active {
+      display: flex;
     }
     #loadingOverlay.fade-out {
       opacity: 0;
@@ -939,15 +942,18 @@
             const defaultUser = { username: 'desktop_user', name: '桌面用户', role: 'teacher' };
             localStorage.setItem('user_info', JSON.stringify(defaultUser));
           }
-          authGuard.init({ required: false });
+          await authGuard.init({ required: false });
         } else {
-          // 网页版：强制登录，未登录跳转积分系统登录页
-          authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
+          // 网页版：强制登录，未登录会跳转，不会继续执行下面的代码
+          await authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
         }
       } catch (e) {
         // 网络异常时默认要求登录
-        authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
+        await authGuard.init({ required: true, loginUrl: '/static/points-login.html' });
       }
+      // 认证通过后才显示加载遮罩
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.classList.add('active');
     })();
   </script>
 </body>
