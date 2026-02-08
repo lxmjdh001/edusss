@@ -260,6 +260,10 @@
         // 检查是否已登录（仅通过 localStorage token 判断，不依赖 cookie）
         window.addEventListener('DOMContentLoaded', async () => {
             try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('logout') === '1') {
+                    return;
+                }
                 const token = localStorage.getItem('session_token');
                 if (!token) {
                     return;

@@ -180,7 +180,16 @@ class AuthGuard {
             console.error('登出失败:', error);
         }
 
-        window.location.href = redirectUrl;
+        let finalUrl = redirectUrl;
+        try {
+            if (!/[?&]logout=1\b/.test(redirectUrl)) {
+                finalUrl = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}logout=1`;
+            }
+        } catch (e) {
+            finalUrl = redirectUrl;
+        }
+
+        window.location.href = finalUrl;
     }
 
     /**

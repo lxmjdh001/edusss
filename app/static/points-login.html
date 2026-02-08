@@ -127,6 +127,10 @@
         // 立即执行，不依赖 DOMContentLoaded（避免事件已触发导致检查被跳过）
         (async () => {
             try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('logout') === '1') {
+                    return;
+                }
                 // 桌面模式直接跳转
                 const dmResp = await fetch('/api/desktop-mode');
                 const dmData = await dmResp.json();
