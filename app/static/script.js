@@ -138,6 +138,7 @@ async preloadRemoteStorage() {
     const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
     if (!resp.ok) return;
     const items = await resp.json();
+    console.log('[diag] points-kv/all returned', Array.isArray(items) ? items.length + ' items' : typeof items, Array.isArray(items) && items.length > 0 ? items.map(i => i?.key).slice(0, 10) : items);
     if (Array.isArray(items)) {
       items.forEach(item => {
         if (!item || !item.key) return;
