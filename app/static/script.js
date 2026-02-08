@@ -12090,6 +12090,11 @@ document.addEventListener('DOMContentLoaded', () => {
     console.time('[perf] total init');
     const system = new ClassPointsSystem();
 
+    // 诊断：检查初始状态
+    console.log('[diag] storagePrefix:', system.storagePrefix);
+    console.log('[diag] currentClassId:', system.currentClassId);
+    console.log('[diag] classes:', system.classes);
+
     // 并行执行：远程存储预加载 + 宠物图片加载（两者无依赖）
     console.time('[perf] preload+pet parallel');
     await Promise.all([
@@ -12098,9 +12103,19 @@ document.addEventListener('DOMContentLoaded', () => {
     ]);
     console.timeEnd('[perf] preload+pet parallel');
 
+    // 诊断：检查预加载后状态
+    console.log('[diag] after preload - storagePrefix:', system.storagePrefix);
+    console.log('[diag] after preload - currentClassId:', system.currentClassId);
+    const kvKey = system.storageKey(`classPointsData_${system.currentClassId}`);
+    const rawData = localStorage.getItem(kvKey);
+    console.log('[diag] localStorage key:', kvKey, '| has data:', !!rawData, '| length:', rawData?.length);
+
     console.time('[perf] loadFromLocalStorage');
     system.loadFromLocalStorage();
     console.timeEnd('[perf] loadFromLocalStorage');
+
+    // 诊断：检查加载后数据
+    console.log('[diag] after load - students:', system.students?.length, '| groups:', system.groups?.length);
 
     system.setupTimeFilterListeners();
     system.setupSortListeners();
