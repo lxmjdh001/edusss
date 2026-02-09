@@ -11080,7 +11080,24 @@ exportBackup(){
 		  // 🔧 修复：导入等级积分设置
 		  this.scoreToPointsRatio = data.scoreToPointsRatio || 10;
 		  this.petStages = data.petStages || this.getDefaultPetStages();
-		  
+
+		  // 🐾 恢复宠物配置
+		  if (data.petTypes && Array.isArray(data.petTypes) && data.petTypes.length > 0) {
+		    this.petTypes = data.petTypes;
+		  }
+		  if (data.petStagesByType && typeof data.petStagesByType === 'object') {
+		    this.petStagesByType = data.petStagesByType;
+		  }
+		  if (data.studentPets && typeof data.studentPets === 'object') {
+		    this.studentPets = data.studentPets;
+		  }
+		  if (data.groupPets && typeof data.groupPets === 'object') {
+		    this.groupPets = data.groupPets;
+		  }
+		  if (data.displayMode) {
+		    this.displayMode = data.displayMode;
+		  }
+
 		  // 处理小组等级导入：只导入积分范围，不导入名称（名称已固定）
 		  if (data.groupStages && Array.isArray(data.groupStages)) {
 		    const defaultGroupStages = this.getDefaultGroupStages();
