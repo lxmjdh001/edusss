@@ -9225,6 +9225,10 @@ clearRandomRecords(){
 
   initRemoteLockFeature(){
     const isMobile = window.innerWidth <= 768;
+    const remoteLockBtn = document.getElementById('remoteLockBtn');
+    if(remoteLockBtn){
+      remoteLockBtn.style.display = isMobile ? '' : 'none';
+    }
     // 非手机端启动轮询
     if(!isMobile){
       this._remoteLockPollTimer = setInterval(()=>this.pollRemoteLockStatus(), 3000);
