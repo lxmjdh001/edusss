@@ -761,29 +761,56 @@
             const prefix = (window.authGuard && typeof authGuard.getStorageNamespace === 'function')
                 ? authGuard.getStorageNamespace('points')
                 : 'points_guest__';
+            // 内存缓存，与主系统 _kvCache 对齐
+            const _cache = new Map();
             const key = (k) => `${prefix}${k}`;
             const get = (k) => {
-                const primary = localStorage.getItem(key(k));
+                const fullKey = key(k);
+                if (_cache.has(fullKey)) return _cache.get(fullKey);
+                // 回退到 localStorage（兼容旧数据）
+                const primary = localStorage.getItem(fullKey);
                 if (primary !== null) return primary;
                 const legacy = localStorage.getItem(k);
-                if (legacy !== null) {
-                    localStorage.setItem(key(k), legacy);
-                    localStorage.removeItem(k);
-                }
                 return legacy;
             };
-            return {
-                key,
-                get,
-                set: (k, v) => localStorage.setItem(key(k), v),
-                remove: (k, includeLegacy = false) => {
-                    localStorage.removeItem(key(k));
-                    if (includeLegacy) localStorage.removeItem(k);
+            const set = (k, v) => {
+                _cache.set(key(k), v);
+                // 同时写入远程数据库，返回 promise 以便关键写入可 await
+                return fetch('/api/points-kv/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ items: [{ key: k, value: v }] })
+                }).catch(err => console.error('写入远程存储失败:', err));
+            };
+            const remove = (k, includeLegacy = false) => {
+                _cache.delete(key(k));
+                fetch(`/api/points-kv/${encodeURIComponent(k)}`, {
+                    method: 'DELETE', credentials: 'include'
+                }).catch(() => {});
+                if (includeLegacy) localStorage.removeItem(k);
+            };
+            // 从远程数据库预加载所有 KV 到内存缓存
+            const preload = async () => {
+                try {
+                    const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
+                    if (!resp.ok) return;
+                    const items = await resp.json();
+                    if (Array.isArray(items)) {
+                        items.forEach(item => {
+                            if (item && item.key) _cache.set(key(item.key), item.value ?? '');
+                        });
+                    }
+                } catch (e) {
+                    console.error('预加载远程存储失败:', e);
                 }
             };
+            return { key, get, set, remove, preload, _cache };
         }
 
         const pointsStorage = createPointsStorage();
+        // 启动预加载（其他初始化代码 await 此 promise）
+        const _storageReady = pointsStorage.preload();
 
         // 获取DOM元素
         const mainTitle = document.getElementById('mainTitle');
@@ -1474,7 +1501,10 @@
         });
 
         // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 等待远程数据库预加载完成
+            await _storageReady;
+
             // 初始状态下不显示指针
             const pointer = document.querySelector('.pointer');
             if (pointer) {
@@ -1622,7 +1652,10 @@ document.getElementById('loadClassStudentsBtn').addEventListener('click', () => 
   }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // 等待远程数据库预加载完成
+  await _storageReady;
+
   /* 0. 先按比例给一次默认值 */
   initWheelSizeByRatio();
 

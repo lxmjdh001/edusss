@@ -986,29 +986,56 @@
             const prefix = (window.authGuard && typeof authGuard.getStorageNamespace === 'function')
                 ? authGuard.getStorageNamespace('points')
                 : 'points_guest__';
+            // 内存缓存，与主系统 _kvCache 对齐
+            const _cache = new Map();
             const key = (k) => `${prefix}${k}`;
             const get = (k) => {
-                const primary = localStorage.getItem(key(k));
+                const fullKey = key(k);
+                if (_cache.has(fullKey)) return _cache.get(fullKey);
+                // 回退到 localStorage（兼容旧数据）
+                const primary = localStorage.getItem(fullKey);
                 if (primary !== null) return primary;
                 const legacy = localStorage.getItem(k);
-                if (legacy !== null) {
-                    localStorage.setItem(key(k), legacy);
-                    localStorage.removeItem(k);
-                }
                 return legacy;
             };
-            return {
-                key,
-                get,
-                set: (k, v) => localStorage.setItem(key(k), v),
-                remove: (k, includeLegacy = false) => {
-                    localStorage.removeItem(key(k));
-                    if (includeLegacy) localStorage.removeItem(k);
+            const set = (k, v) => {
+                _cache.set(key(k), v);
+                // 同时写入远程数据库，返回 promise 以便关键写入可 await
+                return fetch('/api/points-kv/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ items: [{ key: k, value: v }] })
+                }).catch(err => console.error('写入远程存储失败:', err));
+            };
+            const remove = (k, includeLegacy = false) => {
+                _cache.delete(key(k));
+                fetch(`/api/points-kv/${encodeURIComponent(k)}`, {
+                    method: 'DELETE', credentials: 'include'
+                }).catch(() => {});
+                if (includeLegacy) localStorage.removeItem(k);
+            };
+            // 从远程数据库预加载所有 KV 到内存缓存
+            const preload = async () => {
+                try {
+                    const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
+                    if (!resp.ok) return;
+                    const items = await resp.json();
+                    if (Array.isArray(items)) {
+                        items.forEach(item => {
+                            if (item && item.key) _cache.set(key(item.key), item.value ?? '');
+                        });
+                    }
+                } catch (e) {
+                    console.error('预加载远程存储失败:', e);
                 }
             };
+            return { key, get, set, remove, preload, _cache };
         }
 
         const pointsStorage = createPointsStorage();
+        // 启动预加载（其他初始化代码 await 此 promise）
+        const _storageReady = pointsStorage.preload();
 
         // 全局变量
         let startTime = null;
@@ -1928,7 +1955,7 @@ function deleteThisRecord(idx) {
         }
 
         // 确认同步积分
-        document.getElementById('confirmSyncBtn').addEventListener('click', function() {
+        document.getElementById('confirmSyncBtn').addEventListener('click', async function() {
             const selectedRecordIndex = document.querySelector('input[name="selectedRecord"]:checked');
             if (!selectedRecordIndex) {
                 alert('请选择要同步的记录！');
@@ -1996,8 +2023,8 @@ function deleteThisRecord(idx) {
                     recordIndex: recordIndex
                 };
                 
-                // 保存到本地存储
-                pointsStorage.set('tempTaskRule', JSON.stringify(tempRuleData));
+                // 保存到远程数据库（等待写入完成，确保返回主页时数据已持久化）
+                await pointsStorage.set('tempTaskRule', JSON.stringify(tempRuleData));
                 
                 // 将处理过的学生加入任务同步历史记录
                 availableStudents.forEach(name => {
@@ -2099,6 +2126,9 @@ function deleteThisRecord(idx) {
 
         // 页面加载时初始化
         window.addEventListener('load', async function() {
+            // 等待远程数据库预加载完成
+            await _storageReady;
+
             // 检查URL参数，只有显式要求全新任务时才清空数据
             const urlParams = new URLSearchParams(window.location.search);
             const newTask = urlParams.get('newTask') === '1';
