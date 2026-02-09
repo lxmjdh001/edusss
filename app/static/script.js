@@ -4569,9 +4569,9 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       if(this.isLocked) return;
       this.clearData();
     });
-    document.getElementById('lockBtn').addEventListener('click',()=>this.toggleLock());
+    document.getElementById('lockBtn')?.addEventListener('click',()=>this.toggleLock());
     // 远程锁屏按钮事件
-    document.getElementById('remoteLockBtn').addEventListener('click',()=>this.showRemoteLockModal());
+    document.getElementById('remoteLockBtn')?.addEventListener('click',()=>this.showRemoteLockModal());
     document.getElementById('confirmRemoteLockBtn').addEventListener('click',()=>this.doRemoteLock());
     document.getElementById('cancelRemoteLockBtn').addEventListener('click',()=>{
       document.getElementById('remoteLockModal').style.display='none';
