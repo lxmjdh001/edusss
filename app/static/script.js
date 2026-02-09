@@ -9353,6 +9353,7 @@ clearRandomRecords(){
   
   updateLockButton(){
     const lockBtn = document.getElementById('lockBtn');
+    if (!lockBtn) return;
     if(this.isLocked){
       lockBtn.innerHTML = '🔒 解锁页面';
       lockBtn.classList.remove('btn-warning');
