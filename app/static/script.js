@@ -568,20 +568,19 @@ fixExistingData() {
         }
 
         // 同步等级名称（保持积分区间等结构，只替换名称）
+        if (!this.petStagesByType) this.petStagesByType = {};
+        if (!this.petStagesByType[serverType.id]) {
+          // 即使服务器没有返回 stageNames，也要为该宠物类型初始化等级数据
+          const baseStages = Array.isArray(this.petStages) && this.petStages.length > 0
+            ? this.petStages
+            : this.migrateStages(this.getDefaultPetStages(), 'pet');
+          this.petStagesByType[serverType.id] = JSON.parse(JSON.stringify(baseStages));
+        }
         if (serverType.stageNames && serverType.stageNames.length > 0) {
-          if (!this.petStagesByType) this.petStagesByType = {};
-          const existingStages = this.petStagesByType[serverType.id];
-          const baseStages =
-            Array.isArray(existingStages) && existingStages.length > 0
-              ? existingStages
-              : (Array.isArray(this.petStages) && this.petStages.length > 0
-                ? this.petStages
-                : this.migrateStages(this.getDefaultPetStages(), 'pet'));
-          const mergedStages = JSON.parse(JSON.stringify(baseStages));
+          const mergedStages = this.petStagesByType[serverType.id];
           serverType.stageNames.forEach((name, i) => {
             if (mergedStages[i]) mergedStages[i].name = name;
           });
-          this.petStagesByType[serverType.id] = mergedStages;
         }
       });
 
@@ -10473,22 +10472,19 @@ deleteGroup(index){
   
   // 等级制度方法
   getPetStage(points, studentName = null){
-    // 根据学生名称获取对应的宠物类型
+    // 根据学生名称获取对应的宠物类型（与 getStudentPetImage 保持一致的回退逻辑）
     let petType = null;
     if (studentName && this.studentPets && this.studentPets[studentName]) {
       petType = this.studentPets[studentName].petType;
+    }
+    if (!petType && this.petTypes && this.petTypes.length > 0) {
+      petType = this.petTypes[0].id;
     }
 
     // 如果该宠物类型有独立的等级名称存储，使用对应的等级数据
     let stagesToUse = this.petStages;
     if (petType && this.petStagesByType && this.petStagesByType[petType]) {
       stagesToUse = this.petStagesByType[petType];
-    }
-    // DEBUG: 临时调试日志
-    if (studentName && this._debugPetStageCount === undefined) this._debugPetStageCount = 0;
-    if (studentName && this._debugPetStageCount < 3) {
-      this._debugPetStageCount++;
-      console.log(`[DEBUG getPetStage] student=${studentName}, petType=${petType}, displayMode=${this.displayMode}, hasPetStagesByType=${!!(this.petStagesByType && this.petStagesByType[petType])}, stagesToUse[0].name=${stagesToUse[0]?.name}`);
     }
     
     for(let i = stagesToUse.length - 1; i >= 0; i--){
