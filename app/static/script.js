@@ -539,6 +539,7 @@ fixExistingData() {
       const defaultColors = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff'];
 
       data.types.forEach((serverType, idx) => {
+        console.log(`[DEBUG initPetImages] type=${serverType.id}, stageNames=`, serverType.stageNames);
         const serverName = serverType.name || serverType.id;
         // 同步 petTypes：如果前端没有这个类型，自动添加
         const exists = this.petTypes.find(t => t.id === serverType.id);
