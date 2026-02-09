@@ -535,6 +535,15 @@ fixExistingData() {
 
     // 将服务器返回的宠物类型和图片URL同步到前端
     if (data.types && Array.isArray(data.types)) {
+      // 缓存服务器返回的等级名称，供 loadFromLocalStorage 之后重新应用
+      // （因为 loadFromLocalStorage 会用旧的 localStorage 数据覆盖 petStagesByType）
+      if (!this._serverStageNames) this._serverStageNames = {};
+      data.types.forEach(t => {
+        if (t.stageNames && t.stageNames.length > 0) {
+          this._serverStageNames[t.id] = t.stageNames;
+        }
+      });
+
       // 默认颜色列表，用于自动分配
       const defaultColors = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff'];
 
@@ -568,6 +577,7 @@ fixExistingData() {
         }
 
         // 同步等级名称（保持积分区间等结构，只替换名称）
+        // 每次登录都从服务器文件夹的等级名称.txt重新提取，避免显示硬编码的"蛋"
         if (!this.petStagesByType) this.petStagesByType = {};
         if (!this.petStagesByType[serverType.id]) {
           // 即使服务器没有返回 stageNames，也要为该宠物类型初始化等级数据
@@ -576,6 +586,7 @@ fixExistingData() {
             : this.migrateStages(this.getDefaultPetStages(), 'pet');
           this.petStagesByType[serverType.id] = JSON.parse(JSON.stringify(baseStages));
         }
+        // 始终用服务器返回的等级名称覆盖本地缓存，确保每次登录都从文件夹提取最新名称
         if (serverType.stageNames && serverType.stageNames.length > 0) {
           const mergedStages = this.petStagesByType[serverType.id];
           serverType.stageNames.forEach((name, i) => {
@@ -599,6 +610,22 @@ fixExistingData() {
     this.petImagesLoaded = true;
     this.maybeRefreshPetStageViews();
     console.timeEnd('[perf] initializePetImages');
+  }
+}
+
+// 重新应用服务器返回的等级名称到 petStagesByType
+// 用于 loadFromLocalStorage 等函数从旧缓存加载后，确保名称来自服务器文件夹的等级名称.txt
+_reapplyServerStageNames() {
+  if (!this._serverStageNames || !this.petStagesByType) return;
+  for (const petType in this._serverStageNames) {
+    if (this.petStagesByType[petType]) {
+      const names = this._serverStageNames[petType];
+      names.forEach((name, i) => {
+        if (this.petStagesByType[petType][i]) {
+          this.petStagesByType[petType][i].name = name;
+        }
+      });
+    }
   }
 }
 
@@ -3659,7 +3686,10 @@ loadAllPetConfig(preventPetStagesByTypeOverride = true) {
         console.error('加载按类型存储的个人等级配置失败:', error);
       }
     }
-    
+
+    // 重新应用服务器返回的等级名称，避免 localStorage 旧数据覆盖
+    this._reapplyServerStageNames();
+
     // 加载宠物类型配置
     const savedPetTypes = this.storageGet(`petTypes_${this.currentClassId}`);
     if (savedPetTypes) {
@@ -3863,6 +3893,9 @@ loadFromLocalStorage(){
         this.loadPetStagesFromLegacyStorage();
       }
       
+      // 重新应用服务器返回的等级名称，避免 localStorage 旧数据覆盖
+      this._reapplyServerStageNames();
+
       // 优先从单独的groupStages存储加载小组等级数据
       const savedGroupStages = this.storageGet(`groupStages_${this.currentClassId}`);
       if (savedGroupStages) {
@@ -10489,7 +10522,6 @@ deleteGroup(index){
 
     for(let i = stagesToUse.length - 1; i >= 0; i--){
       if(points >= stagesToUse[i].minPoints){
-        // 根据显示模式返回不同的等级名称和emoji
         const stage = {...stagesToUse[i]};
         if (this.displayMode === 'emoji') {
           // emoji模式下使用默认等级名称和emoji
@@ -10499,7 +10531,7 @@ deleteGroup(index){
             stage.emoji = defaultStages[i].emoji;
           }
         } else {
-          // 自定义模式下使用自定义等级名称，保持原有emoji
+          // 自定义模式下使用 petStagesByType 中的等级名称（来自服务器文件夹的等级名称.txt）
           stage.name = stagesToUse[i].name;
           stage.emoji = stagesToUse[i].emoji;
         }
@@ -10515,7 +10547,6 @@ deleteGroup(index){
         stage.emoji = defaultStages[0].emoji;
       }
     } else {
-      // 自定义模式下使用自定义等级名称，保持原有emoji
       stage.name = stagesToUse[0].name;
       stage.emoji = stagesToUse[0].emoji;
     }
@@ -10603,32 +10634,27 @@ getStudentPetName(student) {
         for(let i = typeStages.length - 1; i >= 0; i--){
           if(points >= typeStages[i].minPoints){
             const stage = {...typeStages[i]};
-            // 根据显示模式返回不同的等级名称
             if (this.displayMode === 'emoji') {
-              // emoji模式下使用默认等级名称
               const defaultStages = this.getDefaultPetStages();
               if (defaultStages[i]) {
                 stage.name = defaultStages[i].name;
               }
             } else {
-              // 自定义模式下使用自定义等级名称
+              // 自定义模式下使用 petStagesByType 中的等级名称（来自服务器文件夹的等级名称.txt）
               stage.name = typeStages[i].name;
             }
             return stage;
           }
         }
-        
+
         // 如果没有找到匹配的等级，返回该宠物类型的最低等级
         const stage = {...typeStages[0]};
-        // 根据显示模式返回不同的等级名称
         if (this.displayMode === 'emoji') {
-          // emoji模式下使用默认等级名称
           const defaultStages = this.getDefaultPetStages();
           if (defaultStages[0]) {
             stage.name = defaultStages[0].name;
           }
         } else {
-          // 自定义模式下使用自定义等级名称
           stage.name = typeStages[0].name;
         }
         return stage;
@@ -10710,31 +10736,10 @@ getStudentPetName(student) {
   // 获取宠物颜色
   getPetColor(points, studentName = null) {
     const stage = this.getPetStage(points, studentName);
-    
-    // 根据显示模式使用对应的颜色
-    if (this.displayMode === 'emoji') {
-      // emoji模式下使用默认颜色
-      const colors = {
-        '蛋': '#FF6B6B',
-        '孵化中': '#FFD93D',
-        '雏鸟': '#6BCF7F',
-        '幼鸟': '#4ECDC4',
-        '成长鸟': '#45B7D1',
-        '雄鹰': '#96CEB4'
-      };
-      return colors[stage.name] || '#667eea';
-    } else {
-      // 自定义模式下使用自定义颜色或默认颜色
-      const colors = {
-        '蛋': '#FF6B6B',
-        '孵化中': '#FFD93D',
-        '雏鸟': '#6BCF7F',
-        '幼鸟': '#4ECDC4',
-        '成长鸟': '#45B7D1',
-        '雄鹰': '#96CEB4'
-      };
-      return colors[stage.name] || '#667eea';
-    }
+    // 使用索引确定颜色，避免依赖硬编码的等级名称
+    const level = this.getLevel(points, studentName);
+    const colorsByIndex = ['#FF6B6B', '#FFD93D', '#6BCF7F', '#4ECDC4', '#45B7D1', '#96CEB4'];
+    return colorsByIndex[level - 1] || '#667eea';
   }
   
   // 获取小组颜色
@@ -10751,45 +10756,17 @@ getStudentPetName(student) {
         const currentStageIndex = typeStages.findIndex(s => s.minPoints === stage.minPoints && s.maxPoints === stage.maxPoints);
         
         if (currentStageIndex >= 0) {
-          // 使用宠物类型特定的颜色
-          const colors = {
-            '蛋': '#FF6B6B',
-            '孵化中': '#FFD93D',
-            '雏鸟': '#6BCF7F',
-            '幼鸟': '#4ECDC4',
-            '成长鸟': '#45B7D1',
-            '雄鹰': '#96CEB4'
-          };
-          return colors[stage.name] || '#667eea';
+          // 使用索引确定颜色，避免依赖硬编码的等级名称
+          const colorsByIndex = ['#FF6B6B', '#FFD93D', '#6BCF7F', '#4ECDC4', '#45B7D1', '#96CEB4'];
+          return colorsByIndex[currentStageIndex] || '#667eea';
         }
       }
     }
     
-    // 默认使用小组等级颜色
-    // 根据显示模式使用对应的颜色
-    if (this.displayMode === 'emoji') {
-      // emoji模式下使用默认颜色
-      const colors = {
-        '青铜': '#CD7F32',
-        '白银': '#C0C0C0',
-        '黄金': '#FFD700',
-        '铂金': '#E5E4E2',
-        '钻石': '#B9F2FF',
-        '王者': '#FF6B6B'
-      };
-      return colors[stage.name] || '#667eea';
-    } else {
-      // 自定义模式下使用自定义颜色或默认颜色
-      const colors = {
-        '青铜': '#CD7F32',
-        '白银': '#C0C0C0',
-        '黄金': '#FFD700',
-        '铂金': '#E5E4E2',
-        '钻石': '#B9F2FF',
-        '王者': '#FF6B6B'
-      };
-      return colors[stage.name] || '#667eea';
-    }
+    // 默认使用小组等级颜色（按索引）
+    const groupLevel = this.getGroupLevel(points, groupName);
+    const groupColorsByIndex = ['#CD7F32', '#C0C0C0', '#FFD700', '#E5E4E2', '#B9F2FF', '#FF6B6B'];
+    return groupColorsByIndex[groupLevel - 1] || '#667eea';
   }
   
   // 关闭模态框方法
