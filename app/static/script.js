@@ -539,7 +539,6 @@ fixExistingData() {
       const defaultColors = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff'];
 
       data.types.forEach((serverType, idx) => {
-        console.log(`[DEBUG initPetImages] type=${serverType.id}, stageNames=`, serverType.stageNames);
         const serverName = serverType.name || serverType.id;
         // 同步 petTypes：如果前端没有这个类型，自动添加
         const exists = this.petTypes.find(t => t.id === serverType.id);
@@ -3813,9 +3812,11 @@ loadPetStagesFromLegacyStorage() {
     this.petStagesByType = {};
   }
   
-  // 为每个宠物类型复制一份等级数据
+  // 为每个宠物类型复制一份等级数据（不覆盖已从服务器加载的数据）
   this.petTypes.forEach(type => {
-    this.petStagesByType[type.id] = JSON.parse(JSON.stringify(this.petStages));
+    if (!this.petStagesByType[type.id]) {
+      this.petStagesByType[type.id] = JSON.parse(JSON.stringify(this.petStages));
+    }
   });
 }
 
@@ -10486,11 +10487,6 @@ deleteGroup(index){
     let stagesToUse = this.petStages;
     if (petType && this.petStagesByType && this.petStagesByType[petType]) {
       stagesToUse = this.petStagesByType[petType];
-    }
-    // DEBUG
-    if (studentName && !this._debugPetStage2) {
-      this._debugPetStage2 = true;
-      console.log(`[DEBUG getPetStage2] petType=${petType}, keys=`, Object.keys(this.petStagesByType || {}), `matched=${!!(this.petStagesByType && this.petStagesByType[petType])}, stagesToUse[0].name=${stagesToUse[0]?.name}`);
     }
 
     for(let i = stagesToUse.length - 1; i >= 0; i--){
