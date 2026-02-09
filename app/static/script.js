@@ -10487,7 +10487,12 @@ deleteGroup(index){
     if (petType && this.petStagesByType && this.petStagesByType[petType]) {
       stagesToUse = this.petStagesByType[petType];
     }
-    
+    // DEBUG
+    if (studentName && !this._debugPetStage2) {
+      this._debugPetStage2 = true;
+      console.log(`[DEBUG getPetStage2] petType=${petType}, keys=`, Object.keys(this.petStagesByType || {}), `matched=${!!(this.petStagesByType && this.petStagesByType[petType])}, stagesToUse[0].name=${stagesToUse[0]?.name}`);
+    }
+
     for(let i = stagesToUse.length - 1; i >= 0; i--){
       if(points >= stagesToUse[i].minPoints){
         // 根据显示模式返回不同的等级名称和emoji
