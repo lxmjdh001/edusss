@@ -2855,14 +2855,22 @@ init(){
   // 如果没有保存的配置，保留 initializePetImages() 已从服务器加载的公共宠物类型
   
   // 加载宠物阶段配置（在currentClassId正确设置后）
+  // 注意：只合并积分范围，不覆盖名称。
+  // 因为 this.petStages 是 petStagesByType[firstPetType] 的引用，
+  // 覆盖名称会把服务器返回的等级名称（来自等级名称.txt）替换回旧的"蛋"等硬编码名称。
   const savedPetStages = this.storageGet(`petStages_${this.currentClassId}`);
   if (savedPetStages) {
     try {
       const parsedStages = JSON.parse(savedPetStages);
-      // 合并保存的阶段名称
       parsedStages.forEach((savedStage, index) => {
-        if (index < this.petStages.length && savedStage.name) {
-          this.petStages[index].name = savedStage.name;
+        if (index < this.petStages.length) {
+          // 只合并积分范围，不覆盖名称
+          if (savedStage.minPoints !== undefined) {
+            this.petStages[index].minPoints = savedStage.minPoints;
+          }
+          if (savedStage.maxPoints !== undefined) {
+            this.petStages[index].maxPoints = savedStage.maxPoints;
+          }
         }
       });
     } catch (error) {
@@ -2937,7 +2945,14 @@ init(){
   // 插到控制栏第二行最右边
   const row2 = document.querySelector('.controls-row-2');
   row2.appendChild(this.toggleModeBtn);
-    
+
+  // 首次渲染前，确保服务器等级名称已应用到 petStagesByType
+  this._reapplyServerStageNames();
+  // 将修正后的 petStagesByType 持久化，避免下次加载时仍读到旧的"蛋"名称
+  if (this.currentClassId && this.petStagesByType && Object.keys(this.petStagesByType).length > 0) {
+    this.storageSet(`petStagesByType_${this.currentClassId}`, JSON.stringify(this.petStagesByType));
+  }
+
   this.renderStudents();
   this.renderGroups();
   this.renderHistory();
