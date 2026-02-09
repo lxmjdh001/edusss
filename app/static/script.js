@@ -3362,6 +3362,7 @@ setupTimeFilterListeners() {
   if (checkbox) {
     checkbox.addEventListener('change', (e) => {
       this.includeMemberPointsInGroupRank = e.target.checked;
+      console.log('[DEBUG] includeMember changed:', e.target.checked, 'groups:', this.groups.map(g => ({name: g.name, members: g.members})));
       this.renderRankings();
     });
   }
