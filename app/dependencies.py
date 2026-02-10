@@ -85,7 +85,7 @@ async def get_active_member(
     if current_user.expires_at and current_user.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="账号已过期，请续费",
+            detail="账号已过期，续费请添加客服微信：ddjia2022",
         )
 
     return current_user

@@ -39,7 +39,7 @@ def _resolve_owner(current_user: Optional[Member]) -> tuple[str, Optional[int]]:
     if current_user.expires_at and current_user.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="账号已过期，请续费",
+            detail="账号已过期，续费请添加客服微信：ddjia2022",
         )
     return ("user", current_user.id)
 

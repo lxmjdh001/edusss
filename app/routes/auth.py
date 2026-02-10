@@ -146,7 +146,7 @@ def login(
     if member.expires_at and member.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="账号已过期，请联系管理员续费"
+            detail="账号已过期，续费请添加客服微信：ddjia2022"
         )
 
     # 创建登录会话
@@ -170,10 +170,18 @@ def login(
         samesite="lax",
     )
 
+    # 检查是否在到期前7天内，生成到期提醒
+    warning = None
+    if member.expires_at:
+        days_left = (member.expires_at - datetime.utcnow()).days
+        if 0 <= days_left <= 7:
+            warning = f"您的账号将在{days_left}天后到期，续费请添加客服微信：ddjia2022"
+
     return schemas.AuthResponse(
         token=session_token,
         member=member,
-        message="登录成功"
+        message="登录成功",
+        warning=warning,
     )
 
 

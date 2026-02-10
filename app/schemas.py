@@ -357,3 +357,4 @@ class AuthResponse(BaseModel):
     token: str
     member: Member
     message: str = "操作成功"
+    warning: Optional[str] = None

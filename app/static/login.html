@@ -143,6 +143,51 @@
         .loading.show {
             display: block;
         }
+
+        .warning-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .warning-modal-overlay.show {
+            display: flex;
+        }
+        .warning-modal {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .warning-modal h3 {
+            color: #e67e22;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .warning-modal p {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .warning-modal .btn-confirm {
+            padding: 10px 30px;
+            background: #e67e22;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .warning-modal .btn-confirm:hover {
+            background: #d35400;
+        }
     </style>
 </head>
 <body>
@@ -186,6 +231,14 @@
 
         <div class="register-link">
             还没有账号？<a href="/static/register.html">立即注册</a>
+        </div>
+    </div>
+
+    <div class="warning-modal-overlay" id="warningModal">
+        <div class="warning-modal">
+            <h3>到期提醒</h3>
+            <p id="warningMessage"></p>
+            <button class="btn-confirm" id="warningConfirmBtn">我知道了</button>
         </div>
     </div>
 
@@ -240,11 +293,21 @@
                     localStorage.setItem('user_info', JSON.stringify(data.member));
                     localStorage.removeItem('force_logout');
 
-                    showAlert('登录成功，正在跳转...', 'success');
-
-                    setTimeout(() => {
-                        window.location.href = '/static/grades.html';
-                    }, 1000);
+                    if (data.warning) {
+                        // 显示到期提醒弹窗，用户确认后再跳转
+                        const modal = document.getElementById('warningModal');
+                        document.getElementById('warningMessage').textContent = data.warning;
+                        modal.classList.add('show');
+                        document.getElementById('warningConfirmBtn').onclick = () => {
+                            modal.classList.remove('show');
+                            window.location.href = '/static/grades.html';
+                        };
+                    } else {
+                        showAlert('登录成功，正在跳转...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/static/grades.html';
+                        }, 1000);
+                    }
                 } else {
                     showAlert(data.detail || '登录失败，请检查用户名和密码');
                     loginBtn.disabled = false;
