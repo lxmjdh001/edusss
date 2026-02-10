@@ -1577,37 +1577,54 @@ function getShopPrizesFromItems(items) {
   return prizes;
 }
 
+/* ===== 直接从API获取商店数据（缓存未命中时的兜底） ===== */
+async function fetchShopItemsFromAPI() {
+  try {
+    const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
+    if (!resp.ok) return null;
+    const items = await resp.json();
+    if (!Array.isArray(items)) return null;
+    const shopEntry = items.find(item => item.key === 'classPointsGlobalShopItems');
+    if (shopEntry && shopEntry.value) {
+      // 同步更新本地缓存，使后续 getShopPrizes() 能读到
+      pointsStorage._cache.set(
+        pointsStorage.key('classPointsGlobalShopItems'),
+        shopEntry.value
+      );
+      return shopEntry.value;
+    }
+    return null;
+  } catch (e) {
+    console.error('直接API获取商店数据失败:', e);
+    return null;
+  }
+}
+
 /* ===== 按钮事件 ===== */
-document.getElementById('loadShopBtn').addEventListener('click', () => {
-  // 先详细检查数据格式
-  const raw = pointsStorage.get('classPointsGlobalShopItems');
-  console.log('【详细检查】原始数据:', raw);
-  
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      console.log('【详细检查】解析后数据:', parsed);
-      console.log('【详细检查】数据类型:', typeof parsed);
-      console.log('【详细检查】是否为数组:', Array.isArray(parsed));
-      if (Array.isArray(parsed)) {
-        console.log('【详细检查】数组长度:', parsed.length);
-        console.log('【详细检查】数组内容:', parsed);
-      }
-    } catch (e) {
-      console.log('【详细检查】解析错误:', e);
+document.getElementById('loadShopBtn').addEventListener('click', async () => {
+  // 确保预加载完成
+  await _storageReady;
+
+  // 先从缓存读取
+  let prizes = getShopPrizes();
+
+  // 缓存未命中时，直接从API重新获取
+  if (prizes.length === 0) {
+    const freshRaw = await fetchShopItemsFromAPI();
+    if (freshRaw) {
+      prizes = getShopPrizes();
     }
   }
-  
-  const prizes = getShopPrizes();
+
   if (prizes.length === 0) {
-    console.log('全局商店也空，请先去主页-系统配置-全局配置里添加商品！');
+    alert('未找到商店商品！请先在主页 → 系统配置 → 全局配置中添加商品。');
     return;
   }
+
   data = prizes;
   winningIndex = -1;
   drawWheel();
   saveToLocalStorage();
-  console.log('已载入全局奖品', prizes);
 });
 
 
