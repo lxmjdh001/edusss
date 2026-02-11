@@ -234,6 +234,24 @@
     </div>
 </div>
 
+<!-- 导出激活码弹窗 -->
+<div class="modal-overlay" id="exportModal">
+    <div class="modal">
+        <h3>批量导出激活码</h3>
+        <div class="form-group">
+            <label>导出范围</label>
+            <select id="exportScope">
+                <option value="unused">仅未激活</option>
+                <option value="all">全部</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeModal('exportModal')">取消</button>
+            <button class="btn btn-primary" style="background:#10b981;" onclick="doExport()">导出</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let adminPassword = '';
 const API = '/api/points-admin';
@@ -480,24 +498,31 @@ async function deleteCode(id) {
         else { const d = await resp.json(); alert(d.detail || '删除失败'); }
     } catch(e) { alert('网络错误'); }
 }
-async function exportCodes() {
-    const count = prompt('请输入导出数量（将导出未使用的激活码）：', '10');
-    if (!count) return;
-    const n = parseInt(count);
-    if (isNaN(n) || n < 1) { alert('请输入有效数量'); return; }
+function exportCodes() {
+    document.getElementById('exportModal').classList.add('show');
+}
+
+async function doExport() {
+    const scope = document.getElementById('exportScope').value;
+    const typeMap = {1:'天卡',30:'月卡',90:'季卡',365:'年卡'};
     try {
         const resp = await fetch(API + '/activation-codes?password=' + encodeURIComponent(adminPassword));
         if (!resp.ok) { alert('获取激活码失败'); return; }
         const codes = await resp.json();
-        const unused = codes.filter(c => !c.is_used).slice(0, n);
-        if (!unused.length) { alert('没有可导出的未使用激活码'); return; }
-        const text = unused.map(c => c.code).join('\n');
+        const filtered = scope === 'unused' ? codes.filter(c => !c.is_used) : codes;
+        if (!filtered.length) { alert('没有可导出的激活码'); return; }
+        const text = filtered.map(c => {
+            const label = typeMap[c.valid_days] || (c.valid_days + '天');
+            return c.code + '  ' + label;
+        }).join('\n');
         const blob = new Blob([text], { type: 'text/plain' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = '激活码_' + new Date().toISOString().slice(0,10) + '.txt';
+        const tag = scope === 'unused' ? '未激活' : '全部';
+        a.download = '激活码_' + tag + '_' + new Date().toISOString().slice(0,10) + '.txt';
         a.click();
         URL.revokeObjectURL(a.href);
+        closeModal('exportModal');
     } catch(e) { alert('网络错误'); }
 }
 </script>

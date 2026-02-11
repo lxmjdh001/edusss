@@ -146,7 +146,7 @@ def login(
     if member.expires_at and member.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="账号已过期，续费请添加客服微信：ddjia2022"
+            detail="账号已过期，请联系客服续费"
         )
 
     # 创建登录会话
