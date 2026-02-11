@@ -148,7 +148,7 @@ def _get_owner_bucket(owner: Optional[models.Member]) -> str:
     if owner.expires_at and owner.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="账号已过期，请联系客服续费",
+            detail="账号已过期，点击【联系客服】续费",
         )
     return _safe_name(f"user_{owner.id}")
 

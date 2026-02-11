@@ -123,14 +123,14 @@
         const alertBox = document.getElementById('alert');
 
         function showAlert(message, type = 'error') {
-            if (message.includes('联系客服')) {
-                alertBox.innerHTML = message.replace('联系客服', '<a href="javascript:void(0)" onclick="document.getElementById(\'contactModal\').classList.add(\'show\')" style="color:#c33;font-weight:bold;text-decoration:underline;">联系客服</a>');
+            if (message.includes('【联系客服】')) {
+                alertBox.innerHTML = message.replace('【联系客服】', '<a href="javascript:void(0)" onclick="document.getElementById(\'contactModal\').classList.add(\'show\')" style="color:#c33;font-weight:bold;text-decoration:underline;cursor:pointer;">【联系客服】</a>');
             } else {
                 alertBox.textContent = message;
             }
             alertBox.className = `alert alert-${type}`;
             alertBox.style.display = 'block';
-            if (!message.includes('联系客服')) {
+            if (!message.includes('【联系客服】')) {
                 setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
             }
         }
