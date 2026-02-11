@@ -160,6 +160,7 @@
             </select>
             <input type="number" id="codeCount" value="1" min="1" max="500" style="width:80px;" placeholder="数量">
             <button class="btn btn-primary" onclick="generateCodes()">生成激活码</button>
+            <button class="btn btn-primary" onclick="exportCodes()" style="background:#10b981;">批量导出</button>
         </div>
         <table>
             <thead>
@@ -477,6 +478,26 @@ async function deleteCode(id) {
         const resp = await fetch(API + '/activation-codes/' + id + '?password=' + encodeURIComponent(adminPassword), { method: 'DELETE' });
         if (resp.ok) { loadCodes(); loadCodeStats(); }
         else { const d = await resp.json(); alert(d.detail || '删除失败'); }
+    } catch(e) { alert('网络错误'); }
+}
+async function exportCodes() {
+    const count = prompt('请输入导出数量（将导出未使用的激活码）：', '10');
+    if (!count) return;
+    const n = parseInt(count);
+    if (isNaN(n) || n < 1) { alert('请输入有效数量'); return; }
+    try {
+        const resp = await fetch(API + '/activation-codes?password=' + encodeURIComponent(adminPassword));
+        if (!resp.ok) { alert('获取激活码失败'); return; }
+        const codes = await resp.json();
+        const unused = codes.filter(c => !c.is_used).slice(0, n);
+        if (!unused.length) { alert('没有可导出的未使用激活码'); return; }
+        const text = unused.map(c => c.code).join('\n');
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '激活码_' + new Date().toISOString().slice(0,10) + '.txt';
+        a.click();
+        URL.revokeObjectURL(a.href);
     } catch(e) { alert('网络错误'); }
 }
 </script>
