@@ -352,6 +352,13 @@ class LoginRequest(BaseModel):
     password: str = Field(..., description="密码")
 
 
+class ResetPasswordRequest(BaseModel):
+    """重置密码请求"""
+    username: str = Field(..., description="用户名")
+    invite_code: str = Field(..., max_length=32, description="激活码")
+    new_password: str = Field(..., min_length=6, max_length=128, description="新密码")
+
+
 class AuthResponse(BaseModel):
     """认证响应"""
     token: str

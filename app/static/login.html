@@ -230,7 +230,30 @@
         </form>
 
         <div class="register-link">
-            还没有账号？<a href="/static/register.html">立即注册</a>
+            还没有账号？<a href="/static/register.html">立即注册</a> | <a href="javascript:void(0)" onclick="document.getElementById('resetModal').classList.add('show')">找回密码</a>
+        </div>
+    </div>
+
+    <div class="warning-modal-overlay" id="resetModal">
+        <div class="warning-modal" style="text-align:left;padding:24px;">
+            <h3 style="text-align:center;color:#333;">找回密码</h3>
+            <div id="resetAlert" class="alert" style="display:none;margin-bottom:12px;"></div>
+            <div class="form-group">
+                <label style="display:block;margin-bottom:6px;font-size:13px;color:#333;">账号</label>
+                <input type="text" id="resetUsername" placeholder="请输入账号" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:4px;font-size:14px;">
+            </div>
+            <div class="form-group">
+                <label style="display:block;margin-bottom:6px;font-size:13px;color:#333;">激活码</label>
+                <input type="text" id="resetCode" placeholder="请输入激活码" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:4px;font-size:14px;">
+            </div>
+            <div class="form-group">
+                <label style="display:block;margin-bottom:6px;font-size:13px;color:#333;">新密码</label>
+                <input type="password" id="resetPassword" placeholder="请输入新密码（至少6位）" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:4px;font-size:14px;">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                <button onclick="document.getElementById('resetModal').classList.remove('show')" style="padding:10px 20px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:14px;">取消</button>
+                <button onclick="doResetPassword()" style="padding:10px 20px;background:#333;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">重置密码</button>
+            </div>
         </div>
     </div>
 
@@ -269,6 +292,29 @@
                     alertBox.style.display = 'none';
                 }, 5000);
             }
+        }
+
+        async function doResetPassword() {
+            const username = document.getElementById('resetUsername').value.trim();
+            const code = document.getElementById('resetCode').value.trim();
+            const pwd = document.getElementById('resetPassword').value;
+            const alertEl = document.getElementById('resetAlert');
+            if (!username || !code || !pwd) { alertEl.textContent='请填写所有字段'; alertEl.className='alert alert-error'; alertEl.style.display='block'; return; }
+            if (pwd.length < 6) { alertEl.textContent='密码至少6位'; alertEl.className='alert alert-error'; alertEl.style.display='block'; return; }
+            try {
+                const resp = await fetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ username, invite_code: code, new_password: pwd })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    alertEl.textContent='密码重置成功，请登录'; alertEl.className='alert alert-success'; alertEl.style.display='block';
+                    setTimeout(() => { document.getElementById('resetModal').classList.remove('show'); }, 1500);
+                } else {
+                    alertEl.textContent=data.detail||'重置失败'; alertEl.className='alert alert-error'; alertEl.style.display='block';
+                }
+            } catch(e) { alertEl.textContent='网络错误'; alertEl.className='alert alert-error'; alertEl.style.display='block'; }
         }
 
         loginForm.addEventListener('submit', async (e) => {

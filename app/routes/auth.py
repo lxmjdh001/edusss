@@ -185,6 +185,57 @@ def login(
     )
 
 
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(
+    payload: schemas.ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    通过账号+激活码重置密码
+    """
+    member = db.query(models.Member).filter(
+        models.Member.account == payload.username
+    ).first()
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="账号不存在"
+        )
+
+    invite_code = db.query(models.InviteCode).filter(
+        models.InviteCode.code == payload.invite_code
+    ).first()
+    if not invite_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="激活码不存在"
+        )
+    if invite_code.is_used:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="激活码已被使用"
+        )
+
+    # 重置密码
+    member.password_hash = hash_password(payload.new_password)
+
+    # 同时用激活码续期
+    base_time = member.expires_at
+    now = datetime.utcnow()
+    if not base_time or base_time < now:
+        base_time = now
+    member.expires_at = base_time + timedelta(days=invite_code.valid_days)
+
+    # 标记激活码已使用
+    invite_code.is_used = True
+    invite_code.used_at = now
+    invite_code.used_by_member_id = member.id
+
+    db.commit()
+
+    return {"success": True, "message": "密码重置成功，激活码已用于续期"}
+
+
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
     request: Request,
