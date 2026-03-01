@@ -10938,7 +10938,7 @@ getStudentPetName(student) {
 	}
   
 	// 修改导出备份方法，包含班级信息
-exportBackup(){
+async exportBackup(){
   try {
     const safeGroupStages = Array.isArray(this.groupStages) ? this.groupStages : [];
     const safePetStages = Array.isArray(this.petStages) ? this.petStages : [];
@@ -11013,8 +11013,8 @@ exportBackup(){
     const filename = `${className}_班级完整数据备份_${timestamp}.json`;
     
     const content = JSON.stringify(data, null, 2);
-    this.exportFile(filename, content, 'application/json', { preferBackend: true });
-    
+    await this.exportFile(filename, content, 'application/json', { preferBackend: true });
+
     let exportMessage = `备份导出成功！\n包含：\n- ${(this.students || []).length} 名学生\n- ${(this.groups || []).length} 个小组\n- ${(this.rules || []).length} 条个人规则\n- ${(this.groupRules || []).length} 条小组规则\n- ${(this.shopItems || []).length} 个商店商品`;
     exportMessage += `\n- 个人等级配置（${safePetStages.length}个等级）`;
     exportMessage += `\n- 小组等级配置（${safeGroupStages.length}个等级）`;
