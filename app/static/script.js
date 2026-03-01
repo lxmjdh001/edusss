@@ -4586,8 +4586,8 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       }
     });
     
-    // 备份上传
-    document.getElementById('backupInput').addEventListener('change',e=>{
+    // 备份上传（数据管理标签内）
+    document.getElementById('settingsBackupInput').addEventListener('change',e=>{
       if(this.isLocked) return;
       const file=e.target.files[0];
       if(file) this.importBackupFile(file);
@@ -4598,7 +4598,7 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       if(this.isLocked) return;
       this.openSettings();
     });
-    document.getElementById('exportBtn').addEventListener('click',()=>{
+    document.getElementById('settingsExportBtn').addEventListener('click',()=>{
       if(this.isLocked) return;
       this.exportBackup();
     });
@@ -4614,7 +4614,7 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       if(this.isLocked) return;
       this.openTimer();
     });
-    document.getElementById('clearBtn').addEventListener('click',()=>{
+    document.getElementById('settingsClearBtn').addEventListener('click',()=>{
       if(this.isLocked) return;
       this.clearData();
     });
@@ -10000,11 +10000,9 @@ executeBatchGroups(){
     // 禁用所有可编辑元素
     document.getElementById('mainTitle').setAttribute('contenteditable', 'false');
     
-    // 禁用特定按钮（上传学生信息、导入备份）
+    // 禁用特定按钮（上传学生信息）
     document.getElementById('fileInput').disabled = true;
-    document.getElementById('backupInput').disabled = true;
     document.querySelector('label[for="fileInput"]').classList.add('disabled');
-    document.querySelector('label[for="backupInput"]').classList.add('disabled');
     
     // 禁用除积分历史记录外的所有内容区域的交互
     const contentAreas = document.querySelectorAll('#studentsContainer, #groupsContainer, #systemConfigContainer');
@@ -10064,9 +10062,7 @@ executeBatchGroups(){
     
     // 启用特定按钮
     document.getElementById('fileInput').disabled = false;
-    document.getElementById('backupInput').disabled = false;
     document.querySelector('label[for="fileInput"]').classList.remove('disabled');
-    document.querySelector('label[for="backupInput"]').classList.remove('disabled');
     
     // 恢复所有内容区域的交互
     const contentAreas = document.querySelectorAll('#studentsContainer, #groupsContainer, #systemConfigContainer, #historyContainer');

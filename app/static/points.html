@@ -85,9 +85,6 @@
         <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
         
         <button class="btn btn-secondary" id="settingsBtn">⚙️ 系统配置</button>
-        <button class="btn btn-primary" id="exportBtn">💾 导出备份</button>
-        <label for="backupInput" class="btn btn-secondary">📂 导入备份</label>
-        <input type="file" id="backupInput" accept=".json" style="display:none;">
         <button class="btn btn-info" id="statisticsBtn">📊 统计</button>
         <button class="btn btn-primary" id="batchBtn">📦 批量操作</button>
       </div>
@@ -106,7 +103,6 @@
 			</div>
 		  </div>
 		  
-		  <button class="btn btn-danger" id="clearBtn">🗑️ 清空数据</button>
 		  <button class="btn btn-purple" id="remoteLockBtn" style="display:none;">📱 远程锁屏</button>
 
 		  <!-- 修改为技术支持按钮并移至最右侧 -->
@@ -279,6 +275,7 @@
       <button class="modal-tab" data-tab="levelSettings">等级积分设置</button>
       <button class="modal-tab" data-tab="petConfig">🐾 宠物配置</button>
       <button class="modal-tab" data-tab="security" style="display:none;">安全设置</button>
+      <button class="modal-tab" data-tab="dataManage">数据管理</button>
       <button class="modal-tab" data-tab="account">我的账户</button>
     </div>
 		
@@ -431,6 +428,16 @@
 			  <p style="color: #e53e3e; margin-bottom: 10px;">如果忘记密码导致系统无法使用，可以使用紧急重置功能</p>
 			  <button class="btn btn-danger" id="emergencyResetBtn">紧急重置系统</button>
 			</div>
+		  </div>
+		</div>
+
+		<!-- 数据管理 -->
+		<div id="dataManageTab" class="modal-tab-content">
+		  <div style="display:flex;flex-direction:column;gap:15px;align-items:center;padding:20px 0;">
+			<button class="btn btn-primary" id="settingsExportBtn" style="width:200px;padding:10px;">💾 导出备份</button>
+			<label for="settingsBackupInput" class="btn btn-secondary" style="width:200px;padding:10px;text-align:center;cursor:pointer;">📂 导入备份</label>
+			<input type="file" id="settingsBackupInput" accept=".json" style="display:none;">
+			<button class="btn btn-danger" id="settingsClearBtn" style="width:200px;padding:10px;">🗑️ 清空数据</button>
 		  </div>
 		</div>
 
