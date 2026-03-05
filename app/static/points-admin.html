@@ -616,7 +616,15 @@ async function createUser() {
 
 function showEditUser(id, account) {
     document.getElementById('editUserId').value = id;
-    document.getElementById('editUsername').value = account;
+    const usernameInput = document.getElementById('editUsername');
+    usernameInput.value = account;
+    // 兜底：确保用户名输入框始终可编辑（兼容旧缓存里残留 disabled/readonly）
+    usernameInput.disabled = false;
+    usernameInput.readOnly = false;
+    usernameInput.removeAttribute('disabled');
+    usernameInput.removeAttribute('readonly');
+    usernameInput.style.background = '#fff';
+    usernameInput.style.cursor = 'text';
     document.getElementById('editOriginalUsername').value = account;
     document.getElementById('editPassword').value = '';
     document.getElementById('editExtendDays').value = '';
