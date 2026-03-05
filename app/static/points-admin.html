@@ -261,9 +261,10 @@
         <h3>编辑用户</h3>
         <div id="editUserAlert" class="alert-inline alert-error"></div>
         <input type="hidden" id="editUserId">
+        <input type="hidden" id="editOriginalUsername">
         <div class="form-group">
             <label>用户名</label>
-            <input type="text" id="editUsername" disabled style="background:#f5f5f5;">
+            <input type="text" id="editUsername" placeholder="3-64个字符" minlength="3" maxlength="64">
         </div>
         <div class="form-group">
             <label>新密码 (留空不修改)</label>
@@ -616,6 +617,7 @@ async function createUser() {
 function showEditUser(id, account) {
     document.getElementById('editUserId').value = id;
     document.getElementById('editUsername').value = account;
+    document.getElementById('editOriginalUsername').value = account;
     document.getElementById('editPassword').value = '';
     document.getElementById('editExtendDays').value = '';
     document.getElementById('editUserModal').classList.add('show');
@@ -623,9 +625,15 @@ function showEditUser(id, account) {
 
 async function updateUser() {
     const id = document.getElementById('editUserId').value;
+    const username = document.getElementById('editUsername').value.trim();
+    const originalUsername = document.getElementById('editOriginalUsername').value;
     const password = document.getElementById('editPassword').value;
     const extendDays = document.getElementById('editExtendDays').value;
     const body = {};
+    if (username !== originalUsername) {
+        if (!username || username.length < 3) { showInlineAlert('editUserAlert','用户名至少3个字符'); return; }
+        body.username = username;
+    }
     if (password) body.password = password;
     if (extendDays) body.extend_days = parseInt(extendDays);
     if (!Object.keys(body).length) { showInlineAlert('editUserAlert','请至少修改一项'); return; }

@@ -37,6 +37,7 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    username: Optional[str] = Field(default=None, min_length=3, max_length=64)
     password: Optional[str] = Field(default=None, min_length=6)
     is_active: Optional[bool] = None
     extend_days: Optional[int] = Field(default=None, ge=1)
@@ -161,13 +162,38 @@ def update_user(
     password: str,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """编辑用户（改密码、启停、续期）"""
+    """编辑用户（改用户名、改密码、启停、续期）"""
     if not verify_admin_password(password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="密码错误")
 
     member = db.get(models.Member, user_id)
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+
+    if user_data.username is not None:
+        new_username = user_data.username.strip()
+        if not new_username:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="用户名不能为空")
+
+        exists_account = (
+            db.query(models.Member)
+            .filter(models.Member.account == new_username, models.Member.id != user_id)
+            .first()
+        )
+        if exists_account:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="用户名已存在")
+
+        exists_phone = (
+            db.query(models.Member)
+            .filter(models.Member.phone == new_username, models.Member.id != user_id)
+            .first()
+        )
+        if exists_phone:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="用户名已存在")
+
+        # 管理后台默认 phone/account 同步为同一登录名
+        member.account = new_username
+        member.phone = new_username
 
     if user_data.password is not None:
         member.password_hash = hash_password(user_data.password)
