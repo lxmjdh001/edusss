@@ -200,6 +200,7 @@
                 <option value="1">天卡 (1天)</option>
                 <option value="30">月卡 (30天)</option>
                 <option value="90">季卡 (90天)</option>
+                <option value="180">半年卡 (180天)</option>
                 <option value="365" selected>年卡 (365天)</option>
             </select>
             <input type="number" id="codeCount" value="1" min="1" max="500" style="width:80px;" placeholder="数量">
@@ -709,7 +710,7 @@ function renderCodes(codes) {
     const start = (codesPage - 1) * PAGE_SIZE;
     const pageCodes = codesAll.slice(start, start + PAGE_SIZE);
 
-    const typeMap = {1:'天卡',30:'月卡',90:'季卡',365:'年卡'};
+    const typeMap = {1:'天卡',30:'月卡',90:'季卡',180:'半年卡',365:'年卡'};
     tbody.innerHTML = pageCodes.map(c => {
         const label = typeMap[c.valid_days] || (c.valid_days + '天');
         const statusBadge = c.is_used
@@ -786,7 +787,7 @@ async function fetchAllCodesForExport() {
 }
 
 function toCardType(validDays) {
-    const typeMap = {1:'天卡',30:'月卡',90:'季卡',365:'年卡'};
+    const typeMap = {1:'天卡',30:'月卡',90:'季卡',180:'半年卡',365:'年卡'};
     return typeMap[validDays] || `${validDays}天卡`;
 }
 
