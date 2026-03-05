@@ -213,7 +213,7 @@
             <thead>
                 <tr>
                     <th>激活码</th><th>有效天数</th><th>状态</th>
-                    <th>生成时间</th><th>使用时间</th><th>激活用户</th><th>操作</th>
+                    <th>生成时间(北京时间)</th><th>使用时间(北京时间)</th><th>激活用户</th><th>操作</th>
                 </tr>
             </thead>
             <tbody id="codesBody"><tr><td colspan="7" class="empty-tip">加载中...</td></tr></tbody>
@@ -334,10 +334,34 @@ let usersPage = 1;
 let codesAll = [];
 let codesPage = 1;
 
+const DISPLAY_TIMEZONE = 'Asia/Shanghai';
+const shanghaiDateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: DISPLAY_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+});
+
+function parseServerDate(dt) {
+    if (!dt) return null;
+    let text = String(dt).trim();
+    // 兼容 "YYYY-MM-DD HH:mm:ss" 形式
+    text = text.replace(' ', 'T');
+    // 如果后端返回无时区时间，按 UTC 解释，再统一转北京时间
+    const hasTimezone = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(text);
+    if (!hasTimezone) text += 'Z';
+    const d = new Date(text);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function fmt(dt) {
     if (!dt) return '-';
-    const d = new Date(dt);
-    return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+    const d = parseServerDate(dt);
+    if (!d) return '-';
+    return shanghaiDateTimeFormatter.format(d);
 }
 
 function showInlineAlert(id, msg, type='error') {
