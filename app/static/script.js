@@ -166,9 +166,10 @@ queueRemoteDelete(key) {
   }, 500);
 }
 
-async flushRemoteQueue() {
-  if (!window.USE_DATABASE) return;
-  if (this.remoteSyncInFlight) return;
+async flushRemoteQueue(options = {}) {
+  const { throwOnError = false } = options;
+  if (!window.USE_DATABASE) return true;
+  if (this.remoteSyncInFlight) return true;
   const items = Array.from(this.remoteSyncQueue?.entries() || []).map(([key, value]) => ({
     key,
     value: String(value)
@@ -180,30 +181,57 @@ async flushRemoteQueue() {
     clearTimeout(this.remoteSyncTimer);
     this.remoteSyncTimer = null;
   }
-  if (!items.length && !deletes.length) return;
+  if (!items.length && !deletes.length) return true;
   this.remoteSyncInFlight = true;
+  let syncError = null;
   try {
     if (items.length > 0) {
-      await fetch('/api/points-kv/batch', {
+      const response = await fetch('/api/points-kv/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ items })
       });
+      if (!response.ok) {
+        const error = new Error(`远程保存失败（${response.status}）`);
+        error.status = response.status;
+        throw error;
+      }
     }
     if (deletes.length > 0) {
-      await Promise.all(deletes.map(key => fetch(`/api/points-kv/${encodeURIComponent(key)}`, {
+      await Promise.all(deletes.map(async key => {
+        const response = await fetch(`/api/points-kv/${encodeURIComponent(key)}`, {
         method: 'DELETE',
         credentials: 'include'
-      })));
+        });
+        if (!response.ok) {
+          const error = new Error(`远程删除失败（${response.status}）`);
+          error.status = response.status;
+          throw error;
+        }
+      }));
     }
   } catch (error) {
+    syncError = error;
     console.error('同步远程存储失败:', error);
     items.forEach(item => this.remoteSyncQueue.set(item.key, item.value));
     deletes.forEach(key => this.remoteDeleteQueue.add(key));
   } finally {
     this.remoteSyncInFlight = false;
   }
+  if (syncError && throwOnError) throw syncError;
+  return !syncError;
+}
+
+getRemoteSyncErrorMessage(error, action = '操作') {
+  if (error && (error.status === 401 || error.status === 403)) {
+    return `${action}失败：权限不足或登录已过期，请重新登录后重试`;
+  }
+  const message = error?.message || '';
+  if (error instanceof TypeError || /failed to fetch|network|load failed|网络/i.test(message)) {
+    return `${action}失败：网络异常，请检查连接后重试`;
+  }
+  return `${action}失败：${message || '请稍后重试'}`;
 }
 
 escapeHtml(text) {
@@ -3626,8 +3654,8 @@ saveImageFile(file, path) {
 
   
   // 修改原有的保存方法，按班级ID存储数据
-saveAll(){
-  if (!this.currentClassId) return;
+saveAll(options = {}){
+  if (!this.currentClassId) return Promise.resolve(true);
   
   const data={
     students:this.students,
@@ -3664,7 +3692,7 @@ saveAll(){
   }
   
   this.updateClassStudentCount();
-  this.flushRemoteQueue();
+  return this.flushRemoteQueue(options);
 }
   
   // 更新班级学生数量
@@ -4806,7 +4834,7 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
 		  // 小组历史记录模态框的特殊处理
 		  if (modalElement.id === 'groupHistoryModal') {
 			if (tabName === 'groupHistory') {
-			  // 历史记录已经在openGroupHistory中渲染
+			  this.renderGroupHistory();
 			} else if (tabName === 'groupPetSelection') {
 			  const group = this.groups[this.editingGroupIndex];
 			  this.renderGroupPetSelection(group);
@@ -6444,31 +6472,7 @@ renderGroupRanking() {
     document.getElementById('petSelectionGroupName').innerHTML = `<span style="color: #3b82f6; font-weight: 600;">${group.name}</span>`;
     
     // 渲染历史记录
-    const historyContainer = document.getElementById('groupHistoryItems');
-    historyContainer.innerHTML = '';
-    
-    if(group.history.length === 0) {
-      historyContainer.innerHTML = '<div class="history-record">暂无历史记录</div>';
-    } else {
-      // 按时间倒序显示
-      const sortedHistory = [...group.history].reverse();
-      
-      sortedHistory.forEach((record, recordIndex) => {
-        const historyItem = document.createElement('div');
-        historyItem.className = 'history-record';
-        
-        const actionText = `${record.rule} ${record.points > 0 ? '+' : ''}${record.points}积分`;
-        
-        historyItem.innerHTML = `
-          <div class="history-details">
-            <div class="history-date">${record.date}</div>
-            <div class="history-action">${actionText}</div>
-          </div>
-        `;
-        
-        historyContainer.appendChild(historyItem);
-      });
-    }
+    this.renderGroupHistory();
     
     // 渲染宠物选择界面
     this.renderGroupPetSelection(group);
@@ -6541,6 +6545,51 @@ if (historyTabBtn && petTabBtn) {
     console.log('准备显示小组历史模态框', { modal: !!modal, display: modal.style.display });
     modal.style.display = 'flex';
     console.log('小组历史模态框已显示', { display: modal.style.display });
+  }
+
+  renderGroupHistory(){
+    const group = this.groups[this.editingGroupIndex];
+    const historyContainer = document.getElementById('groupHistoryItems');
+    if (!historyContainer) return;
+
+    historyContainer.innerHTML = '';
+
+    if(!group || !Array.isArray(group.history) || group.history.length === 0) {
+      historyContainer.innerHTML = '<div class="history-record">暂无历史记录</div>';
+      return;
+    }
+
+    // 按时间倒序显示
+    const sortedHistory = [...group.history].reverse();
+
+    sortedHistory.forEach((record, recordIndex) => {
+      const originalIndex = group.history.length - 1 - recordIndex;
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-record';
+
+      const pointsValue = parseInt(record.points, 10);
+      const safePoints = Number.isNaN(pointsValue) ? 0 : pointsValue;
+      const actionText = `${record.rule || '积分调整'} ${safePoints > 0 ? '+' : ''}${safePoints}积分`;
+      const canUndo = Boolean(record.rule) && !Number.isNaN(pointsValue);
+
+      historyItem.innerHTML = `
+        <div class="history-details">
+          <div class="history-date">${record.date}</div>
+          <div class="history-action">${actionText}</div>
+        </div>
+        ${canUndo ? `<button class="undo-history-btn" data-index="${originalIndex}">撤回</button>` : ''}
+      `;
+
+      if (canUndo) {
+        const undoBtn = historyItem.querySelector('.undo-history-btn');
+        undoBtn.addEventListener('click', (e) => {
+          if(this.isLocked) return;
+          this.undoGroupHistory(parseInt(e.target.getAttribute('data-index'), 10));
+        });
+      }
+
+      historyContainer.appendChild(historyItem);
+    });
   }
   
   // 渲染小组宠物选择界面
@@ -6778,6 +6827,68 @@ if (historyTabBtn && petTabBtn) {
       this.renderStudentPurchases();
       
       alert('记录已撤回！');
+    }
+  }
+
+  async undoGroupHistory(historyIndex){
+    const group = this.groups[this.editingGroupIndex];
+    if (!group || !Array.isArray(group.history) || historyIndex < 0 || historyIndex >= group.history.length) {
+      this.showNotification('未找到可撤回的小组记录', 'warning');
+      return;
+    }
+
+    const record = group.history[historyIndex];
+    const label = record.rule || '该记录';
+    if(!confirm(`确定要撤回这条记录吗？${label}`)){
+      return;
+    }
+
+    const oldGroupPoints = group.points;
+    const oldGroupHistory = [...group.history];
+    const oldGlobalHistory = [...this.history];
+
+    try {
+      const pointsValue = parseInt(record.points, 10);
+      const safePoints = Number.isNaN(pointsValue) ? 0 : pointsValue;
+      group.points -= safePoints;
+
+      // 移除小组历史记录
+      group.history.splice(historyIndex, 1);
+
+      // 更新全局历史
+      const globalHistoryIndex = this.history.findIndex(h =>
+        h.date === record.date &&
+        h.type === 'group' &&
+        h.group === group.name &&
+        h.rule === record.rule &&
+        (parseInt(h.points, 10) || 0) === safePoints
+      );
+      if (globalHistoryIndex !== -1) {
+        this.history.splice(globalHistoryIndex, 1);
+      }
+
+      await this.saveAll({ throwOnError: true });
+      this.renderGroups();
+      this.renderRankings();
+      this.renderHistory();
+      this.renderGroupHistory();
+
+      alert('记录已撤回！');
+    } catch (error) {
+      // 后端同步失败时回滚本地状态，保持数据一致
+      group.points = oldGroupPoints;
+      group.history = oldGroupHistory;
+      this.history = oldGlobalHistory;
+
+      this.renderGroups();
+      this.renderRankings();
+      this.renderHistory();
+      this.renderGroupHistory();
+
+      // 尝试将回滚后的状态重新写回同步队列
+      this.saveAll();
+
+      alert(this.getRemoteSyncErrorMessage(error, '撤回'));
     }
   }
   

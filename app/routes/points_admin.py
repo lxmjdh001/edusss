@@ -6,6 +6,7 @@ from typing import Annotated, List, Optional, Set
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from .. import models
@@ -106,7 +107,20 @@ def list_users(
 
     query = db.query(models.Member)
     if keyword:
-        query = query.filter(models.Member.account.contains(keyword))
+        code_user_subquery = (
+            db.query(models.InviteCode.used_by_member_id)
+            .filter(
+                models.InviteCode.used_by_member_id.isnot(None),
+                models.InviteCode.code.contains(keyword),
+            )
+            .distinct()
+        )
+        query = query.filter(
+            or_(
+                models.Member.account.contains(keyword),
+                models.Member.id.in_(code_user_subquery),
+            )
+        )
     query = query.order_by(models.Member.created_at.desc())
     users = query.offset(skip).limit(limit).all()
     return users
@@ -218,17 +232,29 @@ def list_activation_codes(
     db: Annotated[Session, Depends(get_db)],
     skip: int = 0,
     limit: int = 100,
+    keyword: Optional[str] = None,
 ):
     """获取激活码列表"""
     if not verify_admin_password(password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="密码错误")
 
-    codes = (
+    query = (
         db.query(models.InviteCode)
         .options(joinedload(models.InviteCode.used_by_member))
         .order_by(models.InviteCode.created_at.desc())
-        .offset(skip).limit(limit).all()
     )
+
+    # 按用户名搜索时，仅返回“已使用且由该用户名激活”的激活码
+    if keyword:
+        query = (
+            query.join(models.InviteCode.used_by_member)
+            .filter(
+                models.InviteCode.is_used == True,
+                models.Member.account.contains(keyword),
+            )
+        )
+
+    codes = query.offset(skip).limit(limit).all()
     _attach_user_info(codes)
     return codes
 

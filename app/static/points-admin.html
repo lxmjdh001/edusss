@@ -102,6 +102,45 @@
         .alert-error { background: #fee; color: #c33; border: 1px solid #fcc; }
         .alert-success { background: #efe; color: #3c3; border: 1px solid #cfc; }
         .empty-tip { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+        .pager-wrap {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .pager-info {
+            color: #666;
+            font-size: 13px;
+        }
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .pager-btn {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            color: #333;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 34px;
+        }
+        .pager-btn:hover:not(:disabled) { background: #f5f5f5; }
+        .pager-btn.active {
+            background: #333;
+            border-color: #333;
+            color: #fff;
+        }
+        .pager-btn:disabled {
+            color: #aaa;
+            background: #fafafa;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -133,8 +172,9 @@
     <!-- 用户管理 Tab -->
     <div class="tab-content active" id="tab-users">
         <div class="toolbar">
-            <input type="text" id="userKeyword" placeholder="搜索用户名..." style="width:200px;">
-            <button class="btn" onclick="loadUsers()">搜索</button>
+            <input type="text" id="userKeyword" placeholder="搜索用户名/激活码..." style="width:220px;">
+            <button class="btn" onclick="loadUsers(true)">搜索</button>
+            <button class="btn" onclick="refreshUsersTab()">刷新</button>
             <button class="btn btn-primary" onclick="showCreateUser()">新增用户</button>
         </div>
         <table>
@@ -146,6 +186,10 @@
             </thead>
             <tbody id="usersBody"><tr><td colspan="7" class="empty-tip">加载中...</td></tr></tbody>
         </table>
+        <div class="pager-wrap">
+            <div class="pager-info" id="usersPagerInfo">共 0 条</div>
+            <div class="pagination" id="usersPagination"></div>
+        </div>
     </div>
 
     <!-- 激活码管理 Tab -->
@@ -159,6 +203,9 @@
                 <option value="365" selected>年卡 (365天)</option>
             </select>
             <input type="number" id="codeCount" value="1" min="1" max="500" style="width:80px;" placeholder="数量">
+            <input type="text" id="codeKeyword" placeholder="输入用户名搜索已使用激活码..." style="width:240px;">
+            <button class="btn" onclick="loadCodes(true)">搜索</button>
+            <button class="btn" onclick="refreshCodesTab()">刷新</button>
             <button class="btn btn-primary" onclick="generateCodes()">生成激活码</button>
             <button class="btn btn-primary" onclick="exportCodes()" style="background:#10b981;">批量导出</button>
         </div>
@@ -171,6 +218,10 @@
             </thead>
             <tbody id="codesBody"><tr><td colspan="7" class="empty-tip">加载中...</td></tr></tbody>
         </table>
+        <div class="pager-wrap">
+            <div class="pager-info" id="codesPagerInfo">共 0 条</div>
+            <div class="pagination" id="codesPagination"></div>
+        </div>
     </div>
 </div>
 
@@ -255,6 +306,14 @@
 <script>
 let adminPassword = '';
 const API = '/api/points-admin';
+const PAGE_SIZE = 20;
+const ADMIN_SESSION_KEY = 'points_admin_password';
+
+let usersAll = [];
+let usersPage = 1;
+
+let codesAll = [];
+let codesPage = 1;
 
 function fmt(dt) {
     if (!dt) return '-';
@@ -278,8 +337,8 @@ function switchTab(name) {
     });
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
-    if (name === 'codes') { loadCodes(); loadCodeStats(); }
-    if (name === 'users') { loadUsers(); }
+    if (name === 'codes') { loadCodes(false); loadCodeStats(); }
+    if (name === 'users') { loadUsers(false); }
 }
 
 // ========== 密码验证 ==========
@@ -294,9 +353,10 @@ async function verifyAdmin() {
         });
         if (resp.ok) {
             adminPassword = pwd;
+            sessionStorage.setItem(ADMIN_SESSION_KEY, pwd);
             document.getElementById('loginGate').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
-            loadUsers();
+            loadUsers(true);
         } else {
             showInlineAlert('gateAlert', '密码错误');
         }
@@ -306,31 +366,151 @@ async function verifyAdmin() {
 document.getElementById('adminPwd').addEventListener('keydown', e => {
     if (e.key === 'Enter') verifyAdmin();
 });
+document.getElementById('userKeyword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') loadUsers(true);
+});
+document.getElementById('codeKeyword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') loadCodes(true);
+});
 
 function logout() {
     adminPassword = '';
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
     document.getElementById('adminPanel').style.display = 'none';
     document.getElementById('loginGate').style.display = 'flex';
     document.getElementById('adminPwd').value = '';
 }
 
+function refreshUsersTab() {
+    loadUsers(false);
+}
+
+function refreshCodesTab() {
+    loadCodes(false);
+    loadCodeStats();
+}
+
+async function restoreAdminSession() {
+    const savedPwd = sessionStorage.getItem(ADMIN_SESSION_KEY);
+    if (!savedPwd) return;
+    try {
+        const resp = await fetch(API + '/verify-admin', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({password: savedPwd})
+        });
+        if (!resp.ok) {
+            sessionStorage.removeItem(ADMIN_SESSION_KEY);
+            return;
+        }
+        adminPassword = savedPwd;
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        loadUsers(true);
+    } catch (e) {
+        // 网络失败时保持登录页，避免误进入
+    }
+}
+
+document.addEventListener('DOMContentLoaded', restoreAdminSession);
+
 // ========== 用户管理 ==========
-async function loadUsers() {
+function renderPager(containerId, current, totalPages, onChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const btn = (label, page, disabled = false, active = false) =>
+        `<button class="pager-btn ${active ? 'active' : ''}" ${disabled ? 'disabled' : ''} data-page="${page}">${label}</button>`;
+
+    let html = '';
+    html += btn('上一页', current - 1, current <= 1);
+
+    const pages = [];
+    pages.push(1);
+    if (current - 2 > 2) pages.push('...');
+    for (let p = Math.max(2, current - 2); p <= Math.min(totalPages - 1, current + 2); p++) {
+        pages.push(p);
+    }
+    if (current + 2 < totalPages - 1) pages.push('...');
+    if (totalPages > 1) pages.push(totalPages);
+
+    const seen = new Set();
+    pages.forEach(p => {
+        if (p === '...') {
+            html += `<span class="pager-info" style="padding:0 4px;">...</span>`;
+            return;
+        }
+        if (seen.has(p)) return;
+        seen.add(p);
+        html += btn(String(p), p, false, p === current);
+    });
+
+    html += btn('下一页', current + 1, current >= totalPages);
+    container.innerHTML = html;
+
+    container.querySelectorAll('button[data-page]').forEach(b => {
+        b.addEventListener('click', () => {
+            if (b.disabled) return;
+            const p = parseInt(b.getAttribute('data-page'), 10);
+            if (!Number.isNaN(p)) onChange(p);
+        });
+    });
+}
+
+function updatePagerInfo(infoId, current, totalPages, total) {
+    const info = document.getElementById(infoId);
+    if (!info) return;
+    if (total === 0) {
+        info.textContent = '共 0 条';
+        return;
+    }
+    info.textContent = `第 ${current} / ${totalPages} 页，共 ${total} 条`;
+}
+
+async function loadUsers(resetPage = false) {
+    if (resetPage) usersPage = 1;
     const keyword = document.getElementById('userKeyword').value.trim();
     let url = API + '/users?password=' + encodeURIComponent(adminPassword);
+    url += '&skip=0&limit=10000';
     if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
     try {
         const resp = await fetch(url);
-        if (!resp.ok) { document.getElementById('usersBody').innerHTML = '<tr><td colspan="7" class="empty-tip">加载失败</td></tr>'; return; }
+        if (!resp.ok) {
+            document.getElementById('usersBody').innerHTML = '<tr><td colspan="7" class="empty-tip">加载失败</td></tr>';
+            usersAll = [];
+            renderUsers(usersAll);
+            return;
+        }
         const users = await resp.json();
         renderUsers(users);
-    } catch(e) { document.getElementById('usersBody').innerHTML = '<tr><td colspan="7" class="empty-tip">网络错误</td></tr>'; }
+    } catch(e) {
+        document.getElementById('usersBody').innerHTML = '<tr><td colspan="7" class="empty-tip">网络错误</td></tr>';
+        usersAll = [];
+        renderUsers(usersAll);
+    }
 }
 
 function renderUsers(users) {
+    usersAll = Array.isArray(users) ? users : [];
     const tbody = document.getElementById('usersBody');
-    if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无用户</td></tr>'; return; }
-    tbody.innerHTML = users.map(u => {
+    if (!usersAll.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无用户</td></tr>';
+        usersPage = 1;
+        updatePagerInfo('usersPagerInfo', usersPage, 1, 0);
+        renderPager('usersPagination', usersPage, 1, () => {});
+        return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(usersAll.length / PAGE_SIZE));
+    usersPage = Math.min(Math.max(usersPage, 1), totalPages);
+    const start = (usersPage - 1) * PAGE_SIZE;
+    const pageUsers = usersAll.slice(start, start + PAGE_SIZE);
+
+    tbody.innerHTML = pageUsers.map(u => {
         const now = new Date();
         const expired = u.expires_at && new Date(u.expires_at) < now;
         const statusBadge = !u.is_active
@@ -352,6 +532,12 @@ function renderUsers(users) {
             </td>
         </tr>`;
     }).join('');
+
+    updatePagerInfo('usersPagerInfo', usersPage, totalPages, usersAll.length);
+    renderPager('usersPagination', usersPage, totalPages, (next) => {
+        usersPage = next;
+        renderUsers(usersAll);
+    });
 }
 
 function showCreateUser() {
@@ -375,7 +561,7 @@ async function createUser() {
         });
         if (resp.ok) {
             closeModal('createUserModal');
-            loadUsers();
+            loadUsers(true);
         } else {
             const data = await resp.json();
             showInlineAlert('createUserAlert', data.detail || '创建失败');
@@ -405,7 +591,7 @@ async function updateUser() {
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify(body)
         });
-        if (resp.ok) { closeModal('editUserModal'); loadUsers(); }
+        if (resp.ok) { closeModal('editUserModal'); loadUsers(false); }
         else { const d = await resp.json(); showInlineAlert('editUserAlert', d.detail || '更新失败'); }
     } catch(e) { showInlineAlert('editUserAlert','网络错误'); }
 }
@@ -417,7 +603,7 @@ async function toggleUser(id, newActive) {
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({is_active: newActive})
         });
-        loadUsers();
+        loadUsers(false);
     } catch(e) { alert('操作失败'); }
 }
 
@@ -425,7 +611,7 @@ async function deleteUser(id, account) {
     if (!confirm('确定删除用户 "' + account + '"？此操作不可恢复。')) return;
     try {
         const resp = await fetch(API + '/users/' + id + '?password=' + encodeURIComponent(adminPassword), { method: 'DELETE' });
-        if (resp.ok) { loadUsers(); } else { const d = await resp.json(); alert(d.detail || '删除失败'); }
+        if (resp.ok) { loadUsers(false); } else { const d = await resp.json(); alert(d.detail || '删除失败'); }
     } catch(e) { alert('网络错误'); }
 }
 
@@ -442,20 +628,46 @@ async function loadCodeStats() {
     } catch(e) {}
 }
 
-async function loadCodes() {
+async function loadCodes(resetPage = false) {
+    if (resetPage) codesPage = 1;
+    const keyword = document.getElementById('codeKeyword').value.trim();
     try {
-        const resp = await fetch(API + '/activation-codes?password=' + encodeURIComponent(adminPassword));
-        if (!resp.ok) { document.getElementById('codesBody').innerHTML = '<tr><td colspan="7" class="empty-tip">加载失败</td></tr>'; return; }
+        let url = API + '/activation-codes?password=' + encodeURIComponent(adminPassword) + '&skip=0&limit=10000';
+        if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            document.getElementById('codesBody').innerHTML = '<tr><td colspan="7" class="empty-tip">加载失败</td></tr>';
+            codesAll = [];
+            renderCodes(codesAll);
+            return;
+        }
         const codes = await resp.json();
         renderCodes(codes);
-    } catch(e) { document.getElementById('codesBody').innerHTML = '<tr><td colspan="7" class="empty-tip">网络错误</td></tr>'; }
+    } catch(e) {
+        document.getElementById('codesBody').innerHTML = '<tr><td colspan="7" class="empty-tip">网络错误</td></tr>';
+        codesAll = [];
+        renderCodes(codesAll);
+    }
 }
 
 function renderCodes(codes) {
+    codesAll = Array.isArray(codes) ? codes : [];
     const tbody = document.getElementById('codesBody');
-    if (!codes.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无激活码</td></tr>'; return; }
+    if (!codesAll.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无激活码</td></tr>';
+        codesPage = 1;
+        updatePagerInfo('codesPagerInfo', codesPage, 1, 0);
+        renderPager('codesPagination', codesPage, 1, () => {});
+        return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(codesAll.length / PAGE_SIZE));
+    codesPage = Math.min(Math.max(codesPage, 1), totalPages);
+    const start = (codesPage - 1) * PAGE_SIZE;
+    const pageCodes = codesAll.slice(start, start + PAGE_SIZE);
+
     const typeMap = {1:'天卡',30:'月卡',90:'季卡',365:'年卡'};
-    tbody.innerHTML = codes.map(c => {
+    tbody.innerHTML = pageCodes.map(c => {
         const label = typeMap[c.valid_days] || (c.valid_days + '天');
         const statusBadge = c.is_used
             ? '<span class="badge badge-gray">已使用</span>'
@@ -470,6 +682,12 @@ function renderCodes(codes) {
             <td>${c.is_used ? '' : '<button class="btn btn-sm btn-danger" onclick="deleteCode('+c.id+')">删除</button>'}</td>
         </tr>`;
     }).join('');
+
+    updatePagerInfo('codesPagerInfo', codesPage, totalPages, codesAll.length);
+    renderPager('codesPagination', codesPage, totalPages, (next) => {
+        codesPage = next;
+        renderCodes(codesAll);
+    });
 }
 
 async function generateCodes() {
@@ -485,7 +703,7 @@ async function generateCodes() {
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify(body)
         });
-        if (resp.ok) { loadCodes(); loadCodeStats(); }
+        if (resp.ok) { loadCodes(true); loadCodeStats(); }
         else { const d = await resp.json(); alert(d.detail || '生成失败'); }
     } catch(e) { alert('网络错误'); }
 }
@@ -494,7 +712,7 @@ async function deleteCode(id) {
     if (!confirm('确定删除此激活码？')) return;
     try {
         const resp = await fetch(API + '/activation-codes/' + id + '?password=' + encodeURIComponent(adminPassword), { method: 'DELETE' });
-        if (resp.ok) { loadCodes(); loadCodeStats(); }
+        if (resp.ok) { loadCodes(false); loadCodeStats(); }
         else { const d = await resp.json(); alert(d.detail || '删除失败'); }
     } catch(e) { alert('网络错误'); }
 }
