@@ -2736,7 +2736,7 @@ getStudentPetImage(student) {
   
   // 计算学生当前等级 - 使用总积分以保持与等级显示一致
   const totalPoints = this.getStudentTotalPoints(student);
-  const studentLevel = this.getLevel(totalPoints) - 1; // getLevel返回1-6，转为0-5
+  const studentLevel = this.getLevel(totalPoints, student.name) - 1; // getLevel返回1-6，转为0-5
   const levelKey = `level${studentLevel + 1}`; // 0-5转为level1-level6
   
   // 根据显示模式返回对应的显示内容
@@ -2780,7 +2780,7 @@ getGroupPetImage(group) {
   // 根据小组积分计算当前等级（考虑小组选择的宠物类型）
   const groupPoints = parseInt(group.points) || 0;
   const groupStage = this.getGroupStage(groupPoints, group.name); // 传递小组名称以获取正确的等级
-  const groupLevel = this.getGroupLevel(groupPoints) - 1; // 获取1-6的等级，转为0-5索引
+  const groupLevel = this.getGroupLevel(groupPoints, group.name) - 1; // 获取1-6的等级，转为0-5索引
   const validLevel = Math.max(0, Math.min(5, groupLevel)); // 确保在0-5范围内
   const levelKey = `level${validLevel + 1}`; // 0-5转为level1-level6
   console.log(`📊 小组等级计算: 积分=${groupPoints}, 等级=${groupLevel + 1}, 有效等级=${validLevel}, levelKey=${levelKey}, 等级名称=${groupStage.name}`);
@@ -3146,16 +3146,33 @@ renderGroupLevelSettings() {
 
 // 保存个人等级设置
 savePetLevels(){
+  const updatedRanges = [];
   this.petStages.forEach((s,i)=>{
-    // 更新积分范围
-    s.minPoints=parseInt(document.getElementById(`pet-min-${i}`).value)||0;
-    const maxInput=document.getElementById(`pet-max-${i}`);
-    if(!maxInput.disabled) s.maxPoints=parseInt(maxInput.value)||Infinity;
+    // 更新通用等级区间
+    s.minPoints = parseInt(document.getElementById(`pet-min-${i}`).value) || 0;
+    const maxInput = document.getElementById(`pet-max-${i}`);
+    const maxValue = maxInput.disabled ? Infinity : parseInt(maxInput.value);
+    s.maxPoints = Number.isNaN(maxValue) ? Infinity : maxValue;
+    updatedRanges.push({ minPoints: s.minPoints, maxPoints: s.maxPoints });
   });
+
+  // 学生实际等级优先读取 petStagesByType，这里同步积分区间，保留每个宠物自己的名称。
+  if (this.petStagesByType && typeof this.petStagesByType === 'object') {
+    Object.values(this.petStagesByType).forEach(typeStages => {
+      if (!Array.isArray(typeStages)) return;
+      updatedRanges.forEach((range, index) => {
+        if (!typeStages[index]) return;
+        typeStages[index].minPoints = range.minPoints;
+        typeStages[index].maxPoints = range.maxPoints;
+      });
+    });
+  }
   
   // 使用saveAllPetConfig确保一致性保存
   this.saveAllPetConfig();
   this.saveAll();
+  this.renderStudents();
+  this.renderGroups();
   alert('个人等级设置已保存！');
 }
 
@@ -5433,7 +5450,7 @@ renderStudents() {
   this.students.forEach((stu, i) => {
     const totalPoints = this.getStudentTotalPoints(stu);
     const stage = this.getStudentPetStage(stu);
-    const level = this.getLevel(totalPoints);
+    const level = this.getLevel(totalPoints, stu.name);
 
     // 获取学生选择的宠物形象
     const petImageHTML = this.getStudentPetImage(stu);
@@ -5446,7 +5463,7 @@ renderStudents() {
     card.innerHTML = `
       <div class="student-name">${stu.name}</div>
       <div class="pet-container-large">
-        <div class="pet-circle-large" style="background:${this.getPetColor(totalPoints)}">
+        <div class="pet-circle-large" style="background:${this.getPetColor(totalPoints, stu.name)}">
           ${showContent}
         </div>
       </div>
@@ -10736,8 +10753,11 @@ getStudentPetName(student) {
   
   getLevel(points, studentName = null){
     const stage=this.getPetStage(points, studentName);
-    const stagesToUse = studentName && this.petStagesByType && this.studentPets[studentName] 
-      ? this.petStagesByType[this.studentPets[studentName].type] || this.petStages
+    const petType = studentName && this.studentPets && this.studentPets[studentName]
+      ? this.studentPets[studentName].petType
+      : null;
+    const stagesToUse = petType && this.petStagesByType && this.petStagesByType[petType]
+      ? this.petStagesByType[petType]
       : this.petStages;
     const index = stagesToUse.findIndex(s => s.minPoints === stage.minPoints && s.maxPoints === stage.maxPoints);
     return index >= 0 ? index + 1 : 1;
