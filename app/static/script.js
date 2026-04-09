@@ -3284,22 +3284,95 @@ resetGroupToDefault(){
     
   // 加载班级列表
   loadClassesFromLocalStorage() {
+    if (!this.currentClassId) {
+      const savedCurrentClassId = this.storageGet('currentClassId');
+      if (savedCurrentClassId) {
+        this.currentClassId = savedCurrentClassId;
+      }
+    }
+
     const classesData = this.storageGet('classPointsClasses');
     if (classesData) {
       try {
-        this.classes = JSON.parse(classesData);
-        // 如果没有当前班级ID，设置第一个班级为当前班级
-        if (this.classes.length > 0 && !this.currentClassId) {
-          this.currentClassId = this.classes[0].id;
-          this.currentClassName = this.classes[0].name;
-        }
+        const parsed = JSON.parse(classesData);
+        this.classes = Array.isArray(parsed) ? parsed : [];
       } catch (e) {
         console.error('加载班级列表失败:', e);
         this.classes = [];
       }
     } else {
-      // 如果没有班级数据，创建一个默认班级
+      this.classes = [];
+    }
+
+    // 兜底恢复：当班级索引丢失/损坏时，从 classPointsData_* 自动重建
+    this.mergeClassesFromStoredClassData();
+
+    if (!Array.isArray(this.classes) || this.classes.length === 0) {
       this.createDefaultClass();
+      return;
+    }
+
+    const hasCurrentClass = this.classes.some(c => c.id === this.currentClassId);
+    if (!hasCurrentClass) {
+      this.currentClassId = this.classes[0].id;
+    }
+
+    const currentClass = this.classes.find(c => c.id === this.currentClassId) || this.classes[0];
+    this.currentClassName = currentClass?.name || '';
+  }
+
+  getStoredClassRecordsFromKV() {
+    const result = [];
+    const namespacePrefix = this.storageKey('');
+
+    for (const [fullKey, rawValue] of this._kvCache.entries()) {
+      if (!fullKey.startsWith(namespacePrefix)) continue;
+      const key = fullKey.slice(namespacePrefix.length);
+      if (!key.startsWith('classPointsData_')) continue;
+
+      const classId = key.slice('classPointsData_'.length);
+      if (!classId) continue;
+
+      try {
+        const parsed = JSON.parse(rawValue || '{}');
+        const students = Array.isArray(parsed.students) ? parsed.students : [];
+        result.push({
+          id: classId,
+          name: parsed.className || `班级_${classId.slice(-4)}`,
+          grade: '未设置',
+          teacher: '未设置',
+          createTime: new Date().toISOString(),
+          studentCount: students.length
+        });
+      } catch (error) {
+        // 忽略损坏项，避免中断恢复流程
+      }
+    }
+
+    return result;
+  }
+
+  mergeClassesFromStoredClassData() {
+    const recoveredClasses = this.getStoredClassRecordsFromKV();
+    if (recoveredClasses.length === 0) return;
+
+    if (!Array.isArray(this.classes)) {
+      this.classes = [];
+    }
+
+    const existingIds = new Set(this.classes.map(c => c.id));
+    let hasChanges = false;
+
+    recoveredClasses.forEach(recovered => {
+      if (!existingIds.has(recovered.id)) {
+        this.classes.push(recovered);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      this.saveClassesToLocalStorage();
+      console.warn('检测到丢失的班级索引，已从存储数据自动恢复');
     }
   }
   

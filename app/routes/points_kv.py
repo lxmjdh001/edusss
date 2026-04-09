@@ -62,11 +62,14 @@ def get_all(
     rows = db.query(PointsKV).filter(
         PointsKV.owner_type == owner_type,
         PointsKV.owner_id == owner_id,
-    ).all()
-    return [
-        {"key": row.key, "value": row.value}
-        for row in rows
-    ]
+    ).order_by(PointsKV.updated_at.asc(), PointsKV.id.asc()).all()
+
+    # 防御性去重：旧库/脏数据可能存在同 key 多条记录，后写入覆盖前写入
+    latest_values: dict[str, str] = {}
+    for row in rows:
+        latest_values[row.key] = row.value
+
+    return [{"key": key, "value": value} for key, value in latest_values.items()]
 
 
 @router.post("/set")
