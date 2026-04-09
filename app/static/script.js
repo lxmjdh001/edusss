@@ -402,9 +402,10 @@ toggleDisplayMode() {
     this.randomNameAnimationId = null;
     this.randomNameRecords = [];
     
-    // 锁定状态变量
-    this.isLocked = false;
-    this.lockPassword = '';
+	    // 锁定状态变量
+	    this.isLocked = false;
+	    this.lockPassword = '';
+	    this.clearDataCaptchaAnswer = null;
 	
 	// 🆕 新增：数据修复调用（在init()中执行，确保数据已加载）
     
@@ -457,15 +458,17 @@ toggleDisplayMode() {
             this.closeStatisticsDetail();
           } else if (modalId === 'randomNameModal') {
             this.closeRandomNameModal();
-          } else if (modalId === 'timerModal') {
-            this.closeTimerModal();
-          } else if (modalId === 'techSupportModal') {
-            this.closeTechSupportModal();
-          }
-        }
-      });
-    });
-  }
+	          } else if (modalId === 'timerModal') {
+	            this.closeTimerModal();
+	          } else if (modalId === 'techSupportModal') {
+	            this.closeTechSupportModal();
+	          } else if (modalId === 'clearDataConfirmModal') {
+	            this.closeClearDataConfirmModal();
+	          }
+	        }
+	      });
+	    });
+	  }
   
   // 初始化宠物功能
   async initializePetFeatures() {
@@ -4659,11 +4662,34 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
       if(this.isLocked) return;
       this.openTimer();
     });
-    document.getElementById('settingsClearBtn').addEventListener('click',()=>{
-      if(this.isLocked) return;
-      this.clearData();
-    });
-    document.getElementById('lockBtn')?.addEventListener('click',()=>this.toggleLock());
+	    document.getElementById('settingsClearBtn').addEventListener('click',()=>{
+	      if(this.isLocked) return;
+	      this.clearData();
+	    });
+	    document.getElementById('confirmClearDataBtn').addEventListener('click',()=>{
+	      if(this.isLocked) return;
+	      this.confirmClearDataWithCaptcha();
+	    });
+	    document.getElementById('cancelClearDataBtn').addEventListener('click',()=>{
+	      this.closeClearDataConfirmModal();
+	    });
+	    document.getElementById('refreshClearDataCaptchaBtn').addEventListener('click',()=>{
+	      this.refreshClearDataCaptcha();
+	    });
+	    document.getElementById('clearDataCaptchaInput').addEventListener('keydown',(event)=>{
+	      if (event.key === 'Enter') {
+	        event.preventDefault();
+	        if(this.isLocked) return;
+	        this.confirmClearDataWithCaptcha();
+	      }
+	    });
+	    document.getElementById('clearDataCaptchaInput').addEventListener('input',()=>{
+	      const errorElement = document.getElementById('clearDataCaptchaError');
+	      if (errorElement) {
+	        errorElement.style.display = 'none';
+	      }
+	    });
+	    document.getElementById('lockBtn')?.addEventListener('click',()=>this.toggleLock());
     // 远程锁屏按钮事件
     document.getElementById('remoteLockBtn')?.addEventListener('click',()=>this.showRemoteLockModal());
     document.getElementById('confirmRemoteLockBtn').addEventListener('click',()=>this.doRemoteLock());
@@ -11082,43 +11108,82 @@ getStudentPetName(student) {
 		return { question: `${left} - ${right}`, answer: left - right };
 	  }
 	  
-	  // 修改清空数据方法，只清空当前班级数据
-		clearData(){
-		  if (!confirm('确定要清空当前班级的所有数据吗？此操作不可撤销！')) {
-			return;
-		  }
-		  
-		  const captcha = this.generateClearDataCaptcha();
-		  const userInput = prompt(`请输入验证码后确认清空：\n${captcha.question} = ?`);
-		  if (userInput === null) {
-			return;
-		  }
-		  
-		  const normalizedInput = userInput.trim();
-		  if (!/^-?\d+$/.test(normalizedInput) || Number(normalizedInput) !== captcha.answer) {
-			alert('验证码错误，已取消清空操作。');
-			return;
-		  }
-		  
-		  this.initializeClassData();
-		  
-		  if (this.currentClassId) {
-			this.storageRemove(`mainTitle_${this.currentClassId}`);
-		  }
-		  
-		  this.storageSet(this.getClearDataTimeStorageKey(), new Date().toISOString());
-		  this.saveAll();
-		  
-		  this.renderStudents();
-		  this.renderGroups();
-		  this.renderRankings();
-		  this.renderHistory();
-		  this.updateClassStudentCount();
-		  this.updateCurrentClassIndicator();
-		  this.updateLastClearDataTimeDisplay();
-		  
-		  alert('当前班级数据已清空！');
+	  refreshClearDataCaptcha() {
+		const captcha = this.generateClearDataCaptcha();
+		this.clearDataCaptchaAnswer = captcha.answer;
+		const questionElement = document.getElementById('clearDataCaptchaQuestion');
+		if (questionElement) {
+		  questionElement.textContent = `${captcha.question} = ?`;
 		}
+	  }
+	  
+	  openClearDataConfirmModal() {
+		this.refreshClearDataCaptcha();
+		const inputElement = document.getElementById('clearDataCaptchaInput');
+		const errorElement = document.getElementById('clearDataCaptchaError');
+		if (inputElement) {
+		  inputElement.value = '';
+		}
+		if (errorElement) {
+		  errorElement.style.display = 'none';
+		}
+		const modalElement = document.getElementById('clearDataConfirmModal');
+		if (modalElement) {
+		  modalElement.style.display = 'flex';
+		}
+		setTimeout(() => inputElement?.focus(), 0);
+	  }
+	  
+	  closeClearDataConfirmModal() {
+		const modalElement = document.getElementById('clearDataConfirmModal');
+		if (modalElement) {
+		  modalElement.style.display = 'none';
+		}
+	  }
+	  
+	  confirmClearDataWithCaptcha() {
+		const inputElement = document.getElementById('clearDataCaptchaInput');
+		const errorElement = document.getElementById('clearDataCaptchaError');
+		const normalizedInput = (inputElement?.value || '').trim();
+		const answer = Number(normalizedInput);
+		const isValid = /^-?\d+$/.test(normalizedInput) && answer === this.clearDataCaptchaAnswer;
+		
+		if (!isValid) {
+		  if (errorElement) {
+			errorElement.style.display = 'block';
+		  }
+		  return;
+		}
+		
+		this.closeClearDataConfirmModal();
+		this.executeClearData();
+	  }
+	  
+	  executeClearData() {
+		this.initializeClassData();
+		
+		if (this.currentClassId) {
+		  this.storageRemove(`mainTitle_${this.currentClassId}`);
+		}
+		
+		this.storageSet(this.getClearDataTimeStorageKey(), new Date().toISOString());
+		this.saveAll();
+		
+		this.renderStudents();
+		this.renderGroups();
+		this.renderRankings();
+		this.renderHistory();
+		this.updateClassStudentCount();
+		this.updateCurrentClassIndicator();
+		this.updateLastClearDataTimeDisplay();
+		
+		alert('当前班级数据已清空！');
+	  }
+	  
+	  // 修改清空数据方法，只清空当前班级数据
+	  clearData(){
+		this.openClearDataConfirmModal();
+	  }
   
 	// 修改导出备份方法，包含班级信息
 async exportBackup(){

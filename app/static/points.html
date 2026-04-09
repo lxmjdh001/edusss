@@ -455,9 +455,32 @@
 		  </div>
 		</div>
 	  </div>
-	</div>
-  <!-- 积分商店模态框 -->
-  <div id="shopModal" class="modal">
+		</div>
+		
+		<!-- 清空数据确认弹窗 -->
+		<div id="clearDataConfirmModal" class="modal">
+		  <div class="modal-content" style="max-width: 460px;">
+			<h3>⚠️ 清空数据确认</h3>
+			<p style="color: #c53030; margin-top: 8px;">
+			  此操作将清空当前班级的所有数据，且不可撤销。
+			</p>
+			<div style="margin-top: 18px; text-align: left;">
+			  <label for="clearDataCaptchaInput" style="font-weight: 600; color: #2d3748;">请输入验证码（30以内加减法）</label>
+			  <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
+				<div id="clearDataCaptchaQuestion" style="min-width: 120px; font-size: 20px; font-weight: 700; color: #2b6cb0;">0 + 0 = ?</div>
+				<button class="btn btn-secondary" id="refreshClearDataCaptchaBtn" style="padding: 8px 12px; white-space: nowrap;">换一题</button>
+			  </div>
+			  <input id="clearDataCaptchaInput" type="text" class="modal-input" placeholder="输入答案后再确认" autocomplete="off">
+			  <p id="clearDataCaptchaError" style="display: none; color: #e53e3e; font-size: 14px; margin-top: 6px;">验证码错误，请重试。</p>
+			</div>
+			<div class="modal-buttons">
+			  <button class="btn btn-danger" id="confirmClearDataBtn">确认清空</button>
+			  <button class="btn btn-secondary" id="cancelClearDataBtn">取消</button>
+			</div>
+		  </div>
+		</div>
+	  <!-- 积分商店模态框 -->
+	  <div id="shopModal" class="modal">
     <div class="modal-content">
       <h3>🛒 积分商店</h3>
       <p id="shopStudentName"></p>
@@ -961,7 +984,7 @@
     // 配置：使用数据库模式
     window.USE_DATABASE = true;
   </script>
-  <script src="/static/script.js?v=20260409_1"></script>
+  <script src="/static/script.js?v=20260409_2"></script>
   <!-- 增强包：多选规则+批量清空 -->
 
   <script>
