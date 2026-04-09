@@ -4859,15 +4859,17 @@ document.getElementById('resetGroupBtn')&& document.getElementById('resetGroupBt
 		  }
 		  
 		  // 设置模态框的特殊处理
-		  if (modalElement.id === 'settingsModal') {
-			if (tabName === 'petConfig') {
-			  this.renderPetConfig();
-			} else if (tabName === 'security') {
-			  this.renderSecuritySettings();
-			} else if (tabName === 'account') {
-			  this.renderAccountSettings();
-			}
-		  }
+			  if (modalElement.id === 'settingsModal') {
+				if (tabName === 'petConfig') {
+				  this.renderPetConfig();
+				} else if (tabName === 'security') {
+				  this.renderSecuritySettings();
+				} else if (tabName === 'dataManage') {
+				  this.updateLastClearDataTimeDisplay();
+				} else if (tabName === 'account') {
+				  this.renderAccountSettings();
+				}
+			  }
 		}
 	  }
 	});
@@ -6910,18 +6912,19 @@ if (historyTabBtn && petTabBtn) {
   }
   
 	// 在 openSettings 方法中确保正确初始化
-		openSettings(){
-		  this.renderRuleList();
-		  this.renderShopList();
-		  this.renderGroupRuleList();
+			openSettings(){
+			  this.renderRuleList();
+			  this.renderShopList();
+			  this.renderGroupRuleList();
 		  // 移除这行：this.renderGlobalConfigTab();
 		  this.renderSecuritySettings();
-		  this.renderConfigScopeSelector();
-		   // 新增：渲染等级积分设置
-		  this.renderLevelSettings();
-		  
-		  // 强制刷新配置范围显示
-		  document.getElementById('globalConfig').checked = this.currentConfigScope === 'global';
+			  this.renderConfigScopeSelector();
+			   // 新增：渲染等级积分设置
+			  this.renderLevelSettings();
+			  this.updateLastClearDataTimeDisplay();
+			  
+			  // 强制刷新配置范围显示
+			  document.getElementById('globalConfig').checked = this.currentConfigScope === 'global';
 		  document.getElementById('classConfig').checked = this.currentConfigScope === 'class';
 		  
 		  document.getElementById('settingsModal').style.display='flex';
@@ -11045,28 +11048,77 @@ getStudentPetName(student) {
     document.getElementById('statisticsModal').style.display='none';
   }
   
-  // 修改清空数据方法，只清空当前班级数据
-	clearData(){
-	  if(confirm('确定要清空当前班级的所有数据吗？此操作不可撤销！')){
-		this.initializeClassData();
-		this.saveAll();
+	  getClearDataTimeStorageKey() {
+		return this.currentClassId ? `lastClearDataTime_${this.currentClassId}` : 'lastClearDataTime';
+	  }
+	  
+	  formatClearDataTime(timeValue) {
+		const clearTime = new Date(timeValue);
+		if (Number.isNaN(clearTime.getTime())) {
+		  return '暂无记录';
+		}
+		return clearTime.toLocaleString('zh-CN', { hour12: false });
+	  }
+	  
+	  updateLastClearDataTimeDisplay() {
+		const timeElement = document.getElementById('lastClearDataTimeText');
+		if (!timeElement) return;
 		
-		if (this.currentClassId) {
-		  this.storageRemove(`mainTitle_${this.currentClassId}`);
+		const savedTime = this.storageGet(this.getClearDataTimeStorageKey());
+		const timeText = savedTime ? this.formatClearDataTime(savedTime) : '暂无记录';
+		timeElement.textContent = `上次清空数据时间：${timeText}`;
+	  }
+	  
+	  generateClearDataCaptcha() {
+		const isAddition = Math.random() < 0.5;
+		if (isAddition) {
+		  const left = Math.floor(Math.random() * 31);
+		  const right = Math.floor(Math.random() * (31 - left));
+		  return { question: `${left} + ${right}`, answer: left + right };
 		}
 		
-		this.renderStudents();
-		this.renderGroups();
-		this.renderRankings();
-		this.renderHistory();
-		this.updateClassStudentCount();
-		
-		// 添加这一行：更新班级指示器
-		this.updateCurrentClassIndicator();
-		
-		alert('当前班级数据已清空！');
+		const left = Math.floor(Math.random() * 31);
+		const right = Math.floor(Math.random() * (left + 1));
+		return { question: `${left} - ${right}`, answer: left - right };
 	  }
-	}
+	  
+	  // 修改清空数据方法，只清空当前班级数据
+		clearData(){
+		  if (!confirm('确定要清空当前班级的所有数据吗？此操作不可撤销！')) {
+			return;
+		  }
+		  
+		  const captcha = this.generateClearDataCaptcha();
+		  const userInput = prompt(`请输入验证码后确认清空：\n${captcha.question} = ?`);
+		  if (userInput === null) {
+			return;
+		  }
+		  
+		  const normalizedInput = userInput.trim();
+		  if (!/^-?\d+$/.test(normalizedInput) || Number(normalizedInput) !== captcha.answer) {
+			alert('验证码错误，已取消清空操作。');
+			return;
+		  }
+		  
+		  this.initializeClassData();
+		  
+		  if (this.currentClassId) {
+			this.storageRemove(`mainTitle_${this.currentClassId}`);
+		  }
+		  
+		  this.storageSet(this.getClearDataTimeStorageKey(), new Date().toISOString());
+		  this.saveAll();
+		  
+		  this.renderStudents();
+		  this.renderGroups();
+		  this.renderRankings();
+		  this.renderHistory();
+		  this.updateClassStudentCount();
+		  this.updateCurrentClassIndicator();
+		  this.updateLastClearDataTimeDisplay();
+		  
+		  alert('当前班级数据已清空！');
+		}
   
 	// 修改导出备份方法，包含班级信息
 async exportBackup(){
