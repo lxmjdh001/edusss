@@ -105,7 +105,10 @@ async ensureStoragePrefix() {
       isDesktop = await authGuard.isDesktopMode();
     }
     if (!isDesktop) {
-      const resp = await fetch('/api/auth/me', { credentials: 'include' });
+      const resp = await fetch('/api/auth/me', {
+        credentials: 'include',
+        headers: this.getAuthHeaders()
+      });
       if (resp.ok) {
         const user = await resp.json();
         this._kvCache.set('user_info', JSON.stringify(user));
@@ -128,8 +131,15 @@ async preloadRemoteStorage() {
   console.time('[perf] preloadRemoteStorage');
   await this.ensureStoragePrefix();
   try {
-    const resp = await fetch('/api/points-kv/all', { credentials: 'include' });
-    if (!resp.ok) return;
+    const resp = await fetch('/api/points-kv/all', {
+      credentials: 'include',
+      headers: this.getAuthHeaders()
+    });
+    if (!resp.ok) {
+      const error = new Error(`远程存储加载失败（${resp.status}）`);
+      error.status = resp.status;
+      throw error;
+    }
     const items = await resp.json();
     if (Array.isArray(items)) {
       items.forEach(item => {
@@ -140,8 +150,10 @@ async preloadRemoteStorage() {
     this.remoteStorageLoaded = true;
   } catch (error) {
     console.error('加载远程存储失败:', error);
+    throw error;
+  } finally {
+    console.timeEnd('[perf] preloadRemoteStorage');
   }
-  console.timeEnd('[perf] preloadRemoteStorage');
 }
 
 queueRemoteSet(key, value) {
@@ -188,7 +200,7 @@ async flushRemoteQueue(options = {}) {
     if (items.length > 0) {
       const response = await fetch('/api/points-kv/batch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
         body: JSON.stringify({ items })
       });
@@ -202,6 +214,7 @@ async flushRemoteQueue(options = {}) {
       await Promise.all(deletes.map(async key => {
         const response = await fetch(`/api/points-kv/${encodeURIComponent(key)}`, {
         method: 'DELETE',
+        headers: this.getAuthHeaders(),
         credentials: 'include'
         });
         if (!response.ok) {
@@ -221,6 +234,27 @@ async flushRemoteQueue(options = {}) {
   }
   if (syncError && throwOnError) throw syncError;
   return !syncError;
+}
+
+getAuthToken() {
+  try {
+    if (window.authGuard && typeof authGuard.getToken === 'function') {
+      const tokenFromGuard = authGuard.getToken();
+      if (tokenFromGuard) return tokenFromGuard;
+    }
+    return localStorage.getItem('session_token') || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+getAuthHeaders(baseHeaders = {}) {
+  const token = this.getAuthToken();
+  if (!token) return { ...baseHeaders };
+  return {
+    ...baseHeaders,
+    Authorization: `Bearer ${token}`
+  };
 }
 
 getRemoteSyncErrorMessage(error, action = '操作') {
